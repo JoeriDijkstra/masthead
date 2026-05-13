@@ -1,0 +1,126 @@
+<div class="landing">
+  <nav class="landing-nav">
+    <a class="brand" href="/">
+      <span class="brand-mark">●</span>
+      <span class="brand-name">Ledger</span>
+    </a>
+    <div class="nav-cta">
+      <%= if assigns[:current_user] do %>
+        <.link navigate={~p"/admin"} class="btn btn-primary btn-sm">Open dashboard &rarr;</.link>
+      <% else %>
+        <.link navigate={~p"/login"} class="nav-link">Log in</.link>
+        <.link navigate={~p"/signup"} class="btn btn-primary btn-sm">Sign up</.link>
+      <% end %>
+    </div>
+  </nav>
+
+  <section class="landing-hero">
+    <div class="hero-inner">
+      <span class="hero-eyebrow">Multi-tenant publishing, simplified</span>
+      <h1>The quiet alternative to a bloated CMS.</h1>
+      <p class="hero-lede">
+        Ledger gives you blogs and small sites on subdomains, written in plain Markdown,
+        deployed as a single Phoenix app. No plugins, no WYSIWYG, no analytics tab — by design.
+      </p>
+      <div class="hero-cta">
+        <%= if assigns[:current_user] do %>
+          <.link navigate={~p"/admin"} class="btn btn-primary btn-lg">Open dashboard &rarr;</.link>
+        <% else %>
+          <.link navigate={~p"/signup"} class="btn btn-primary btn-lg">Create your site</.link>
+          <a href="//joeri.lvh.me:4000" class="btn btn-ghost btn-lg" target="_blank" rel="noopener">See an example &rarr;</a>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="hero-mock">
+      <div class="mock-window">
+        <div class="mock-chrome">
+          <span class="dot dot-r"></span>
+          <span class="dot dot-y"></span>
+          <span class="dot dot-g"></span>
+          <span class="mock-url">joeri.lvh.me</span>
+        </div>
+        <div class="mock-body">
+          <span class="mock-eyebrow">Joeri's Notebook · May 13</span>
+          <h3>Why subdomains, not paths</h3>
+          <p>A note on why each Ledger site lives at its own subdomain instead of a path…</p>
+          <span class="mock-link">Read &rarr;</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-features">
+    <h2 class="section-title">Built for the writer, not the configurator</h2>
+
+    <ul class="feature-grid">
+      <li class="feature-card">
+        <div class="feature-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" /></svg>
+        </div>
+        <h3>Subdomain per site</h3>
+        <p>Each site lives at its own host. Identity belongs in the domain, not in a URL path.</p>
+      </li>
+
+      <li class="feature-card">
+        <div class="feature-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487 18.549 2.8a2.121 2.121 0 1 1 3 3L19.862 7.487m-3-3L6.34 15.013a4.5 4.5 0 0 0-1.13 1.897l-.943 3.18 3.18-.943a4.5 4.5 0 0 0 1.897-1.13L19.862 7.487m-3-3 3 3" /></svg>
+        </div>
+        <h3>Markdown only</h3>
+        <p>Write in plain Markdown with a live preview. No WYSIWYG, no rich-text traps.</p>
+      </li>
+
+      <li class="feature-card">
+        <div class="feature-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+        </div>
+        <h3>Themes as code</h3>
+        <p>Themes are Elixir modules. Add one as a pull request, not a theme editor click.</p>
+      </li>
+
+      <li class="feature-card">
+        <div class="feature-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" /></svg>
+        </div>
+        <h3>One Postgres, many sites</h3>
+        <p>Multi-tenant from day one. Tenant boundary lives at the query, not the schema.</p>
+      </li>
+
+      <li class="feature-card">
+        <div class="feature-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        </div>
+        <h3>Single OTP release</h3>
+        <p>Deploys as one Elixir release. No background queues to babysit, no microservices.</p>
+      </li>
+
+      <li class="feature-card">
+        <div class="feature-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+        </div>
+        <h3>Readable in an afternoon</h3>
+        <p>Codebase intentionally kept small. One person, one read, full mental model.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section class="landing-cta">
+    <div class="cta-card">
+      <h2>Start writing in five minutes.</h2>
+      <p>Sign up, pick a subdomain, write your first post in Markdown.</p>
+      <div class="hero-cta">
+        <%= if assigns[:current_user] do %>
+          <.link navigate={~p"/admin"} class="btn btn-primary btn-lg">Open dashboard</.link>
+        <% else %>
+          <.link navigate={~p"/signup"} class="btn btn-primary btn-lg">Create your site</.link>
+        <% end %>
+      </div>
+    </div>
+  </section>
+
+  <footer class="landing-footer">
+    <p>
+      <span class="brand-mark">●</span> <strong>Ledger</strong> · built with Phoenix &amp; LiveView
+    </p>
+  </footer>
+</div>
