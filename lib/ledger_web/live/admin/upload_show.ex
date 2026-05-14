@@ -29,7 +29,7 @@ defmodule LedgerWeb.AdminLive.UploadShow do
     {:noreply,
      socket
      |> put_flash(:info, "Upload deleted.")
-     |> push_navigate(to: ~p"/admin/sites/#{socket.assigns.site.id}/uploads")}
+     |> push_navigate(to: ~p"/#{socket.assigns.site.slug}/uploads")}
   end
 
   def handle_event("open_rename", _params, socket) do
@@ -83,9 +83,9 @@ defmodule LedgerWeb.AdminLive.UploadShow do
   @impl true
   def render(assigns) do
     ~H"""
-    <.shell title={@upload.filename} site={@site} current_user={@current_user} flash={@flash}>
+    <.shell title={@upload.filename} site={@site} current_user={@current_user} flash={@flash} active={:uploads}>
       <:actions>
-        <.link navigate={~p"/admin/sites/#{@site.id}/uploads"} class="btn">&larr; All uploads</.link>
+        <.link navigate={~p"/#{@site.slug}/uploads"} class="btn">&larr; All uploads</.link>
       </:actions>
 
       <div class="upload-show">

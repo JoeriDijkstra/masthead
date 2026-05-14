@@ -2,7 +2,7 @@ defmodule LedgerWeb.UserAuth do
   @moduledoc """
   Session-based authentication. Intentionally minimal: a signed user id is
   stored in the cookie session; there is no separate tokens table, no
-  remember-me, no email confirmation. Good enough for an MVP admin surface.
+  remember-me, no email confirmation.
   """
   import Plug.Conn
   import Phoenix.Controller

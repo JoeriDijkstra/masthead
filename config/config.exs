@@ -11,6 +11,19 @@ config :ledger,
   ecto_repos: [Ledger.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# Hosts treated as the bare app surface (no subdomain). Overridden via APP_HOSTS
+# at runtime in prod. Dev defaults to lvh.me so `*.lvh.me:4000` resolves to
+# 127.0.0.1 without any /etc/hosts changes.
+config :ledger, :app_hosts, ~w(lvh.me localhost 127.0.0.1)
+
+# Used by the admin to build the public URL of a site (for "View site" links
+# and the slug helper text in the new-site form). Prod overrides this in
+# runtime.exs with the real domain + https.
+config :ledger, :site_url,
+  scheme: "http",
+  host: "lvh.me",
+  port: 4000
+
 # Configure the endpoint
 config :ledger, LedgerWeb.Endpoint,
   url: [host: "localhost"],

@@ -13,6 +13,10 @@ defmodule Ledger.Sites do
     Repo.one!(from s in Site, where: s.id == ^id and s.owner_id == ^user_id)
   end
 
+  def get_user_site_by_slug!(user_id, slug) do
+    Repo.one!(from s in Site, where: s.slug == ^slug and s.owner_id == ^user_id)
+  end
+
   def get_site_by_slug(slug) when is_binary(slug) do
     Repo.get_by(Site, slug: slug)
   end

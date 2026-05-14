@@ -9,7 +9,11 @@ defmodule LedgerWeb.AdminLive.UploadIndex do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(page_title: "Uploads — #{socket.assigns.site.name}", modal_open?: false)
+     |> assign(
+       page_title: "Uploads — #{socket.assigns.site.name}",
+       modal_open?: false,
+       renamed_names: %{}
+     )
      |> assign(uploads_list: Uploads.list_uploads(socket.assigns.site.id))
      |> allow_upload(:image,
        accept: ~w(.png .jpg .jpeg .gif .webp .svg),
@@ -27,13 +31,17 @@ defmodule LedgerWeb.AdminLive.UploadIndex do
     {:noreply, cancel_all_uploads(socket)}
   end
 
-  def handle_event("validate", _params, socket), do: {:noreply, socket}
+  def handle_event("validate", params, socket) do
+    {:noreply, assign(socket, renamed_names: Map.get(params, "renames", %{}))}
+  end
 
-  def handle_event("save", _params, socket) do
+  def handle_event("save", params, socket) do
+    renames = Map.get(params, "renames", socket.assigns.renamed_names)
+
     results =
       consume_uploaded_entries(socket, :image, fn %{path: path}, entry ->
         attrs = %{
-          filename: entry.client_name,
+          filename: final_filename(entry, renames),
           content_type: entry.client_type,
           path: path
         }
@@ -57,7 +65,8 @@ defmodule LedgerWeb.AdminLive.UploadIndex do
      |> put_flash(:info, flash_msg)
      |> assign(
        uploads_list: Uploads.list_uploads(socket.assigns.site.id),
-       modal_open?: stored > 0
+       modal_open?: stored > 0,
+       renamed_names: %{}
      )
      |> maybe_close_modal(stored)}
   end
@@ -77,13 +86,13 @@ defmodule LedgerWeb.AdminLive.UploadIndex do
         cancel_upload(acc, :image, ref)
       end)
 
-    assign(socket, modal_open?: false)
+    assign(socket, modal_open?: false, renamed_names: %{})
   end
 
   @impl true
   def render(assigns) do
     ~H"""
-    <.shell title="Uploads" site={@site} current_user={@current_user} flash={@flash}>
+    <.shell title="Uploads" site={@site} current_user={@current_user} flash={@flash} active={:uploads}>
       <:actions>
         <button type="button" phx-click="open_modal" class="btn btn-primary">+ New upload</button>
       </:actions>
@@ -91,13 +100,13 @@ defmodule LedgerWeb.AdminLive.UploadIndex do
       <div :if={@uploads_list == []} class="empty-state empty-state-illustrated">
         <img src={~p"/images/illustrations/empty-uploads.svg"} alt="" class="empty-illustration" />
         <h2>Nothing uploaded yet</h2>
-        <p>Add an image and you'll be able to embed it in any post or page.</p>
+        <p>Upload an image to embed it in posts and pages using Markdown or HTML snippets.</p>
         <button type="button" phx-click="open_modal" class="btn btn-primary">+ New upload</button>
       </div>
 
       <ul :if={@uploads_list != []} class="upload-grid">
         <li :for={u <- @uploads_list}>
-          <.link navigate={~p"/admin/sites/#{@site.id}/uploads/#{u.id}"} class="upload-card">
+          <.link navigate={~p"/#{@site.slug}/uploads/#{u.id}"} class="upload-card">
             <div class="upload-thumb">
               <img src={Ledger.Uploads.url(u)} alt={u.filename} />
             </div>
@@ -134,9 +143,17 @@ defmodule LedgerWeb.AdminLive.UploadIndex do
 
             <ul :if={@uploads.image.entries != []} class="upload-entries">
               <li :for={entry <- @uploads.image.entries}>
-                <span>{entry.client_name} <span class="muted">({entry.progress}%)</span></span>
+                <input
+                  type="text"
+                  name={"renames[#{entry.ref}]"}
+                  value={Map.get(@renamed_names, entry.ref, entry.client_name)}
+                  spellcheck="false"
+                  autocomplete="off"
+                  phx-debounce="200"
+                  class="rename-input" />
+                <span class="muted entry-progress">{entry.progress}%</span>
                 <button type="button" phx-click="cancel" phx-value-ref={entry.ref} class="btn btn-sm">Remove</button>
-                <p :for={err <- upload_errors(@uploads.image, entry)} class="error">{error_to_string(err)}</p>
+                <p :for={err <- upload_errors(@uploads.image, entry)} class="error entry-error">{error_to_string(err)}</p>
               </li>
             </ul>
 
@@ -161,4 +178,26 @@ defmodule LedgerWeb.AdminLive.UploadIndex do
   defp format_bytes(b) when b < 1024, do: "#{b} B"
   defp format_bytes(b) when b < 1024 * 1024, do: "#{Float.round(b / 1024, 1)} KB"
   defp format_bytes(b), do: "#{Float.round(b / 1024 / 1024, 1)} MB"
+
+  # Apply the user's inline rename if present. Strip slashes, trim, and
+  # re-attach the original extension when missing — same safety rules as
+  # `Ledger.Uploads.rename/2` for an existing upload.
+  defp final_filename(entry, renames) do
+    case Map.get(renames || %{}, entry.ref) do
+      name when is_binary(name) ->
+        cleaned =
+          name
+          |> String.trim()
+          |> String.replace(~r{[/\\]}, "")
+
+        cond do
+          cleaned == "" -> entry.client_name
+          Path.extname(cleaned) == "" -> cleaned <> Path.extname(entry.client_name)
+          true -> cleaned
+        end
+
+      _ ->
+        entry.client_name
+    end
+  end
 end

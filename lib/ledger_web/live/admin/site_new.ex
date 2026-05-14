@@ -10,8 +10,25 @@ defmodule LedgerWeb.AdminLive.SiteNew do
 
     {:ok,
      socket
-     |> assign(page_title: "New site")
+     |> assign(page_title: "New site", host_example: host_example())
      |> assign_form(changeset)}
+  end
+
+  defp host_example do
+    cfg = Application.get_env(:ledger, :site_url, [])
+    host = Keyword.get(cfg, :host, "lvh.me")
+    port = Keyword.get(cfg, :port)
+    scheme = Keyword.get(cfg, :scheme, "http")
+
+    suffix =
+      cond do
+        is_nil(port) -> ""
+        scheme == "http" and port == 80 -> ""
+        scheme == "https" and port == 443 -> ""
+        true -> ":#{port}"
+      end
+
+    "#{host}#{suffix}"
   end
 
   @impl true
@@ -32,7 +49,7 @@ defmodule LedgerWeb.AdminLive.SiteNew do
         {:noreply,
          socket
          |> put_flash(:info, "Site #{site.name} created.")
-         |> push_navigate(to: ~p"/admin/sites/#{site.id}")}
+         |> push_navigate(to: ~p"/#{site.id}")}
 
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
@@ -46,7 +63,7 @@ defmodule LedgerWeb.AdminLive.SiteNew do
   @impl true
   def render(assigns) do
     ~H"""
-    <.shell title="Create a new site" current_user={@current_user} flash={@flash}>
+    <.shell title="Create a new site" current_user={@current_user} flash={@flash} active={:new_site}>
       <.form for={@form} phx-change="validate" phx-submit="save" class="form">
         <.error_list changeset={@changeset} />
 
@@ -59,7 +76,11 @@ defmodule LedgerWeb.AdminLive.SiteNew do
         <label>
           Slug (subdomain)
           <input type="text" name="site[slug]" value={@form[:slug].value} required />
-          <small>e.g. <code>joeri</code> &rarr; <code>joeri.lvh.me:4000</code></small>
+          <small>
+            Used to build the site's public URL:
+            <code>{(@form[:slug].value || "your-slug") <> "." <> @host_example}</code>.
+            Lowercase letters, numbers, and hyphens only.
+          </small>
         </label>
 
         <label>
@@ -74,7 +95,7 @@ defmodule LedgerWeb.AdminLive.SiteNew do
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create site</button>
-          <.link navigate={~p"/admin"}>Cancel</.link>
+          <.link navigate={~p"/sites"}>Cancel</.link>
         </div>
       </.form>
     </.shell>

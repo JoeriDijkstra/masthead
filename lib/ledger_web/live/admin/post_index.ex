@@ -33,9 +33,9 @@ defmodule LedgerWeb.AdminLive.PostIndex do
   @impl true
   def render(assigns) do
     ~H"""
-    <.shell title="Posts" site={@site} current_user={@current_user} flash={@flash}>
+    <.shell title="Posts" site={@site} current_user={@current_user} flash={@flash} active={:posts}>
       <:actions>
-        <.link navigate={~p"/admin/sites/#{@site.id}/posts/new"} class="btn btn-primary">+ New post</.link>
+        <.link navigate={~p"/#{@site.slug}/posts/new"} class="btn btn-primary">+ New post</.link>
       </:actions>
 
       <table :if={@posts != []} class="table">
@@ -45,7 +45,7 @@ defmodule LedgerWeb.AdminLive.PostIndex do
         <tbody>
           <tr :for={p <- @posts}>
             <td>
-              <.link navigate={~p"/admin/sites/#{@site.id}/posts/#{p.id}/edit"}>{p.title}</.link>
+              <.link navigate={~p"/#{@site.slug}/posts/#{p.id}/edit"}>{p.title}</.link>
               <div class="muted">/posts/{p.slug}</div>
             </td>
             <td>
@@ -72,8 +72,8 @@ defmodule LedgerWeb.AdminLive.PostIndex do
       <div :if={@posts == []} class="empty-state empty-state-illustrated">
         <img src={~p"/images/illustrations/empty-posts.svg"} alt="" class="empty-illustration" />
         <h2>No posts yet</h2>
-        <p>Write something. Drafts stay private; published posts show up on your site.</p>
-        <.link navigate={~p"/admin/sites/#{@site.id}/posts/new"} class="btn btn-primary">+ New post</.link>
+        <p>Create your first post to start publishing. Drafts remain private until you publish them.</p>
+        <.link navigate={~p"/#{@site.slug}/posts/new"} class="btn btn-primary">+ New post</.link>
       </div>
     </.shell>
     """

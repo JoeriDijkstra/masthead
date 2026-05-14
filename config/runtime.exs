@@ -57,8 +57,25 @@ if config_env() == :prod do
 
   config :ledger, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Hosts treated as the bare app surface (no subdomain). Everything that
+  # ends in ".<one of these>" is treated as a site subdomain.
+  app_hosts =
+    case System.get_env("APP_HOSTS") do
+      nil -> [host]
+      raw -> raw |> String.split(",", trim: true) |> Enum.map(&String.trim/1)
+    end
+
+  config :ledger, :app_hosts, app_hosts
+
+  # Used by the admin "View site" link to build a site's public URL.
+  config :ledger, :site_url,
+    scheme: "https",
+    host: List.first(app_hosts),
+    port: nil
+
   config :ledger, LedgerWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
+    check_origin: ["https://#{host}" | Enum.map(app_hosts, &"//*.#{&1}")],
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
@@ -67,6 +84,27 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0}
     ],
     secret_key_base: secret_key_base
+
+  # Object storage. If a BUCKET_NAME env var is set, use the S3 adapter
+  # (Tigris on Fly by default — works with any S3-compatible service).
+  # Otherwise fall back to local-disk storage.
+  if System.get_env("BUCKET_NAME") do
+    s3_endpoint = System.get_env("AWS_ENDPOINT_URL_S3") || "https://fly.storage.tigris.dev"
+    s3_host = URI.parse(s3_endpoint).host
+    s3_region = System.get_env("AWS_REGION") || "auto"
+
+    config :ledger, Ledger.Storage, adapter: Ledger.Storage.S3
+
+    config :ex_aws,
+      access_key_id: System.fetch_env!("AWS_ACCESS_KEY_ID"),
+      secret_access_key: System.fetch_env!("AWS_SECRET_ACCESS_KEY"),
+      region: s3_region
+
+    config :ex_aws, :s3,
+      scheme: "https://",
+      host: s3_host,
+      region: s3_region
+  end
 
   # ## SSL Support
   #

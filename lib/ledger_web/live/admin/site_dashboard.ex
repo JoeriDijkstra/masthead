@@ -22,9 +22,9 @@ defmodule LedgerWeb.AdminLive.SiteDashboard do
   @impl true
   def render(assigns) do
     ~H"""
-    <.shell title={@site.name} site={@site} current_user={@current_user} flash={@flash}>
+    <.shell title={@site.name} site={@site} current_user={@current_user} flash={@flash} active={:overview}>
       <:actions>
-        <.link navigate={~p"/admin/sites/#{@site.id}/posts/new"} class="btn btn-primary">+ New post</.link>
+        <.link navigate={~p"/#{@site.slug}/posts/new"} class="btn btn-primary">+ New post</.link>
       </:actions>
 
       <section class="stats">
@@ -38,13 +38,13 @@ defmodule LedgerWeb.AdminLive.SiteDashboard do
       <div :if={@posts == []} class="empty-state empty-state-illustrated">
         <img src={~p"/images/illustrations/empty-posts.svg"} alt="" class="empty-illustration" />
         <h2>No posts yet</h2>
-        <p>Write something. Drafts stay private; published posts show up on your site.</p>
-        <.link navigate={~p"/admin/sites/#{@site.id}/posts/new"} class="btn btn-primary">+ New post</.link>
+        <p>Create your first post to start publishing. Drafts remain private until you publish them.</p>
+        <.link navigate={~p"/#{@site.slug}/posts/new"} class="btn btn-primary">+ New post</.link>
       </div>
 
       <ul :if={@posts != []} class="recent-list">
         <li :for={p <- Enum.take(@posts, 5)}>
-          <.link navigate={~p"/admin/sites/#{@site.id}/posts/#{p.id}/edit"}>
+          <.link navigate={~p"/#{@site.slug}/posts/#{p.id}/edit"}>
             <strong>{p.title}</strong>
             <span class={"pill pill-" <> if(p.published, do: "live", else: "draft")}>{if p.published, do: "Published", else: "Draft"}</span>
           </.link>
@@ -52,7 +52,7 @@ defmodule LedgerWeb.AdminLive.SiteDashboard do
       </ul>
 
       <p :if={length(@posts) > 5}>
-        <.link navigate={~p"/admin/sites/#{@site.id}/posts"}>See all posts &rarr;</.link>
+        <.link navigate={~p"/#{@site.slug}/posts"}>See all posts &rarr;</.link>
       </p>
     </.shell>
     """

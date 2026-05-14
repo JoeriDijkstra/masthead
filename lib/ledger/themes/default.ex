@@ -137,7 +137,7 @@ defmodule Ledger.Themes.Default do
           {render_slot(@inner_block)}
         </main>
         <footer class="site-footer">
-          <p>Published with <a href="/">{@site.name}</a> on Ledger.</p>
+          <p>Published with <a href="https://ledger-cloud.com" target="_blank" rel="noopener">Ledger</a></p>
         </footer>
       </body>
     </html>
@@ -150,13 +150,25 @@ defmodule Ledger.Themes.Default do
 
   def theme_css do
     """
-    :root { --fg: #1a1a1a; --muted: #666; --accent: #0066cc; --bg: #fafafa; --rule: #e5e5e5; }
+    :root { --fg: #1a1a1a; --muted: #666; --accent: #0066cc; --bg: #fafafa; --rule: #e5e5e5; --max: 760px; }
     *,*::before,*::after { box-sizing: border-box; }
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; line-height: 1.6; color: var(--fg); background: var(--bg); }
-    main, .site-nav, .site-footer { max-width: 720px; margin: 0 auto; padding: 0 1.25rem; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      color: var(--fg);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+    main { flex: 1; width: 100%; }
+    main, .site-nav, .site-footer { max-width: var(--max); margin: 0 auto; padding: 0 1.25rem; width: 100%; }
     .site-nav { display: flex; align-items: center; justify-content: space-between; padding-top: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--rule); }
     .site-nav .brand { font-weight: 600; text-decoration: none; color: var(--fg); }
-    .site-nav ul { list-style: none; display: flex; gap: 1rem; margin: 0; padding: 0; }
+    .site-nav ul { list-style: none; display: flex; gap: 1rem; margin: 0; padding: 0; flex-wrap: wrap; }
     .site-nav a { color: var(--muted); text-decoration: none; }
     .site-nav a:hover { color: var(--fg); }
     main { padding-top: 2rem; padding-bottom: 4rem; }
@@ -178,9 +190,21 @@ defmodule Ledger.Themes.Default do
     .post-body a, .page-body a { color: var(--accent); }
     .post-body blockquote, .page-body blockquote { border-left: 3px solid var(--rule); margin: 1rem 0; padding: 0.1rem 1rem; color: var(--muted); }
     .empty { color: var(--muted); padding: 2rem 0; }
-    .site-footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.85rem; }
+    .site-footer { margin-top: 4rem; padding-top: 1.5rem; padding-bottom: 1.5rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: 0.85rem; }
     .post footer { margin-top: 2rem; }
     .post footer a, .empty a { color: var(--accent); text-decoration: none; }
+
+    @media (max-width: 640px) {
+      main, .site-nav, .site-footer { padding-left: 1rem; padding-right: 1rem; }
+      .site-nav { padding-top: 1.5rem; padding-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem; }
+      .site-nav ul { gap: 0.85rem; }
+      main { padding-top: 1.5rem; padding-bottom: 3rem; }
+      .post-body, .page-body { font-size: 1rem; }
+      .post-body pre, .page-body pre { padding: 0.6rem; font-size: 0.85rem; }
+      .post header h1, .page h1 { font-size: 1.6rem; line-height: 1.25; }
+      .post-list h2 { font-size: 1.1rem; }
+      .site-footer { margin-top: 2.5rem; }
+    }
     """
   end
 end

@@ -16,47 +16,48 @@ defmodule LedgerWeb.AdminLive.Components do
     <div class="admin-shell">
       <aside class="admin-sidebar">
         <div class="sidebar-brand">
-          <.link navigate={~p"/admin"} class="brand">
+          <.link navigate={~p"/sites"} class="brand">
             <span class="brand-mark">●</span>
             <span class="brand-name">Ledger</span>
           </.link>
+          <p class="sidebar-version">v{Application.spec(:ledger, :vsn)}</p>
           <p :if={@site} class="sidebar-site">{@site.name}</p>
         </div>
 
         <nav class="sidebar-nav">
           <%= if @site do %>
-            <.nav_link href={~p"/admin/sites/#{@site.id}"} label="Overview" active={@active == :overview}>
+            <.nav_link href={~p"/#{@site.slug}"} label="Overview" active={@active == :overview}>
               <.icon_home />
             </.nav_link>
-            <.nav_link href={~p"/admin/sites/#{@site.id}/posts"} label="Posts" active={@active == :posts}>
+            <.nav_link href={~p"/#{@site.slug}/posts"} label="Posts" active={@active == :posts}>
               <.icon_doc />
             </.nav_link>
-            <.nav_link href={~p"/admin/sites/#{@site.id}/pages"} label="Pages" active={@active == :pages}>
+            <.nav_link href={~p"/#{@site.slug}/pages"} label="Pages" active={@active == :pages}>
               <.icon_page />
             </.nav_link>
-            <.nav_link href={~p"/admin/sites/#{@site.id}/uploads"} label="Uploads" active={@active == :uploads}>
+            <.nav_link href={~p"/#{@site.slug}/uploads"} label="Uploads" active={@active == :uploads}>
               <.icon_image />
             </.nav_link>
-            <.nav_link href={~p"/admin/sites/#{@site.id}/settings"} label="Settings" active={@active == :settings}>
+            <.nav_link href={~p"/#{@site.slug}/settings"} label="Settings" active={@active == :settings}>
               <.icon_cog />
             </.nav_link>
 
             <div class="sidebar-divider"></div>
 
-            <a class="nav-item nav-external" href={"//#{@site.slug}.lvh.me:4000"} target="_blank" rel="noopener">
+            <a class="nav-item nav-external" href={site_url(@site)} target="_blank" rel="noopener">
               <.icon_external />
               <span>View site</span>
             </a>
 
-            <.nav_link href={~p"/admin"} label="All sites" active={false}>
+            <.nav_link href={~p"/sites"} label="All sites" active={false}>
               <.icon_grid />
             </.nav_link>
           <% else %>
-            <.nav_link href={~p"/admin"} label="Your sites" active={@active == :sites}>
+            <.nav_link href={~p"/sites"} label="Your sites" active={@active == :sites}>
               <.icon_grid />
             </.nav_link>
 
-            <.nav_link href={~p"/admin/sites/new"} label="New site" active={@active == :new_site}>
+            <.nav_link href={~p"/sites/new"} label="New site" active={@active == :new_site}>
               <.icon_plus />
             </.nav_link>
           <% end %>
@@ -161,7 +162,7 @@ defmodule LedgerWeb.AdminLive.Components do
         </div>
         <h3>HTML</h3>
         <p>Raw HTML for full control. Sanitized on render — scripts and unsafe attributes are stripped.</p>
-        <span class="format-pill format-pill-muted">Power user</span>
+        <span class="format-pill format-pill-muted">Advanced</span>
       </button>
 
       <button
@@ -207,6 +208,28 @@ defmodule LedgerWeb.AdminLive.Components do
   end
 
   defp user_initial(_), do: "?"
+
+  @doc false
+  # Builds the public URL for a site based on `:ledger, :site_url`:
+  #
+  #   * `scheme: "http", host: "lvh.me", port: 4000`        -> http://slug.lvh.me:4000
+  #   * `scheme: "https", host: "yourdomain.com", port: nil` -> https://slug.yourdomain.com
+  defp site_url(site) do
+    cfg = Application.get_env(:ledger, :site_url, scheme: "http", host: "lvh.me", port: 4000)
+    scheme = Keyword.fetch!(cfg, :scheme)
+    host = Keyword.fetch!(cfg, :host)
+    port = Keyword.get(cfg, :port)
+
+    port_segment =
+      cond do
+        is_nil(port) -> ""
+        scheme == "http" and port == 80 -> ""
+        scheme == "https" and port == 443 -> ""
+        true -> ":#{port}"
+      end
+
+    "#{scheme}://#{site.slug}.#{host}#{port_segment}"
+  end
 
   # ---- Icons (heroicons outline, inlined) ----
 

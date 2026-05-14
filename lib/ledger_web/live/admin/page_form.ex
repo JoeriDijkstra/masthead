@@ -8,24 +8,25 @@ defmodule LedgerWeb.AdminLive.PageForm do
 
   @impl true
   def mount(params, _session, socket) do
-    {page, draft, page_title} =
+    {page, draft, page_title, step} =
       case socket.assigns.live_action do
         :new ->
-          {nil, %{"format" => "markdown"}, "New page"}
+          {nil, %{"format" => "markdown"}, "New page", 1}
 
         :edit ->
           page = Content.get_page!(socket.assigns.site.id, params["id"])
-          {page, page_to_draft(page), "Edit: #{page.title}"}
+          {page, page_to_draft(page), "Edit: #{page.title}", 3}
       end
 
     {:ok,
      socket
      |> assign(
        page: page,
-       step: 1,
+       step: step,
        draft: draft,
        page_title: page_title,
-       preview_html: render_preview(draft)
+       preview_html: render_preview(draft),
+       slug_touched: page != nil
      )
      |> assign_changeset(draft)}
   end
@@ -67,19 +68,36 @@ defmodule LedgerWeb.AdminLive.PageForm do
     end
   end
 
-  def handle_event("validate", %{"page" => params}, socket) do
+  def handle_event("validate", %{"page" => params} = full_params, socket) do
+    target = List.last(full_params["_target"] || [])
+    slug_touched = update_slug_touched(socket.assigns[:slug_touched], target, params)
+
+    params =
+      if !slug_touched and target == "title" do
+        Map.put(params, "slug", "")
+      else
+        params
+      end
+
     draft = Map.merge(socket.assigns.draft, params)
     preview_html = render_preview(draft)
 
     {:noreply,
      socket
-     |> assign(draft: draft, preview_html: preview_html)
+     |> assign(draft: draft, preview_html: preview_html, slug_touched: slug_touched)
      |> assign_changeset(draft, validate: true)}
   end
 
+  defp update_slug_touched(_prev, "slug", %{"slug" => slug}) when slug != "", do: true
+  defp update_slug_touched(_prev, "slug", _params), do: false
+  defp update_slug_touched(prev, _target, _params), do: prev || false
+
   def handle_event("save", %{"page" => page_params} = params, socket) do
-    action = Map.get(params, "action", "draft")
-    publish? = action == "publish"
+    publish? =
+      case socket.assigns.page do
+        nil -> Map.get(params, "action", "draft") == "publish"
+        page -> page.published
+      end
 
     full_params =
       socket.assigns.draft
@@ -98,14 +116,13 @@ defmodule LedgerWeb.AdminLive.PageForm do
           case {socket.assigns.page, publish?} do
             {nil, true} -> "Page published."
             {nil, false} -> "Draft saved."
-            {_, true} -> "Saved & published."
-            {_, false} -> "Saved as draft."
+            {_, _} -> "Changes saved."
           end
 
         {:noreply,
          socket
          |> put_flash(:info, flash)
-         |> push_navigate(to: ~p"/admin/sites/#{socket.assigns.site.id}/pages/#{page.id}/edit")}
+         |> push_navigate(to: ~p"/#{socket.assigns.site.slug}/pages/#{page.id}/edit")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, form: to_form(changeset, as: :page), changeset: changeset)}
@@ -170,7 +187,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
   @impl true
   def render(assigns) do
     ~H"""
-    <.shell title={@page_title} site={@site} current_user={@current_user} flash={@flash}>
+    <.shell title={@page_title} site={@site} current_user={@current_user} flash={@flash} active={:pages}>
       <:actions>
         <button :if={@page} type="button" phx-click="toggle_publish" class={publish_button_class(@page.published)}>
           {if @page && @page.published, do: "Unpublish", else: "Publish"}
@@ -184,14 +201,14 @@ defmodule LedgerWeb.AdminLive.PageForm do
               locked={@page != nil}
               format={@draft["format"]}
               editing={@page != nil}
-              site_id={@site.id} />
+              site_slug={@site.slug} />
           <% 2 -> %>
             <.meta_step
               form={@form}
               changeset={@changeset}
               format={@draft["format"]}
               editing={@page != nil}
-              site_id={@site.id} />
+              site_slug={@site.slug} />
           <% 3 -> %>
             <.content_step
               form={@form}
@@ -199,7 +216,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
               format={@draft["format"]}
               preview_html={@preview_html}
               editing={@page != nil}
-              site_id={@site.id} />
+              site_slug={@site.slug} />
         <% end %>
       </div>
     </.shell>
@@ -229,7 +246,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
   attr :locked, :boolean, default: false
   attr :format, :string, default: nil
   attr :editing, :boolean, default: false
-  attr :site_id, :integer, required: true
+  attr :site_slug, :string, required: true
   defp format_step(assigns) do
     ~H"""
     <.stepper step={1} />
@@ -241,7 +258,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
     <.format_cards selected={@format} locked={@locked} allow_blog={true} />
 
     <div :if={@locked} class="wizard-footer">
-      <.link navigate={~p"/admin/sites/#{@site_id}/pages"} class="btn">Cancel</.link>
+      <.link navigate={~p"/#{@site_slug}/pages"} class="btn">Cancel</.link>
       <span class="muted">Format is set at creation and cannot be changed.</span>
       <button type="button" phx-click="advance" class="btn btn-primary">Continue &rarr;</button>
     </div>
@@ -252,7 +269,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
   attr :changeset, :map, required: true
   attr :format, :string, required: true
   attr :editing, :boolean, default: false
-  attr :site_id, :integer, required: true
+  attr :site_slug, :string, required: true
   defp meta_step(assigns) do
     ~H"""
     <.stepper step={2} />
@@ -287,7 +304,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
   attr :format, :string, required: true
   attr :preview_html, :string, required: true
   attr :editing, :boolean, default: false
-  attr :site_id, :integer, required: true
+  attr :site_slug, :string, required: true
   defp content_step(assigns) do
     ~H"""
     <.stepper step={3} />
@@ -309,12 +326,18 @@ defmodule LedgerWeb.AdminLive.PageForm do
     <div class="wizard-footer">
       <button type="button" phx-click="back" class="btn">&larr; Back</button>
       <div class="wizard-actions">
-        <button type="submit" form="content-form" name="action" value="draft" class="btn">
-          Save as draft
-        </button>
-        <button type="submit" form="content-form" name="action" value="publish" class="btn btn-primary">
-          Save & publish
-        </button>
+        <%= if @editing do %>
+          <button type="submit" form="content-form" class="btn btn-primary">
+            Save changes
+          </button>
+        <% else %>
+          <button type="submit" form="content-form" name="action" value="draft" class="btn">
+            Save as draft
+          </button>
+          <button type="submit" form="content-form" name="action" value="publish" class="btn btn-primary">
+            Save &amp; publish
+          </button>
+        <% end %>
       </div>
     </div>
     """

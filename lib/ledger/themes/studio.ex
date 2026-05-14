@@ -179,17 +179,18 @@ defmodule Ledger.Themes.Studio do
           </div>
         </header>
 
-        <main class="container content">
-          {render_slot(@inner_block)}
+        <main class="content">
+          <div class="container">
+            {render_slot(@inner_block)}
+          </div>
         </main>
 
         <footer class="site-footer">
           <div class="container">
-            <p>
-              <span class="brand-mark">●</span>
-              <strong>{@site.name}</strong>
+            <p class="muted">
+              Published with
+              <a href="https://ledger-cloud.com" target="_blank" rel="noopener">Ledger</a>
             </p>
-            <p class="muted">Published with Ledger.</p>
           </div>
         </footer>
       </body>
@@ -223,6 +224,9 @@ defmodule Ledger.Themes.Studio do
     html { -webkit-text-size-adjust: 100%; }
     body {
       margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
       font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
       color: var(--fg);
       background: var(--bg);
@@ -230,10 +234,11 @@ defmodule Ledger.Themes.Studio do
       -webkit-font-smoothing: antialiased;
       font-feature-settings: "ss01", "cv11";
     }
+    main { flex: 1; width: 100%; }
     a { color: var(--accent); text-decoration: none; transition: color 0.15s ease; }
     a:hover { color: var(--accent-hover); }
 
-    .container { max-width: 760px; margin: 0 auto; padding: 0 1.5rem; }
+    .container { max-width: 880px; margin: 0 auto; padding: 0 1.5rem; width: 100%; }
     .muted { color: var(--muted); }
 
     /* Header */
@@ -273,7 +278,7 @@ defmodule Ledger.Themes.Studio do
     .primary-nav a:hover { color: var(--fg); }
 
     /* Content */
-    .content { padding-top: 3.5rem; padding-bottom: 4rem; }
+    .content { padding-top: 3rem; padding-bottom: 4rem; }
 
     /* Eyebrows / small labels */
     .eyebrow {
@@ -529,12 +534,46 @@ defmodule Ledger.Themes.Studio do
 
     .blog-intro { margin: 0 0 2.5rem; max-width: 65ch; }
 
+    /* Tablets */
+    @media (max-width: 800px) {
+      .container { padding: 0 1.25rem; }
+      .post-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+    }
+
+    /* Phones */
     @media (max-width: 640px) {
-      .nav { flex-wrap: wrap; gap: 0.75rem; }
-      .primary-nav { gap: 1rem; }
-      .content { padding-top: 2.5rem; }
-      .post-grid { grid-template-columns: 1fr; }
-      .featured-card { padding: 1.4rem; }
+      .container { padding: 0 1rem; }
+      .nav {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding-top: 0.85rem;
+        padding-bottom: 0.85rem;
+      }
+      .primary-nav {
+        gap: 0.9rem;
+        flex-wrap: wrap;
+      }
+      .primary-nav a { font-size: 0.9rem; }
+      .content { padding-top: 2rem; padding-bottom: 3rem; }
+      .hero { margin-bottom: 2.25rem; }
+      .lede { font-size: 1.05rem; }
+      .featured-card { padding: 1.3rem; margin-bottom: 2rem; }
+      .featured-card h2 { font-size: 1.3rem; }
+      .post-grid { grid-template-columns: 1fr; gap: 0.8rem; }
+      .post-card { padding: 1.1rem; }
+      .post-header, .page-header { margin-bottom: 1.75rem; }
+      .prose { font-size: 1rem; line-height: 1.7; }
+      .prose pre { padding: 0.85rem 1rem; font-size: 0.85rem; border-radius: 8px; }
+      .post-footer { margin-top: 2.5rem; }
+      .site-footer { margin-top: 3rem; padding: 2rem 0; }
+      .blog-intro { margin-bottom: 2rem; }
+    }
+
+    /* Small phones */
+    @media (max-width: 380px) {
+      .container { padding: 0 0.85rem; }
+      .brand-name { font-size: 0.95rem; }
+      .featured-card h2 { font-size: 1.2rem; }
     }
     """
   end

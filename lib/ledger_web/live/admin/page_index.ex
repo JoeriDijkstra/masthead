@@ -34,9 +34,9 @@ defmodule LedgerWeb.AdminLive.PageIndex do
   @impl true
   def render(assigns) do
     ~H"""
-    <.shell title="Pages" site={@site} current_user={@current_user} flash={@flash}>
+    <.shell title="Pages" site={@site} current_user={@current_user} flash={@flash} active={:pages}>
       <:actions>
-        <.link navigate={~p"/admin/sites/#{@site.id}/pages/new"} class="btn btn-primary">+ New page</.link>
+        <.link navigate={~p"/#{@site.slug}/pages/new"} class="btn btn-primary">+ New page</.link>
       </:actions>
 
       <table :if={@pages != []} class="table">
@@ -46,7 +46,7 @@ defmodule LedgerWeb.AdminLive.PageIndex do
         <tbody>
           <tr :for={p <- @pages}>
             <td>
-              <.link navigate={~p"/admin/sites/#{@site.id}/pages/#{p.id}/edit"}>{p.title}</.link>
+              <.link navigate={~p"/#{@site.slug}/pages/#{p.id}/edit"}>{p.title}</.link>
               <div class="muted">/{p.slug}</div>
             </td>
             <td>
@@ -65,8 +65,8 @@ defmodule LedgerWeb.AdminLive.PageIndex do
       <div :if={@pages == []} class="empty-state empty-state-illustrated">
         <img src={~p"/images/illustrations/empty-pages.svg"} alt="" class="empty-illustration" />
         <h2>No pages yet</h2>
-        <p>Pages are evergreen content like <em>About</em> or <em>Contact</em>. They show up in your site's nav when published.</p>
-        <.link navigate={~p"/admin/sites/#{@site.id}/pages/new"} class="btn btn-primary">+ New page</.link>
+        <p>Pages are standalone content such as About or Contact. Published pages appear in the site navigation.</p>
+        <.link navigate={~p"/#{@site.slug}/pages/new"} class="btn btn-primary">+ New page</.link>
       </div>
     </.shell>
     """

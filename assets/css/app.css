@@ -286,6 +286,13 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   letter-spacing: 0.08em;
   font-weight: 500;
 }
+.sidebar-version {
+  margin: 0.25rem 0 0;
+  font-size: 0.72rem;
+  font-family: ui-monospace, Menlo, monospace;
+  color: var(--sidebar-fg-muted);
+  letter-spacing: 0.02em;
+}
 
 .sidebar-nav {
   flex: 1;
@@ -918,6 +925,62 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 .form-row { display: flex; gap: 1rem; }
 .form-row > label { flex: 1; }
 
+/* Settings page — card-style sections grouping related fields */
+.settings-form {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  max-width: none;
+  gap: 1.5rem;
+}
+.settings-section {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2rem;
+  padding: 1.75rem 2rem;
+}
+.settings-section-head h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+}
+.settings-section-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.settings-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  min-width: 0;
+}
+.settings-fields .muted code {
+  font-family: ui-monospace, Menlo, monospace;
+  background: var(--bg);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  margin: 0 0.15rem;
+}
+
+@media (max-width: 800px) {
+  .settings-section {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    padding: 1.5rem;
+  }
+  .form-row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
 /* Post / page editor */
 .editor {
   display: grid;
@@ -990,9 +1053,42 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 }
 
 .upload-entries { list-style: none; padding: 0; margin: 0; }
-.upload-entries li { padding: 0.6rem 0; border-bottom: 1px solid var(--rule); display: flex; align-items: center; gap: 1rem; }
+.upload-entries li {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
 .upload-entries li:last-child { border-bottom: 0; }
-.upload-entries li > span:first-child { flex: 1; font-size: 0.9rem; }
+.upload-entries .rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  background: var(--card);
+  color: var(--fg);
+}
+.upload-entries .rename-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+.upload-entries .entry-progress {
+  font-size: 0.8rem;
+  min-width: 3rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.upload-entries .entry-error {
+  flex-basis: 100%;
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+}
 
 /* Modal */
 /* Dialog (named to avoid collisions with daisyUI's .modal-* classes) */
@@ -1330,9 +1426,28 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 }
 .landing .brand:hover { color: var(--landing-fg); }
 .landing .brand-mark { color: var(--landing-accent); }
-.landing .nav-cta { display: flex; align-items: center; gap: 1.25rem; }
+.landing .nav-cta { display: flex; align-items: center; gap: 1rem; }
 .landing .nav-link { color: var(--landing-fg-soft); font-weight: 500; font-size: 0.92rem; }
 .landing .nav-link:hover { color: var(--landing-fg); }
+.landing .github-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--landing-rule);
+  background: var(--landing-card);
+  color: var(--landing-fg) !important;
+  font-weight: 500;
+  font-size: 0.88rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.landing .github-btn:hover {
+  background: var(--landing-bg);
+  border-color: var(--landing-fg);
+  text-decoration: none;
+}
+.landing .github-btn svg { width: 18px; height: 18px; }
 
 /* Buttons (landing variants) */
 .landing .btn {
@@ -1558,19 +1673,45 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
-
+.cta-card .btn-ghost {
+  background: transparent;
+  color: white !important;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.cta-card .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
+}
 /* Footer */
 .landing-footer {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem 1.5rem 2rem;
   border-top: 1px solid var(--landing-rule);
   color: var(--landing-muted);
   font-size: 0.85rem;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
+.landing-footer-brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.landing-footer-brand strong { color: var(--landing-fg); font-weight: 600; }
 .landing-footer .brand-mark { color: var(--landing-accent); }
-.landing-footer p { margin: 0; }
+.landing-footer .github-btn {
+  font-size: 0.82rem;
+  padding: 0.3rem 0.65rem;
+}
+.landing-version {
+  font-family: ui-monospace, Menlo, monospace;
+  letter-spacing: 0.02em;
+  font-size: 0.75rem;
+}
 
 @media (max-width: 800px) {
   .landing-hero {
@@ -1580,6 +1721,11 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   }
   .hero-mock { display: none; }
   .cta-card { padding: 2rem 1.5rem; }
+}
+
+@media (max-width: 500px) {
+  .landing-nav .github-btn span { display: none; }
+  .landing-nav .github-btn { padding: 0.4rem; }
 }
 
 /* This file is for your main application CSS */

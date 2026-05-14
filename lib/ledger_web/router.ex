@@ -31,21 +31,22 @@ defmodule LedgerWeb.Router do
 
     live_session :authenticated,
       on_mount: [{LedgerWeb.UserAuth, :require_authenticated}] do
-      live "/admin", AdminLive.SiteIndex, :index
-      live "/admin/sites/new", AdminLive.SiteNew, :new
-      live "/admin/sites/:site_id", AdminLive.SiteDashboard, :show
-      live "/admin/sites/:site_id/settings", AdminLive.SiteSettings, :edit
+      live "/sites", AdminLive.SiteIndex, :index
+      live "/sites/new", AdminLive.SiteNew, :new
 
-      live "/admin/sites/:site_id/posts", AdminLive.PostIndex, :index
-      live "/admin/sites/:site_id/posts/new", AdminLive.PostForm, :new
-      live "/admin/sites/:site_id/posts/:id/edit", AdminLive.PostForm, :edit
+      live "/:site_slug", AdminLive.SiteDashboard, :show
+      live "/:site_slug/settings", AdminLive.SiteSettings, :edit
 
-      live "/admin/sites/:site_id/pages", AdminLive.PageIndex, :index
-      live "/admin/sites/:site_id/pages/new", AdminLive.PageForm, :new
-      live "/admin/sites/:site_id/pages/:id/edit", AdminLive.PageForm, :edit
+      live "/:site_slug/posts", AdminLive.PostIndex, :index
+      live "/:site_slug/posts/new", AdminLive.PostForm, :new
+      live "/:site_slug/posts/:id/edit", AdminLive.PostForm, :edit
 
-      live "/admin/sites/:site_id/uploads", AdminLive.UploadIndex, :index
-      live "/admin/sites/:site_id/uploads/:id", AdminLive.UploadShow, :show
+      live "/:site_slug/pages", AdminLive.PageIndex, :index
+      live "/:site_slug/pages/new", AdminLive.PageForm, :new
+      live "/:site_slug/pages/:id/edit", AdminLive.PageForm, :edit
+
+      live "/:site_slug/uploads", AdminLive.UploadIndex, :index
+      live "/:site_slug/uploads/:id", AdminLive.UploadShow, :show
     end
   end
 

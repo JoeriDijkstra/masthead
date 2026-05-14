@@ -27,19 +27,27 @@ defmodule Ledger.Uploads do
       true ->
         ext = Path.extname(filename) |> String.downcase()
         key = "#{System.system_time(:millisecond)}-#{:rand.uniform(1_000_000)}#{ext}"
-        {:ok, rel} = Storage.stream_into(site.slug, key, path)
 
-        %{size: byte_size} = File.stat!(Storage.absolute(rel))
+        # Stat the source file before handing it to the storage adapter so we
+        # don't need a "read back the stored object" call (which the S3
+        # adapter would have to make over the network).
+        %{size: byte_size} = File.stat!(path)
 
-        %Upload{}
-        |> Upload.changeset(%{
-          site_id: site.id,
-          filename: filename,
-          content_type: content_type,
-          byte_size: byte_size,
-          path: rel
-        })
-        |> Repo.insert()
+        case Storage.stream_into(site.slug, key, path) do
+          {:ok, rel} ->
+            %Upload{}
+            |> Upload.changeset(%{
+              site_id: site.id,
+              filename: filename,
+              content_type: content_type,
+              byte_size: byte_size,
+              path: rel
+            })
+            |> Repo.insert()
+
+          {:error, reason} ->
+            {:error, reason}
+        end
     end
   end
 

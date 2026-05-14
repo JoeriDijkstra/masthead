@@ -9,7 +9,8 @@ defmodule Ledger.Themes do
 
   @themes %{
     "default" => Ledger.Themes.Default,
-    "studio" => Ledger.Themes.Studio
+    "studio" => Ledger.Themes.Studio,
+    "blank" => Ledger.Themes.Blank
   }
 
   def get(name) when is_binary(name) do

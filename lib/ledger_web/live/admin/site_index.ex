@@ -12,14 +12,14 @@ defmodule LedgerWeb.AdminLive.SiteIndex do
   @impl true
   def render(assigns) do
     ~H"""
-    <.shell title="Your sites" current_user={@current_user} flash={@flash}>
+    <.shell title="Your sites" current_user={@current_user} flash={@flash} active={:sites}>
       <:actions>
-        <.link navigate={~p"/admin/sites/new"} class="btn btn-primary">+ New site</.link>
+        <.link navigate={~p"/sites/new"} class="btn btn-primary">+ New site</.link>
       </:actions>
 
       <ul :if={@sites != []} class="card-list">
         <li :for={s <- @sites}>
-          <.link navigate={~p"/admin/sites/#{s.id}"}>
+          <.link navigate={~p"/#{s.slug}"}>
             <strong>{s.name}</strong>
             <span class="muted">{s.slug}.lvh.me</span>
           </.link>
@@ -28,7 +28,7 @@ defmodule LedgerWeb.AdminLive.SiteIndex do
 
       <p :if={@sites == []} class="empty">
         You don't have any sites yet.
-        <.link navigate={~p"/admin/sites/new"}>Create your first site</.link>.
+        <.link navigate={~p"/sites/new"}>Create your first site</.link>.
       </p>
     </.shell>
     """

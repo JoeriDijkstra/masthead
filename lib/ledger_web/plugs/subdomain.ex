@@ -9,10 +9,8 @@ defmodule LedgerWeb.Plugs.Subdomain do
   - On a subdomain that doesn't match any site, we 404 immediately so we never
     serve admin-shaped responses against a stranger's host.
   """
-  import Plug.Conn
   alias Ledger.Sites
-
-  @app_hosts ~w(ledger.local lvh.me localhost 127.0.0.1)
+  alias LedgerWeb.SiteNotFound
 
   def init(opts), do: opts
 
@@ -23,26 +21,23 @@ defmodule LedgerWeb.Plugs.Subdomain do
 
       slug ->
         case Sites.get_site_by_slug(slug) do
-          nil ->
-            conn
-            |> send_resp(404, "site not found")
-            |> halt()
-
-          site ->
-            assign(conn, :current_site, site)
+          nil -> SiteNotFound.send(conn)
+          site -> Plug.Conn.assign(conn, :current_site, site)
         end
     end
   end
 
   defp extract_subdomain(host) when is_binary(host) do
+    hosts = app_hosts()
+
     cond do
-      host in @app_hosts ->
+      host in hosts ->
         nil
 
       true ->
         # `foo.lvh.me` -> "foo"; `bar.baz.ledger.local` -> "bar.baz" (we treat
         # everything left of the registered host as the subdomain).
-        app_host = matching_app_host(host)
+        app_host = Enum.find(hosts, &String.ends_with?(host, "." <> &1))
 
         if app_host do
           host
@@ -60,7 +55,7 @@ defmodule LedgerWeb.Plugs.Subdomain do
 
   defp extract_subdomain(_), do: nil
 
-  defp matching_app_host(host) do
-    Enum.find(@app_hosts, fn h -> String.ends_with?(host, "." <> h) end)
+  defp app_hosts do
+    Application.get_env(:ledger, :app_hosts, ~w(ledger.local lvh.me localhost 127.0.0.1))
   end
 end
