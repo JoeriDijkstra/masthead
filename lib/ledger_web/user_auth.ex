@@ -19,7 +19,7 @@ defmodule LedgerWeb.UserAuth do
     |> put_session(@session_key, user.id)
     |> put_session(:live_socket_id, "users_sessions:#{user.id}")
     |> maybe_put_flash(params)
-    |> redirect(to: return_to || "/admin")
+    |> redirect(to: return_to || "/sites")
   end
 
   def log_out_user(conn) do
