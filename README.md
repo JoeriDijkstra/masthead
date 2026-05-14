@@ -35,8 +35,8 @@ instructions below to self-host.
   (`/`, `/posts/:slug`, `/:slug`); `LedgerWeb.Router` serves the admin
   and marketing surface on the bare app host.
 - Object storage is pluggable via `Ledger.Storage.Adapter`. Ships with a
-  local-disk adapter (dev) and an S3-compatible adapter (prod —
-  tested against [Tigris](https://www.tigrisdata.com)).
+  local-disk adapter for development and an S3-compatible adapter for
+  production (works with any S3-compatible provider).
 
 ## Run it locally
 
@@ -51,7 +51,7 @@ mix phx.server
 Open:
 
 - `http://localhost:4000` — admin and marketing pages
-- `http://joeri.lvh.me:4000` — seeded example site
+- `http://admin.lvh.me:4000` — seeded example site
 
 `*.lvh.me` is a public DNS record that resolves to `127.0.0.1`, so
 subdomain-based tenancy works in dev without `/etc/hosts` edits.
@@ -59,7 +59,7 @@ subdomain-based tenancy works in dev without `/etc/hosts` edits.
 Default seeded credentials:
 
 ```
-email:    joeri@example.com
+email:    admin@example.com
 password: password1234
 ```
 
@@ -87,7 +87,7 @@ the configured bucket and public URLs are generated as
 | Var | Example |
 |---|---|
 | `BUCKET_NAME` | `your-bucket-name` |
-| `AWS_ENDPOINT_URL_S3` | `https://fly.storage.tigris.dev` |
+| `AWS_ENDPOINT_URL_S3` | `https://s3.your-provider.example` |
 | `AWS_REGION` | `auto` |
 | `AWS_ACCESS_KEY_ID` | _from your storage provider_ |
 | `AWS_SECRET_ACCESS_KEY` | _from your storage provider_ |
@@ -97,25 +97,19 @@ or per-object ACL) for image embeds to resolve in browsers.
 
 ## Deploy
 
-Quick summary for [Fly.io](https://fly.io) with Tigris object storage:
+Ships as a standard Phoenix release. The general shape:
 
-```bash
-fly launch                                      # detects Phoenix
-fly postgres create && fly postgres attach ...  # provision DB
-fly storage create                              # provision Tigris bucket
-fly secrets set \
-  PHX_HOST=your-domain.com \
-  APP_HOSTS=your-domain.com \
-  SECRET_KEY_BASE=$(mix phx.gen.secret)
-fly certs add your-domain.com
-fly certs add "*.your-domain.com"               # wildcard for subdomains
-# Add the DNS records Fly prints, then:
-fly deploy
-```
+1. Provision a Postgres database and an S3-compatible bucket (optional —
+   omit if you're fine writing uploads to local disk).
+2. Set the required environment variables (see above).
+3. Build a release with `mix phx.gen.release` + `mix release`, or
+   deploy via your platform's Phoenix-aware tooling.
+4. Configure wildcard DNS (`*.your-domain.com`) and wildcard TLS for
+   subdomain-based site routing.
 
-Set bucket access to public in the Tigris dashboard, or apply a public
-bucket policy. Wildcard TLS issuance via Let's Encrypt requires the
-DNS-01 challenge — Fly prints the TXT record to add at your registrar.
+Wildcard TLS issuance via Let's Encrypt requires the DNS-01 challenge,
+since HTTP-01 doesn't support wildcards. Most modern hosting providers
+(or a Caddy / Traefik reverse proxy) handle this automatically.
 
 ## Project layout
 

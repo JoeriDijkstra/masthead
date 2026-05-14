@@ -2,7 +2,7 @@ defmodule Ledger.Sites.Site do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @reserved_slugs ~w(www admin api app dashboard login signup logout auth public assets static help docs sites new)
+  @reserved_slugs ~w(www api app dashboard login signup logout auth public assets static help docs sites new)
 
   schema "sites" do
     field :slug, :string

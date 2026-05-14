@@ -4,20 +4,20 @@ alias Ledger.Content
 
 # Demo user
 {:ok, user} =
-  case Accounts.get_user_by_email("joeri@example.com") do
-    nil -> Accounts.register_user(%{"email" => "joeri@example.com", "password" => "password1234"})
+  case Accounts.get_user_by_email("admin@example.com") do
+    nil -> Accounts.register_user(%{"email" => "admin@example.com", "password" => "password1234"})
     existing -> {:ok, existing}
   end
 
 # Demo site
 {:ok, site} =
-  case Sites.get_site_by_slug("joeri") do
+  case Sites.get_site_by_slug("admin") do
     nil ->
       Sites.create_site(%{
-        "slug" => "joeri",
-        "name" => "Joeri's Notebook",
-        "title" => "Joeri's Notebook",
-        "description" => "Notes on building things in Elixir, distributed systems, and the messy middle of company-building.",
+        "slug" => "admin",
+        "name" => "Example Site",
+        "title" => "Example Site",
+        "description" => "A placeholder site seeded with Ledger. Use it to explore the platform — edit, publish, or delete anything.",
         "owner_id" => user.id
       })
 
@@ -30,72 +30,61 @@ case Content.list_posts(site.id) do
   [] ->
     posts = [
       %{
-        "title" => "Hello from Ledger",
-        "excerpt" => "First post on Ledger — what it is, why it exists, and what's intentionally missing.",
+        "title" => "Welcome to your new site",
+        "excerpt" => "A short tour of what Ledger lets you publish and how to get started.",
         "body" => """
         ## Welcome
 
-        This is the first post on **Ledger**, a minimal multi-tenant blogging platform
-        I built to scratch my own itch. The whole thing is a few thousand lines of
-        Phoenix + LiveView and it deploys as a single OTP release.
+        This is the first post on your new Ledger site. You can edit it,
+        unpublish it, or delete it from the admin dashboard.
 
-        ### What it does
+        ### What you can publish
 
-        - Each user can create one or more *sites*
-        - Each site is served on its own subdomain (`<slug>.lvh.me` in dev)
-        - Posts and pages are written in Markdown
-        - Themes are Elixir modules — no admin theme editor, on purpose
+        - **Posts** — dated entries that show up in the post list. Best for
+          articles, updates, and announcements.
+        - **Pages** — evergreen content like *About* or *Contact* that
+          appears in the site navigation.
+        - **Blog pages** — a page that renders the post list. Set it as the
+          homepage to make your post archive the front door of the site.
 
-        ### What it deliberately doesn't do
+        ### Where to go next
 
-        - No WYSIWYG editor
-        - No plugin system
-        - No analytics dashboard
-        - No team accounts (yet)
-        - No custom domains (yet)
-
-        The goal is to keep the codebase small enough that any single person can
-        read it in an afternoon and understand the whole thing.
-
-        > Software grows by accretion. Removing things is the work.
+        Open the admin dashboard, switch to the **Posts** tab, and write
+        your first piece. You can use Markdown or paste raw HTML — both
+        are sanitized before they reach your readers.
         """,
         "published" => true
       },
       %{
-        "title" => "Why subdomains, not paths",
-        "excerpt" => "A note on why each Ledger site lives at its own subdomain instead of `/users/joeri/posts/...`.",
+        "title" => "Writing in Markdown",
+        "excerpt" => "Markdown gives you headings, lists, links, and code without leaving the keyboard.",
         "body" => """
-        Multi-tenant SaaS apps tend to split into two camps:
+        Markdown is a plain-text shorthand for the common structural
+        elements of writing online. Ledger uses it as the default editor
+        because it gets out of the way.
 
-        1. **Path-based tenancy:** `app.com/u/joeri/posts/hello`
-        2. **Subdomain-based tenancy:** `joeri.app.com/posts/hello`
+        ### What you get for free
 
-        Ledger picks subdomains. Here's why.
+        - Headings via `#`, `##`, `###`
+        - **Bold** with `**bold**` and *italic* with `*italic*`
+        - Lists, both bulleted and 1. numbered
+        - Inline `code` and fenced code blocks
+        - Links like [this one](https://example.com)
+        - Block quotes and horizontal rules
 
-        ### Identity belongs in the host
+        > Markdown was designed to read naturally as plain text — even
+        > without a renderer in front of it.
 
-        A site is a thing in the world. It has its own brand, its own home, its
-        own audience. Putting `joeri/` in a URL path makes every visitor a tenant
-        of the larger app. Putting it in the subdomain makes the site feel like
-        the destination.
-
-        ### Custom domains become a config flip
-
-        Once you're serving by `Host:` header, custom domains (`blog.joeri.dev`)
-        are just another row in the `sites` table mapping host → site_id. With
-        path-based tenancy you'd have to rewrite every link.
-
-        ### The cost
-
-        Subdomains need wildcard DNS and HTTPS. In dev you get `*.lvh.me` for
-        free. In prod, Let's Encrypt + a wildcard cert handles it.
+        If you need anything Markdown can't express — tables with custom
+        classes, embedded video, complex layouts — switch the post format
+        to **HTML** when you create it. The output is sanitized either way.
         """,
         "published" => true
       },
       %{
-        "title" => "Draft: what's next",
-        "excerpt" => "Drafts are hidden from public listings.",
-        "body" => "This is a draft. It shouldn't show up on the homepage of the site.",
+        "title" => "Draft: not visible yet",
+        "excerpt" => "Drafts are hidden from public listings until you publish them.",
+        "body" => "This post is a draft. It doesn't appear on the public site until you publish it from the admin dashboard.",
         "published" => false
       }
     ]
@@ -111,13 +100,10 @@ case Content.list_posts(site.id) do
         "body" => """
         ## About this site
 
-        This is the example blog seeded with Ledger. It exists so I have something
-        concrete to point at when I tell people what Ledger is.
-
-        I'm **Joeri** — Elixir/Phoenix developer based in the Netherlands, currently
-        exploring B2B SaaS as a solo founder.
-
-        Find me at [eyra.co](https://eyra.co).
+        This is the placeholder *About* page for the example site seeded
+        with Ledger. Edit the body, change the slug, or delete it — it's
+        here to show that a published page appears automatically in the
+        site navigation.
         """,
         "published" => true
       })
@@ -129,7 +115,7 @@ end
 IO.puts("""
 
 Seeded:
-  user:  joeri@example.com / password1234
-  site:  http://joeri.lvh.me:4000
-  admin: http://localhost:4000/admin
+  user:  admin@example.com / password1234
+  site:  http://admin.lvh.me:4000
+  admin: http://localhost:4000/sites
 """)
