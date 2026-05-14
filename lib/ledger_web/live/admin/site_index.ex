@@ -6,7 +6,7 @@ defmodule LedgerWeb.AdminLive.SiteIndex do
   @impl true
   def mount(_params, _session, socket) do
     sites = Sites.list_sites_for_user(socket.assigns.current_user.id)
-    {:ok, assign(socket, sites: sites, page_title: "Your sites")}
+    {:ok, assign(socket, sites: sites, page_title: "Your sites", host: site_host())}
   end
 
   @impl true
@@ -21,7 +21,7 @@ defmodule LedgerWeb.AdminLive.SiteIndex do
         <li :for={s <- @sites}>
           <.link navigate={~p"/#{s.slug}"}>
             <strong>{s.name}</strong>
-            <span class="muted">{s.slug}.lvh.me</span>
+            <span class="muted">{s.slug}.{@host}</span>
           </.link>
         </li>
       </ul>
@@ -32,5 +32,22 @@ defmodule LedgerWeb.AdminLive.SiteIndex do
       </p>
     </.shell>
     """
+  end
+
+  defp site_host do
+    cfg = Application.get_env(:ledger, :site_url, [])
+    host = Keyword.get(cfg, :host, "lvh.me")
+    port = Keyword.get(cfg, :port)
+    scheme = Keyword.get(cfg, :scheme, "http")
+
+    suffix =
+      cond do
+        is_nil(port) -> ""
+        scheme == "http" and port == 80 -> ""
+        scheme == "https" and port == 443 -> ""
+        true -> ":#{port}"
+      end
+
+    "#{host}#{suffix}"
   end
 end
