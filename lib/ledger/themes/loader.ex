@@ -52,16 +52,22 @@ defmodule Ledger.Themes.Loader do
   Read a theme from its source root without consulting the cache.
   Used by the seed task to compute manifest+version before deciding
   whether to upsert, and by `fetch!/1` on cache miss.
+
+  Built-ins are read from `priv/themes/<slug>/` via the filesystem.
+  Uploaded themes are read through `Ledger.Storage.read/1`, which routes
+  to whichever adapter is configured (local disk or S3). This is the
+  cold-cache path — once an entry lands in `:persistent_term`, the
+  Renderer never touches storage again.
   """
   @spec read_from_source!(Theme.t()) :: entry()
   def read_from_source!(%Theme{source: "built_in", storage_path: path} = theme) do
-    root = Path.join([:code.priv_dir(:ledger) |> to_string(), path])
-    read_root!(theme, root, asset_base_for_built_in(path))
+    reader = priv_reader(path)
+    read_with(theme, reader, asset_base_for(path))
   end
 
   def read_from_source!(%Theme{source: "uploaded", storage_path: path} = theme) do
-    root = Path.join(Ledger.Storage.Local.root_path(), path)
-    read_root!(theme, root, asset_base_for_uploaded(path))
+    reader = storage_reader(path)
+    read_with(theme, reader, asset_base_for(path))
   end
 
   @doc """
@@ -76,21 +82,37 @@ defmodule Ledger.Themes.Loader do
         }
   def read_built_in_source!(slug) when is_binary(slug) do
     storage_path = Path.join("themes", slug)
-    root = Path.join([:code.priv_dir(:ledger) |> to_string(), storage_path])
-
-    manifest = read_manifest!(root)
-    templates = read_templates!(root)
-    css = read_css!(root)
+    reader = priv_reader(storage_path)
 
     %{
-      manifest: manifest,
-      templates: templates,
-      css: css,
+      manifest: read_manifest!(reader),
+      templates: read_templates!(reader),
+      css: read_css!(reader),
       storage_path: storage_path
     }
   end
 
   # ---- internal ----
+
+  # A reader is `(relative_path :: String.t()) -> {:ok, binary} | {:error, term}`.
+  # We pass it around so file-reading code can be source-agnostic — priv
+  # disk for built-ins, Storage adapter (local or S3) for uploads.
+
+  defp priv_reader(storage_path) do
+    root = Path.join([:code.priv_dir(:ledger) |> to_string(), storage_path])
+
+    fn rel ->
+      case File.read(Path.join(root, rel)) do
+        {:ok, body} -> {:ok, body}
+        {:error, :enoent} -> {:error, :not_found}
+        {:error, _} = err -> err
+      end
+    end
+  end
+
+  defp storage_reader(storage_path) do
+    fn rel -> Ledger.Storage.read(Path.join(storage_path, rel)) end
+  end
 
   defp load_and_cache!(theme) do
     entry = read_from_source!(theme)
@@ -98,66 +120,52 @@ defmodule Ledger.Themes.Loader do
     entry
   end
 
-  defp read_root!(%Theme{} = theme, root, asset_base) do
-    manifest = read_manifest!(root)
-    templates = read_templates!(root)
-    css = read_css!(root)
-
+  defp read_with(%Theme{} = theme, reader, asset_base) do
     %{
       theme: theme,
-      manifest: manifest,
-      templates: templates,
-      css: css,
+      manifest: read_manifest!(reader),
+      templates: read_templates!(reader),
+      css: read_css!(reader),
       asset_base: asset_base
     }
   end
 
-  defp read_manifest!(root) do
-    path = Path.join(root, "manifest.json")
-
-    case File.read(path) do
+  defp read_manifest!(reader) do
+    case reader.("manifest.json") do
       {:ok, body} ->
         case Manifest.parse(body) do
           {:ok, manifest} -> manifest
-          {:error, errors} -> raise "invalid manifest at #{path}: #{Enum.join(errors, ", ")}"
+          {:error, errors} -> raise "invalid manifest: #{Enum.join(errors, ", ")}"
         end
 
       {:error, reason} ->
-        raise "could not read manifest at #{path}: #{:file.format_error(reason)}"
+        raise "could not read manifest.json: #{inspect(reason)}"
     end
   end
 
-  defp read_templates!(root) do
+  defp read_templates!(reader) do
     Map.new(@template_names, fn name ->
-      path = Path.join([root, "templates", name <> ".liquid"])
+      rel = "templates/" <> name <> ".liquid"
 
-      case File.read(path) do
+      case reader.(rel) do
         {:ok, body} ->
           case Sandbox.parse(body) do
             {:ok, template} -> {String.to_atom(name), template}
-            {:error, err} -> raise "could not parse #{path}: #{inspect(err)}"
+            {:error, err} -> raise "could not parse #{rel}: #{inspect(err)}"
           end
 
         {:error, reason} ->
-          raise "missing template #{path}: #{:file.format_error(reason)}"
+          raise "missing template #{rel}: #{inspect(reason)}"
       end
     end)
   end
 
-  defp read_css!(root) do
-    path = Path.join(root, "theme.css")
-
-    case File.read(path) do
+  defp read_css!(reader) do
+    case reader.("theme.css") do
       {:ok, body} -> body
-      {:error, reason} -> raise "missing theme.css at #{path}: #{:file.format_error(reason)}"
+      {:error, reason} -> raise "missing theme.css: #{inspect(reason)}"
     end
   end
 
-  # Built-in assets are served from priv via the same `/uploads/themes/...`
-  # mount used for uploaded themes. We'll wire the priv mount in Phase 4
-  # alongside the upload pipeline. For now, return the placeholder path —
-  # nothing references it in the v1 built-in templates.
-  defp asset_base_for_built_in(storage_path), do: "/uploads/" <> storage_path <> "/assets"
-
-  defp asset_base_for_uploaded(storage_path), do: "/uploads/" <> storage_path <> "/assets"
+  defp asset_base_for(storage_path), do: "/uploads/" <> storage_path <> "/assets"
 end

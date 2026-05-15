@@ -92,7 +92,11 @@ defmodule Ledger.Themes.Renderer do
     inner_template = Map.fetch!(entry.templates, target)
     layout_template = Map.fetch!(entry.templates, :layout)
 
-    inner_context = Map.merge(base_context, target_assigns)
+    inner_context =
+      base_context
+      |> Map.merge(target_assigns)
+      |> compose_page_metadata(entry.manifest)
+
     {:ok, inner_iodata, _errs} = Sandbox.render(inner_template, inner_context)
     inner_html = IO.iodata_to_binary(inner_iodata)
 
@@ -101,6 +105,19 @@ defmodule Ledger.Themes.Renderer do
 
     IO.iodata_to_binary(layout_iodata)
   end
+
+  # When this render target carries a `page`, replace its raw `metadata`
+  # override map with the effective merge against the manifest schema, so
+  # templates can read `page.metadata.<key>` and always see a value (the
+  # manifest default if the page has no override). Unknown keys on the
+  # page survive — theme-switch resilience comes from the manifest layer.
+  defp compose_page_metadata(%{"page" => %{} = page} = context, manifest) do
+    raw = Map.get(page, "metadata", %{})
+    effective = Manifest.effective_metadata(manifest, raw)
+    Map.put(context, "page", Map.put(page, "metadata", effective))
+  end
+
+  defp compose_page_metadata(context, _manifest), do: context
 
   defp resolve_theme(%Ledger.Sites.Site{theme_id: id}) when is_integer(id) do
     Themes.get_theme!(id)
