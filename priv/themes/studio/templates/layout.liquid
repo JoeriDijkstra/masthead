@@ -13,22 +13,24 @@
     </style>
   </head>
   <body>
-    <header class="site-header">
-      <div class="container nav">
-        <a class="brand" href="/">
-          <span class="brand-mark">&#9679;</span>
-          <span class="brand-name">{{ site.name | escape }}</span>
-        </a>
-        {% if pages != empty %}
-          <nav class="primary-nav">
-            {% for p in pages %}<a href="{{ p.url }}">{{ p.title | escape }}</a>{% endfor %}
-          </nav>
-        {% endif %}
-      </div>
-    </header>
+    {% unless page.metadata.show_navigation == false %}
+      <header class="site-header">
+        <div class="container nav">
+          <a class="brand" href="/">
+            <span class="brand-mark">&#9679;</span>
+            <span class="brand-name">{{ site.name | escape }}</span>
+          </a>
+          {% if pages != empty %}
+            <nav class="primary-nav">
+              {% for p in pages %}<a href="{{ p.url }}">{{ p.title | escape }}</a>{% endfor %}
+            </nav>
+          {% endif %}
+        </div>
+      </header>
+    {% endunless %}
 
     <main class="content">
-      <div class="container">
+      <div class="container{% if page.metadata.layout == "wide" %} wide{% endif %}">
         {{ content }}
       </div>
     </main>

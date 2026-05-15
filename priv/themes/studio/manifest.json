@@ -1,7 +1,7 @@
 {
   "name": "Studio",
   "slug": "studio",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Ledger",
   "description": "Editorial / blue accent. Built for long-form reading.",
   "tokens": [
@@ -16,6 +16,23 @@
       "label": "Content width",
       "type": "length",
       "default": "880px"
+    }
+  ],
+  "metadata": [
+    {
+      "key": "layout",
+      "label": "Page layout",
+      "type": "select",
+      "options": ["contained", "wide"],
+      "default": "contained",
+      "description": "Use 'wide' to drop the centered column on this page."
+    },
+    {
+      "key": "show_navigation",
+      "label": "Show site navigation",
+      "type": "boolean",
+      "default": true,
+      "description": "Untick to hide the sticky header on this page only."
     }
   ]
 }

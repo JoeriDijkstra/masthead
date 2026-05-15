@@ -17,6 +17,24 @@ img { max-width: 100%; height: auto; }
 
 /* Content is full-width, zero padding — your HTML defines its own layout */
 .content { width: 100%; }
+/* Opt-in centered column via `metadata.layout = "contained"`. */
+.content.contained { max-width: 720px; margin: 0 auto; padding: 0 1.25rem; }
+
+/* Optional top nav, shown only when `metadata.show_navigation = true`.
+   Kept deliberately spartan to match Blank's no-chrome aesthetic. */
+.site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid #eee;
+  font-size: 0.92rem;
+}
+.site-nav .brand { font-weight: 600; color: #111; text-decoration: none; }
+.site-nav ul { list-style: none; display: flex; gap: 1rem; margin: 0; padding: 0; }
+.site-nav a { color: #555; text-decoration: none; }
+.site-nav a:hover { color: #111; }
 
 /* Modest styling for the built-in fallback views (index / post / 404 /
    blog) so they're readable without looking unstyled. HTML and Markdown
