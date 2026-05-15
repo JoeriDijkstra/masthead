@@ -902,8 +902,8 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 }
 
 /* Short editor variant (used by blog page description) */
-.editor.editor-short .markdown-editor { min-height: 180px; }
-.editor.editor-short .preview { min-height: 180px; }
+.editor.editor-short .markdown-editor { min-height: 180px; flex: 1; }
+.editor.editor-short .preview { min-height: 180px; flex: 1; }
 
 /* Preview pane for blog page: show description + divider noting post list */
 .blog-preview .blog-preview-divider {
@@ -993,12 +993,81 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 }
 .editor-pane { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
 .editor-label { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.02em; color: var(--muted); text-transform: uppercase; }
-.markdown-editor { min-height: 560px; font-family: ui-monospace, Menlo, monospace; }
-.preview { background: var(--bg); border: 1px solid var(--rule); border-radius: 8px; padding: 1.25rem 1.5rem; min-height: 560px; overflow: auto; }
-.prose h1, .prose h2, .prose h3 { margin-top: 1rem; }
-.prose pre { background: #f4f4f5; padding: 0.7rem; border-radius: 4px; overflow-x: auto; }
-.prose img { max-width: 100%; }
-.prose blockquote { border-left: 3px solid var(--rule); padding-left: 0.75rem; color: var(--muted); margin-left: 0; }
+.markdown-editor {
+  flex: 1;
+  min-height: 560px;
+  font-family: ui-monospace, Menlo, monospace;
+  resize: vertical;
+}
+.preview {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  min-height: 560px;
+  overflow: auto;
+}
+/* Prose — preview pane in the post/page editor. Tailwind preflight resets
+   default heading/paragraph styles to inherit, so we restore the typical
+   "rendered Markdown" look explicitly here. */
+.prose { font-size: 0.95rem; line-height: 1.6; color: var(--fg); }
+.prose > *:first-child { margin-top: 0; }
+.prose > *:last-child { margin-bottom: 0; }
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  margin: 1.6em 0 0.6em;
+}
+.prose h1 { font-size: 1.7em; }
+.prose h2 { font-size: 1.4em; }
+.prose h3 { font-size: 1.2em; }
+.prose h4 { font-size: 1.05em; }
+.prose h5, .prose h6 { font-size: 1em; color: var(--muted); }
+.prose p { margin: 0 0 1em; }
+.prose ul, .prose ol { margin: 0 0 1em; padding-left: 1.4em; }
+.prose ul { list-style: disc; }
+.prose ol { list-style: decimal; }
+.prose li { margin-bottom: 0.3em; }
+.prose li > p { margin-bottom: 0.3em; }
+.prose a { color: var(--accent); text-decoration: underline; }
+.prose a:hover { color: var(--accent-hover); }
+.prose strong { font-weight: 600; }
+.prose em { font-style: italic; }
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 1.5em 0; }
+.prose code {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.88em;
+  background: #f1f5f9;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+}
+.prose pre {
+  background: #f1f5f9;
+  color: var(--fg);
+  border: 1px solid var(--rule);
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0 0 1em;
+  font-size: 0.86em;
+  line-height: 1.55;
+}
+.prose pre code { background: transparent; padding: 0; color: inherit; font-size: 1em; }
+.prose img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+.prose blockquote {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  padding: 0.4em 0.9em;
+  margin: 0 0 1em;
+  border-radius: 0 6px 6px 0;
+  color: var(--fg-soft);
+}
+.prose blockquote p:last-child { margin-bottom: 0; }
+.prose table { border-collapse: collapse; margin: 0 0 1em; }
+.prose th, .prose td { border: 1px solid var(--rule); padding: 0.4em 0.7em; }
+.prose th { background: var(--bg-soft); font-weight: 600; text-align: left; }
 
 @media (max-width: 800px) {
   .editor { grid-template-columns: 1fr; }

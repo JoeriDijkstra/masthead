@@ -10,7 +10,7 @@ defmodule LedgerWeb.AdminLive.SiteNew do
 
     {:ok,
      socket
-     |> assign(page_title: "New site", host_example: host_example())
+     |> assign(page_title: "New site", host_example: host_example(), show_errors: false)
      |> assign_form(changeset)}
   end
 
@@ -49,10 +49,10 @@ defmodule LedgerWeb.AdminLive.SiteNew do
         {:noreply,
          socket
          |> put_flash(:info, "Site #{site.name} created.")
-         |> push_navigate(to: ~p"/#{site.id}")}
+         |> push_navigate(to: ~p"/#{site.slug}")}
 
       {:error, changeset} ->
-        {:noreply, assign_form(socket, changeset)}
+        {:noreply, socket |> assign(show_errors: true) |> assign_form(changeset)}
     end
   end
 
@@ -65,7 +65,7 @@ defmodule LedgerWeb.AdminLive.SiteNew do
     ~H"""
     <.shell title="Create a new site" current_user={@current_user} flash={@flash} active={:new_site}>
       <.form for={@form} phx-change="validate" phx-submit="save" class="form">
-        <.error_list changeset={@changeset} />
+        <.error_list changeset={@changeset} show={@show_errors} />
 
         <label>
           Name

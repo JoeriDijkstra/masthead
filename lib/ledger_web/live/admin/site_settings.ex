@@ -15,7 +15,8 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
      |> assign(
        page_title: "Settings — #{site.name}",
        themes: Themes.names(),
-       published_pages: Content.list_published_pages(site.id)
+       published_pages: Content.list_published_pages(site.id),
+       show_errors: false
      )
      |> assign_form(changeset)}
   end
@@ -43,7 +44,7 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
          |> assign_form(Sites.change_settings(site))}
 
       {:error, changeset} ->
-        {:noreply, assign_form(socket, changeset)}
+        {:noreply, socket |> assign(show_errors: true) |> assign_form(changeset)}
     end
   end
 
@@ -57,7 +58,7 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
     <.shell title="Settings" site={@site} current_user={@current_user} flash={@flash} active={:settings}>
       <div class="wizard">
         <.form for={@form} phx-change="validate" phx-submit="save" class="form settings-form">
-          <.error_list changeset={@changeset} />
+          <.error_list changeset={@changeset} show={@show_errors} />
 
           <div class="settings-section">
             <header class="settings-section-head">

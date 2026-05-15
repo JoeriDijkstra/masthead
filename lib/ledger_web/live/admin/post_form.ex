@@ -28,7 +28,8 @@ defmodule LedgerWeb.AdminLive.PostForm do
        draft: draft,
        page_title: page_title,
        preview_html: render_preview(draft),
-       slug_touched: post != nil
+       slug_touched: post != nil,
+       show_errors: false
      )
      |> assign_changeset(draft)}
   end
@@ -67,7 +68,7 @@ defmodule LedgerWeb.AdminLive.PostForm do
     else
       {:noreply,
        socket
-       |> assign(draft: draft)
+       |> assign(draft: draft, show_errors: true)
        |> assign_changeset(draft, validate: true)}
     end
   end
@@ -137,7 +138,12 @@ defmodule LedgerWeb.AdminLive.PostForm do
          |> push_navigate(to: ~p"/#{socket.assigns.site.slug}/posts/#{post.id}/edit")}
 
       {:error, changeset} ->
-        {:noreply, assign(socket, form: to_form(changeset, as: :post), changeset: changeset)}
+        {:noreply,
+         assign(socket,
+           form: to_form(changeset, as: :post),
+           changeset: changeset,
+           show_errors: true
+         )}
     end
   end
 
@@ -225,7 +231,8 @@ defmodule LedgerWeb.AdminLive.PostForm do
               changeset={@changeset}
               format={@draft["format"]}
               editing={@post != nil}
-              site_slug={@site.slug} />
+              site_slug={@site.slug}
+              show_errors={@show_errors} />
           <% 3 -> %>
             <.content_step
               form={@form}
@@ -233,7 +240,8 @@ defmodule LedgerWeb.AdminLive.PostForm do
               format={@draft["format"]}
               preview_html={@preview_html}
               editing={@post != nil}
-              site_slug={@site.slug} />
+              site_slug={@site.slug}
+              show_errors={@show_errors} />
         <% end %>
       </div>
     </.shell>
@@ -290,12 +298,13 @@ defmodule LedgerWeb.AdminLive.PostForm do
   attr :format, :string, required: true
   attr :editing, :boolean, default: false
   attr :site_slug, :string, required: true
+  attr :show_errors, :boolean, default: false
   defp meta_step(assigns) do
     ~H"""
     <.stepper step={2} />
 
     <form id="meta-form" phx-submit="next_meta" phx-change="validate" class="form">
-      <.error_list changeset={@changeset} />
+      <.error_list changeset={@changeset} show={@show_errors} />
 
       <label>
         Title
@@ -330,12 +339,13 @@ defmodule LedgerWeb.AdminLive.PostForm do
   attr :preview_html, :string, required: true
   attr :editing, :boolean, default: false
   attr :site_slug, :string, required: true
+  attr :show_errors, :boolean, default: false
   defp content_step(assigns) do
     ~H"""
     <.stepper step={3} />
 
     <form id="content-form" phx-submit="save" phx-change="validate" class="form post-form">
-      <.error_list changeset={@changeset} />
+      <.error_list changeset={@changeset} show={@show_errors} />
 
       <input type="hidden" name="post[title]" value={@form[:title].value} />
       <input type="hidden" name="post[slug]" value={@form[:slug].value} />
@@ -372,10 +382,8 @@ defmodule LedgerWeb.AdminLive.PostForm do
     ~H"""
     <div class="editor">
       <div class="editor-pane">
-        <label class="editor-label">
-          Body ({format_label(@format)})
-          <textarea name="post[body]" rows="20" phx-debounce="200" class="markdown-editor">{@form[:body].value}</textarea>
-        </label>
+        <label for="post-body-textarea" class="editor-label">Body ({format_label(@format)})</label>
+        <textarea id="post-body-textarea" name="post[body]" rows="20" phx-debounce="200" class="markdown-editor">{@form[:body].value}</textarea>
       </div>
       <div class="editor-pane">
         <div class="editor-label">Preview</div>

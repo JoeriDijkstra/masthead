@@ -194,10 +194,11 @@ defmodule LedgerWeb.AdminLive.Components do
   end
 
   attr :changeset, :map, required: true
+  attr :show, :boolean, default: false
 
   def error_list(assigns) do
     ~H"""
-    <ul :if={@changeset.errors != []} class="errors">
+    <ul :if={@show and @changeset.errors != []} class="errors">
       <li :for={{field, {msg, _}} <- @changeset.errors}>{field}: {msg}</li>
     </ul>
     """
