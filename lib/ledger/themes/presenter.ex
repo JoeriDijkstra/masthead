@@ -42,7 +42,11 @@ defmodule Ledger.Themes.Presenter do
       "title" => pg.title,
       "slug" => pg.slug,
       "format" => pg.format,
-      "url" => "/" <> pg.slug
+      "url" => "/" <> pg.slug,
+      # Raw override map. The Renderer merges manifest defaults on top of
+      # this before exposing it to templates, so theme authors can read
+      # `page.metadata.<key>` and always get the effective value.
+      "metadata" => pg.metadata || %{}
     }
   end
 

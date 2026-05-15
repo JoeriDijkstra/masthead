@@ -3,7 +3,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
   on_mount {LedgerWeb.AdminLive.Hooks, :load_site}
 
   import LedgerWeb.AdminLive.Components
-  alias Ledger.Content
+  alias Ledger.{Content, Themes}
   alias Ledger.Content.Page
 
   @impl true
@@ -18,6 +18,8 @@ defmodule LedgerWeb.AdminLive.PageForm do
           {page, page_to_draft(page), "Edit: #{page.title}", 3}
       end
 
+    metadata_fields = metadata_fields_for_site(socket.assigns.site)
+
     {:ok,
      socket
      |> assign(
@@ -27,10 +29,44 @@ defmodule LedgerWeb.AdminLive.PageForm do
        page_title: page_title,
        preview_html: render_preview(draft),
        slug_touched: page != nil,
-       show_errors: false
+       show_errors: false,
+       metadata_fields: metadata_fields
      )
      |> assign_changeset(draft)}
   end
+
+  # Pull the metadata schema off the site's current theme. Returns a list
+  # of `%{key, label, type, default, description, options}` maps, or [] if
+  # the theme declares none.
+  defp metadata_fields_for_site(%Ledger.Sites.Site{theme_id: id}) when is_integer(id) do
+    case Themes.get_theme(id) do
+      nil -> []
+      theme -> extract_metadata_fields(theme.manifest)
+    end
+  end
+
+  defp metadata_fields_for_site(_), do: []
+
+  defp extract_metadata_fields(%{} = manifest) do
+    list = Map.get(manifest, "metadata", Map.get(manifest, :metadata, []))
+
+    if is_list(list) do
+      Enum.map(list, fn f ->
+        %{
+          key: f["key"] || f[:key],
+          label: f["label"] || f[:label],
+          type: f["type"] || f[:type],
+          default: f["default"] || f[:default],
+          description: f["description"] || f[:description],
+          options: f["options"] || f[:options] || []
+        }
+      end)
+    else
+      []
+    end
+  end
+
+  defp extract_metadata_fields(_), do: []
 
   @impl true
   def handle_event("choose_format", %{"format" => fmt}, socket)
@@ -166,8 +202,18 @@ defmodule LedgerWeb.AdminLive.PageForm do
       "slug" => page.slug,
       "format" => page.format,
       "body" => page.body,
-      "published" => to_string(page.published)
+      "published" => to_string(page.published),
+      "metadata" => page.metadata || %{}
     }
+  end
+
+  # The metadata input for the given field. The field's key lives at
+  # `page[metadata][<key>]` so it gets cast into the jsonb column.
+  defp metadata_value(draft, key) do
+    case Map.get(draft, "metadata") do
+      %{} = m -> Map.get(m, key) || Map.get(m, to_string(key)) || ""
+      _ -> ""
+    end
   end
 
   defp build_changeset(socket, attrs) do
@@ -234,11 +280,13 @@ defmodule LedgerWeb.AdminLive.PageForm do
             <.content_step
               form={@form}
               changeset={@changeset}
+              draft={@draft}
               format={@draft["format"]}
               preview_html={@preview_html}
               editing={@page != nil}
               site_slug={@site.slug}
               show_errors={@show_errors}
+              metadata_fields={@metadata_fields}
             />
         <% end %>
       </div>
@@ -327,11 +375,13 @@ defmodule LedgerWeb.AdminLive.PageForm do
 
   attr :form, :map, required: true
   attr :changeset, :map, required: true
+  attr :draft, :map, required: true
   attr :format, :string, required: true
   attr :preview_html, :string, required: true
   attr :editing, :boolean, default: false
   attr :site_slug, :string, required: true
   attr :show_errors, :boolean, default: false
+  attr :metadata_fields, :list, default: []
 
   defp content_step(assigns) do
     ~H"""
@@ -353,6 +403,8 @@ defmodule LedgerWeb.AdminLive.PageForm do
       <% else %>
         <.body_editor form={@form} format={@format} preview_html={@preview_html} />
       <% end %>
+
+      <.metadata_section :if={@metadata_fields != []} fields={@metadata_fields} draft={@draft} />
     </form>
 
     <div class="wizard-footer">
@@ -446,6 +498,105 @@ defmodule LedgerWeb.AdminLive.PageForm do
 
   defp format_label("html"), do: "HTML"
   defp format_label(_), do: "Markdown"
+
+  attr :fields, :list, required: true
+  attr :draft, :map, required: true
+
+  defp metadata_section(assigns) do
+    ~H"""
+    <section class="settings-section">
+      <header class="settings-section-head">
+        <h2>Page settings</h2>
+        <p>Theme-specific overrides for this page. Blank fields fall back to the theme default.</p>
+      </header>
+
+      <div class="settings-fields">
+        <.metadata_field :for={f <- @fields} field={f} value={metadata_value(@draft, f.key)} />
+      </div>
+    </section>
+    """
+  end
+
+  attr :field, :map, required: true
+  attr :value, :any, required: true
+
+  defp metadata_field(%{field: %{type: "boolean"}} = assigns) do
+    assigns = assign(assigns, :checked?, truthy?(assigns.value, assigns.field.default))
+
+    ~H"""
+    <label class="checkbox-label">
+      <input type="hidden" name={"page[metadata][" <> @field.key <> "]"} value="false" />
+      <input
+        type="checkbox"
+        name={"page[metadata][" <> @field.key <> "]"}
+        value="true"
+        checked={@checked?}
+      />
+      <span>{@field.label}</span>
+      <small :if={@field.description}>{@field.description}</small>
+    </label>
+    """
+  end
+
+  defp metadata_field(%{field: %{type: "select"}} = assigns) do
+    ~H"""
+    <label>
+      {@field.label}
+      <select name={"page[metadata][" <> @field.key <> "]"}>
+        <option
+          :for={opt <- @field.options}
+          value={opt}
+          selected={to_string(opt) == to_string((@value == "" && @field.default) || @value)}
+        >
+          {opt}
+        </option>
+      </select>
+      <small :if={@field.description}>{@field.description}</small>
+    </label>
+    """
+  end
+
+  defp metadata_field(%{field: %{type: "text"}} = assigns) do
+    ~H"""
+    <label>
+      {@field.label}
+      <textarea
+        name={"page[metadata][" <> @field.key <> "]"}
+        rows="3"
+        placeholder={to_string(@field.default || "")}
+      >{@value}</textarea>
+      <small :if={@field.description}>{@field.description}</small>
+    </label>
+    """
+  end
+
+  defp metadata_field(assigns) do
+    ~H"""
+    <label>
+      {@field.label}
+      <input
+        type={metadata_input_type(@field.type)}
+        name={"page[metadata][" <> @field.key <> "]"}
+        value={@value}
+        placeholder={to_string(@field.default || "")}
+      />
+      <small :if={@field.description}>{@field.description}</small>
+    </label>
+    """
+  end
+
+  defp metadata_input_type("color"), do: "color"
+  defp metadata_input_type("number"), do: "number"
+  defp metadata_input_type("url"), do: "url"
+  defp metadata_input_type(_), do: "text"
+
+  defp truthy?(value, default) do
+    case value do
+      v when v in [true, "true", "on", "1", 1] -> true
+      v when v in [false, "false", "0", 0, nil, ""] -> false
+      _ -> truthy?(default, false)
+    end
+  end
 
   defp publish_button_class(true), do: "btn btn-publish-toggle btn-published"
   defp publish_button_class(_), do: "btn btn-publish-toggle btn-draft"

@@ -25,12 +25,21 @@ defmodule Ledger.Themes.Manifest do
   """
 
   @valid_token_types ~w(color string length number)
+  @valid_metadata_types ~w(string text boolean color url select number)
 
   @slug_re ~r/^[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?$/
   @token_key_re ~r/^[a-z][a-z0-9_]*$/
 
   @enforce_keys [:name, :slug, :version, :tokens]
-  defstruct [:name, :slug, :version, :author, :description, tokens: []]
+  defstruct [
+    :name,
+    :slug,
+    :version,
+    :author,
+    :description,
+    tokens: [],
+    metadata: []
+  ]
 
   @type token :: %{
           key: String.t(),
@@ -39,13 +48,23 @@ defmodule Ledger.Themes.Manifest do
           default: String.t()
         }
 
+  @type metadata_field :: %{
+          key: String.t(),
+          label: String.t(),
+          type: String.t(),
+          default: term(),
+          description: String.t() | nil,
+          options: [String.t()] | nil
+        }
+
   @type t :: %__MODULE__{
           name: String.t(),
           slug: String.t(),
           version: String.t(),
           author: String.t() | nil,
           description: String.t() | nil,
-          tokens: [token()]
+          tokens: [token()],
+          metadata: [metadata_field()]
         }
 
   @doc """
@@ -76,6 +95,7 @@ defmodule Ledger.Themes.Manifest do
       |> optional_string(map, "author", 0, 100)
       |> optional_string(map, "description", 0, 500)
       |> validate_tokens(map)
+      |> validate_metadata(map)
 
     case errors do
       [] ->
@@ -85,7 +105,8 @@ defmodule Ledger.Themes.Manifest do
           version: map["version"],
           author: map["author"],
           description: map["description"],
-          tokens: normalize_tokens(Map.get(map, "tokens", []))
+          tokens: normalize_tokens(Map.get(map, "tokens", [])),
+          metadata: normalize_metadata(Map.get(map, "metadata", []))
         }
 
         {:ok, manifest}
@@ -113,6 +134,54 @@ defmodule Ledger.Themes.Manifest do
       Map.put(acc, key, value)
     end)
   end
+
+  @doc """
+  Return the merge of manifest metadata defaults with per-page overrides.
+
+  Differences from `effective_tokens/2`:
+
+    * Unknown override keys are **preserved** — the page may have been
+      authored under a different theme. Tokens disappear silently because
+      they're inert without a matching CSS variable; metadata is meant to
+      survive theme switches so the user doesn't lose data.
+    * Values are coerced to the declared type at the boundary so the
+      template sees a typed value (boolean true vs. "true", etc).
+  """
+  @spec effective_metadata(t(), map()) :: %{String.t() => term()}
+  def effective_metadata(%__MODULE__{metadata: fields}, overrides) when is_map(overrides) do
+    defaults =
+      Enum.reduce(fields, %{}, fn %{key: key, type: type, default: default}, acc ->
+        Map.put(acc, key, coerce_metadata_value(type, default))
+      end)
+
+    # Apply overrides for declared fields (with coercion). Unknown keys are
+    # passed through verbatim so theme-specific data is preserved across
+    # theme changes.
+    field_keys = Enum.map(fields, & &1.key) |> MapSet.new()
+
+    Enum.reduce(overrides, defaults, fn {k, v}, acc ->
+      if MapSet.member?(field_keys, k) do
+        type = Enum.find_value(fields, fn f -> if f.key == k, do: f.type end)
+        Map.put(acc, k, coerce_metadata_value(type, v))
+      else
+        Map.put(acc, k, v)
+      end
+    end)
+  end
+
+  defp coerce_metadata_value("boolean", v) when is_boolean(v), do: v
+  defp coerce_metadata_value("boolean", v) when v in ["true", "on", "1", 1], do: true
+  defp coerce_metadata_value("boolean", _), do: false
+  defp coerce_metadata_value("number", v) when is_number(v), do: v
+
+  defp coerce_metadata_value("number", v) when is_binary(v) do
+    case Float.parse(v) do
+      {n, ""} -> if n == trunc(n), do: trunc(n), else: n
+      _ -> v
+    end
+  end
+
+  defp coerce_metadata_value(_type, v), do: v
 
   # ---- internal validators ----
 
@@ -228,6 +297,86 @@ defmodule Ledger.Themes.Manifest do
         label: tok["label"],
         type: tok["type"],
         default: tok["default"]
+      }
+    end)
+  end
+
+  defp validate_metadata(errors, map) do
+    case Map.get(map, "metadata", []) do
+      list when is_list(list) ->
+        list
+        |> Enum.with_index()
+        |> Enum.reduce(errors, fn {field, idx}, acc ->
+          validate_metadata_field(acc, field, idx)
+        end)
+
+      _ ->
+        ["metadata: must be a list" | errors]
+    end
+  end
+
+  defp validate_metadata_field(errors, field, idx) when is_map(field) do
+    prefix = "metadata[#{idx}]"
+
+    errors =
+      case Map.get(field, "key") do
+        k when is_binary(k) ->
+          if Regex.match?(@token_key_re, k) do
+            errors
+          else
+            ["#{prefix}.key: must match #{inspect(@token_key_re.source)}" | errors]
+          end
+
+        _ ->
+          ["#{prefix}.key: is required and must be a string" | errors]
+      end
+
+    errors =
+      case Map.get(field, "label") do
+        l when is_binary(l) and l != "" -> errors
+        _ -> ["#{prefix}.label: is required and must be a non-empty string" | errors]
+      end
+
+    type = Map.get(field, "type")
+
+    errors =
+      cond do
+        type not in @valid_metadata_types ->
+          [
+            "#{prefix}.type: must be one of #{Enum.join(@valid_metadata_types, ", ")}"
+            | errors
+          ]
+
+        type == "select" and not is_list(Map.get(field, "options")) ->
+          ["#{prefix}.options: select fields require a non-empty options list" | errors]
+
+        type == "select" and Map.get(field, "options") == [] ->
+          ["#{prefix}.options: select fields require a non-empty options list" | errors]
+
+        true ->
+          errors
+      end
+
+    # default is required but its allowed shape depends on the type — we
+    # accept anything JSON-serializable and coerce at read time.
+    case Map.has_key?(field, "default") do
+      true -> errors
+      false -> ["#{prefix}.default: is required" | errors]
+    end
+  end
+
+  defp validate_metadata_field(errors, _, idx),
+    do: ["metadata[#{idx}]: must be an object" | errors]
+
+  defp normalize_metadata(list) when is_list(list) do
+    Enum.map(list, fn field ->
+      %{
+        key: field["key"],
+        label: field["label"],
+        type: field["type"],
+        default: field["default"],
+        description: field["description"],
+        options: field["options"]
       }
     end)
   end
