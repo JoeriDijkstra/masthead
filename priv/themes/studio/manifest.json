@@ -1,0 +1,21 @@
+{
+  "name": "Studio",
+  "slug": "studio",
+  "version": "1.0.0",
+  "author": "Ledger",
+  "description": "Editorial / blue accent. Built for long-form reading.",
+  "tokens": [
+    {
+      "key": "accent",
+      "label": "Accent color",
+      "type": "color",
+      "default": "#2563eb"
+    },
+    {
+      "key": "max_width",
+      "label": "Content width",
+      "type": "length",
+      "default": "880px"
+    }
+  ]
+}

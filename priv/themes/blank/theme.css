@@ -1,0 +1,43 @@
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  color: #111;
+  background: #fff;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+main { flex: 1; width: 100%; }
+a { color: #0066cc; }
+img { max-width: 100%; height: auto; }
+
+/* Content is full-width, zero padding — your HTML defines its own layout */
+.content { width: 100%; }
+
+/* Modest styling for the built-in fallback views (index / post / 404 /
+   blog) so they're readable without looking unstyled. HTML and Markdown
+   pages do not get these — they render raw inside .content. */
+.default-index, .default-post {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+.default-index ul { list-style: none; padding: 0; margin: 1.5rem 0 0; }
+.default-index li {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.default-index li time { color: #888; font-size: 0.85rem; white-space: nowrap; }
+.default-post header { margin-bottom: 1.5rem; }
+.default-post header time { color: #888; font-size: 0.9rem; }
+
+@media (max-width: 640px) {
+  .default-index, .default-post { padding: 1.5rem 1rem; }
+}

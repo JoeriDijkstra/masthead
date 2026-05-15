@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ site.title | default: site.name | escape }}</title>
+    {% if site.description != "" %}<meta name="description" content="{{ site.description | escape }}" />{% endif %}
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <style>
+      {{ theme.css }}
+      {{ site.css_overrides }}
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav">
+        <a class="brand" href="/">
+          <span class="brand-mark">&#9679;</span>
+          <span class="brand-name">{{ site.name | escape }}</span>
+        </a>
+        {% if pages != empty %}
+          <nav class="primary-nav">
+            {% for p in pages %}<a href="{{ p.url }}">{{ p.title | escape }}</a>{% endfor %}
+          </nav>
+        {% endif %}
+      </div>
+    </header>
+
+    <main class="content">
+      <div class="container">
+        {{ content }}
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <p class="muted">
+          Published with
+          <a href="https://ledger-cloud.com" target="_blank" rel="noopener">Ledger</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

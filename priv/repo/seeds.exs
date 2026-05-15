@@ -17,7 +17,8 @@ alias Ledger.Content
         "slug" => "admin",
         "name" => "Example Site",
         "title" => "Example Site",
-        "description" => "A placeholder site seeded with Ledger. Use it to explore the platform — edit, publish, or delete anything.",
+        "description" =>
+          "A placeholder site seeded with Ledger. Use it to explore the platform — edit, publish, or delete anything.",
         "owner_id" => user.id
       })
 
@@ -57,7 +58,8 @@ case Content.list_posts(site.id) do
       },
       %{
         "title" => "Writing in Markdown",
-        "excerpt" => "Markdown gives you headings, lists, links, and code without leaving the keyboard.",
+        "excerpt" =>
+          "Markdown gives you headings, lists, links, and code without leaving the keyboard.",
         "body" => """
         Markdown is a plain-text shorthand for the common structural
         elements of writing online. Ledger uses it as the default editor
@@ -84,7 +86,8 @@ case Content.list_posts(site.id) do
       %{
         "title" => "Draft: not visible yet",
         "excerpt" => "Drafts are hidden from public listings until you publish them.",
-        "body" => "This post is a draft. It doesn't appear on the public site until you publish it from the admin dashboard.",
+        "body" =>
+          "This post is a draft. It doesn't appear on the public site until you publish it from the admin dashboard.",
         "published" => false
       }
     ]

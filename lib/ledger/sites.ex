@@ -23,8 +23,25 @@ defmodule Ledger.Sites do
 
   def create_site(attrs) do
     %Site{}
-    |> Site.create_changeset(attrs)
+    |> Site.create_changeset(attrs_with_default_theme(attrs))
     |> Repo.insert()
+  end
+
+  # Every site must have a theme_id (NOT NULL). The signup wizard doesn't
+  # ask for one — sites start on the built-in "default" theme and can be
+  # changed from the settings screen.
+  defp attrs_with_default_theme(attrs) do
+    has_theme? =
+      Map.has_key?(attrs, "theme_id") or Map.has_key?(attrs, :theme_id)
+
+    if has_theme? do
+      attrs
+    else
+      case Ledger.Themes.get_built_in_by_slug("default") do
+        nil -> attrs
+        theme -> Map.put(attrs, "theme_id", theme.id)
+      end
+    end
   end
 
   def update_settings(%Site{} = site, attrs) do

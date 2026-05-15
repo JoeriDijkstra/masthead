@@ -1,0 +1,15 @@
+{
+  "name": "Default",
+  "slug": "default",
+  "version": "1.0.0",
+  "author": "Ledger",
+  "description": "Minimal, readable, opinionated about typography.",
+  "tokens": [
+    {
+      "key": "accent",
+      "label": "Accent color",
+      "type": "color",
+      "default": "#0066cc"
+    }
+  ]
+}

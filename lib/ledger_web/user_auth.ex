@@ -92,6 +92,8 @@ defmodule LedgerWeb.UserAuth do
     |> clear_session()
   end
 
-  defp maybe_put_flash(conn, %{"flash" => msg}), do: Phoenix.Controller.put_flash(conn, :info, msg)
+  defp maybe_put_flash(conn, %{"flash" => msg}),
+    do: Phoenix.Controller.put_flash(conn, :info, msg)
+
   defp maybe_put_flash(conn, _), do: conn
 end

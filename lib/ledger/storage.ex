@@ -11,10 +11,19 @@ defmodule Ledger.Storage do
   """
 
   def put(site_slug, key, binary), do: adapter().put(site_slug, key, binary)
-  def stream_into(site_slug, key, source_path), do: adapter().stream_into(site_slug, key, source_path)
+
+  def stream_into(site_slug, key, source_path),
+    do: adapter().stream_into(site_slug, key, source_path)
+
   def delete(rel), do: adapter().delete(rel)
   def rename(old_rel, new_rel), do: adapter().rename(old_rel, new_rel)
   def url(rel), do: adapter().url(rel)
+
+  @doc """
+  Read the bytes at `rel_path` from the configured adapter. Used by the
+  theme renderer to repopulate its cache on a cold miss.
+  """
+  def read(rel_path), do: adapter().read(rel_path)
 
   @doc """
   Local-disk-only helper kept on the top-level module so the Endpoint's
