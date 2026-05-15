@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ site.title | default: site.name | escape }}</title>
+    {% if site.description != "" %}<meta name="description" content="{{ site.description | escape }}" />{% endif %}
+    <style>
+      {{ theme.css }}
+      {{ site.css_overrides }}
+    </style>
+  </head>
+  <body>
+    <main class="content">
+      {{ content }}
+    </main>
+  </body>
+</html>

@@ -1797,4 +1797,135 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   .landing-nav .github-btn { padding: 0.4rem; }
 }
 
+/* Page intro paragraph — sits below the page-head title. */
+.page-intro {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  max-width: 60ch;
+  line-height: 1.55;
+}
+
+/* Generic chip — small labelled tag without the pill's leading dot. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.chip-neutral { background: var(--rule); color: var(--fg-soft, #525252); }
+.chip-accent { background: var(--accent-soft); color: var(--accent-strong); }
+
+/* Theme library grid — cards rather than a table. */
+.theme-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+.theme-grid li { display: block; }
+.theme-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  height: 100%;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  /* Extra bottom padding reserves space for the absolutely-positioned
+     delete icon so the description never overlaps it. */
+  padding: 1.1rem 1.15rem 2.7rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.theme-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--rule-strong);
+}
+.theme-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.theme-card-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+.theme-card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.theme-card-desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+/* Quiet, icon-only delete in the bottom-right of the card. Fades in
+   slightly on card hover and turns destructive-red on its own hover.
+   Disabled state (built-ins, themes owned by someone else) stays muted
+   and unresponsive. */
+.theme-card-delete {
+  position: absolute;
+  bottom: 0.6rem;
+  right: 0.6rem;
+  width: 1.85rem;
+  height: 1.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.55;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+.theme-card:hover .theme-card-delete { opacity: 1; }
+.theme-card-delete:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.theme-card-delete:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.theme-card-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+.theme-card-delete svg { width: 1.05rem; height: 1.05rem; }
+.theme-card-version {
+  /* Version numbers shouldn't get the chip's all-caps treatment — the
+     'v' prefix and digits read better as-is, with tabular numerals so
+     the right column doesn't jitter across cards. */
+  text-transform: none;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Theme upload — single-file row inside the upload modal. */
+.upload-entries .entry-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* This file is for your main application CSS */

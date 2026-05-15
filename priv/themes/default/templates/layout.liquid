@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ site.title | default: site.name | escape }}</title>
+    {% if site.description != "" %}<meta name="description" content="{{ site.description | escape }}" />{% endif %}
+    <style>
+      {{ theme.css }}
+      {{ site.css_overrides }}
+    </style>
+  </head>
+  <body>
+    <nav class="site-nav">
+      <a class="brand" href="/">{{ site.name | escape }}</a>
+      {% if pages != empty %}
+        <ul>
+          {% for p in pages %}<li><a href="{{ p.url }}">{{ p.title | escape }}</a></li>{% endfor %}
+        </ul>
+      {% endif %}
+    </nav>
+    <main>
+      {{ content }}
+    </main>
+    <footer class="site-footer">
+      <p>Published with <a href="https://ledger-cloud.com" target="_blank" rel="noopener">Ledger</a></p>
+    </footer>
+  </body>
+</html>

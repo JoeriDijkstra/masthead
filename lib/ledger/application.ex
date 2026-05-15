@@ -21,7 +21,33 @@ defmodule Ledger.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Ledger.Supervisor]
-    Supervisor.start_link(children, opts)
+
+    case Supervisor.start_link(children, opts) do
+      {:ok, sup} ->
+        seed_built_in_themes()
+        {:ok, sup}
+
+      other ->
+        other
+    end
+  end
+
+  # Built-in themes are seeded after the Repo is up but before the first
+  # public request matters. Errors are logged, not raised — a fresh boot
+  # with an out-of-date schema (e.g. between phased migrations) should
+  # still come up.
+  defp seed_built_in_themes do
+    if Code.ensure_loaded?(Ledger.Themes.Seed) and
+         function_exported?(Ledger.Themes.Seed, :run, 0) do
+      try do
+        Ledger.Themes.Seed.run()
+      rescue
+        e ->
+          require Logger
+          Logger.error("theme seed failed at boot: #{Exception.message(e)}")
+          :ok
+      end
+    end
   end
 
   # Tell Phoenix to update the endpoint configuration

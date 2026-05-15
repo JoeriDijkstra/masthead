@@ -66,6 +66,18 @@ defmodule Ledger.Storage.S3 do
   end
 
   @impl true
+  def read(rel_path) do
+    bucket()
+    |> S3.get_object(rel_path)
+    |> ExAws.request()
+    |> case do
+      {:ok, %{body: body}} -> {:ok, body}
+      {:error, {:http_error, 404, _}} -> {:error, :not_found}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @impl true
   def url(rel_path) do
     # Virtual-hosted style URL: <scheme>://<bucket>.<host>/<key>.
     # Tigris (and most S3-compatible services) serve public objects via

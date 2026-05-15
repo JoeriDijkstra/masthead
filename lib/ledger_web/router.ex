@@ -32,7 +32,8 @@ defmodule LedgerWeb.Router do
     live_session :authenticated,
       on_mount: [{LedgerWeb.UserAuth, :require_authenticated}] do
       live "/sites", AdminLive.SiteIndex, :index
-      live "/sites/new", AdminLive.SiteNew, :new
+
+      live "/themes", AdminLive.ThemeLibrary, :index
 
       live "/:site_slug", AdminLive.SiteDashboard, :show
       live "/:site_slug/settings", AdminLive.SiteSettings, :edit

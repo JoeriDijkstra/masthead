@@ -12,7 +12,13 @@ defmodule LedgerWeb.RegistrationHTML do
           <.error_list changeset={@changeset} />
           <label>
             Email
-            <input type="email" name="user[email]" value={Ecto.Changeset.get_field(@changeset, :email) || ""} required autofocus />
+            <input
+              type="email"
+              name="user[email]"
+              value={Ecto.Changeset.get_field(@changeset, :email) || ""}
+              required
+              autofocus
+            />
           </label>
           <label>
             Password (min 8 chars)

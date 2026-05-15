@@ -35,4 +35,10 @@ defmodule Ledger.Storage.Adapter do
   full external URL (e.g. `https://fly.storage.tigris.dev/<bucket>/<key>`).
   """
   @callback url(rel_path :: String.t()) :: String.t()
+
+  @doc """
+  Read the bytes at `rel_path`. Returns `{:error, :not_found}` if the
+  file does not exist.
+  """
+  @callback read(rel_path :: String.t()) :: {:ok, binary()} | {:error, term()}
 end

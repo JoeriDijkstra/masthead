@@ -40,7 +40,13 @@ defmodule LedgerWeb.AdminLive.PostIndex do
 
       <table :if={@posts != []} class="table">
         <thead>
-          <tr><th>Title</th><th>Format</th><th>Status</th><th>Updated</th><th class="actions-cell"></th></tr>
+          <tr>
+            <th>Title</th>
+            <th>Format</th>
+            <th>Status</th>
+            <th>Updated</th>
+            <th class="actions-cell"></th>
+          </tr>
         </thead>
         <tbody>
           <tr :for={p <- @posts}>
@@ -52,7 +58,9 @@ defmodule LedgerWeb.AdminLive.PostIndex do
               <span class={"format-tag format-tag-" <> p.format}>{format_label(p.format)}</span>
             </td>
             <td>
-              <span class={"pill pill-" <> if(p.published, do: "live", else: "draft")}>{if p.published, do: "Published", else: "Draft"}</span>
+              <span class={"pill pill-" <> if(p.published, do: "live", else: "draft")}>
+                {if p.published, do: "Published", else: "Draft"}
+              </span>
             </td>
             <td class="muted">{Calendar.strftime(p.updated_at, "%Y-%m-%d")}</td>
             <td class="actions-cell">
@@ -61,7 +69,8 @@ defmodule LedgerWeb.AdminLive.PostIndex do
                 phx-click="delete"
                 phx-value-id={p.id}
                 data-confirm={"Delete post \"" <> p.title <> "\"?"}
-                class="btn btn-danger btn-sm">
+                class="btn btn-danger btn-sm"
+              >
                 Delete
               </button>
             </td>
@@ -72,7 +81,9 @@ defmodule LedgerWeb.AdminLive.PostIndex do
       <div :if={@posts == []} class="empty-state empty-state-illustrated">
         <img src={~p"/images/illustrations/empty-posts.svg"} alt="" class="empty-illustration" />
         <h2>No posts yet</h2>
-        <p>Create your first post to start publishing. Drafts remain private until you publish them.</p>
+        <p>
+          Create your first post to start publishing. Drafts remain private until you publish them.
+        </p>
         <.link navigate={~p"/#{@site.slug}/posts/new"} class="btn btn-primary">+ New post</.link>
       </div>
     </.shell>

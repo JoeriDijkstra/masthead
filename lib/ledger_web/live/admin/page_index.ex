@@ -41,7 +41,12 @@ defmodule LedgerWeb.AdminLive.PageIndex do
 
       <table :if={@pages != []} class="table">
         <thead>
-          <tr><th>Title</th><th>Format</th><th>Status</th><th class="actions-cell"></th></tr>
+          <tr>
+            <th>Title</th>
+            <th>Format</th>
+            <th>Status</th>
+            <th class="actions-cell"></th>
+          </tr>
         </thead>
         <tbody>
           <tr :for={p <- @pages}>
@@ -53,10 +58,20 @@ defmodule LedgerWeb.AdminLive.PageIndex do
               <span class={"format-tag format-tag-" <> p.format}>{format_label(p.format)}</span>
             </td>
             <td>
-              <span class={"pill pill-" <> if(p.published, do: "live", else: "draft")}>{if p.published, do: "Published", else: "Draft"}</span>
+              <span class={"pill pill-" <> if(p.published, do: "live", else: "draft")}>
+                {if p.published, do: "Published", else: "Draft"}
+              </span>
             </td>
             <td class="actions-cell">
-              <button type="button" phx-click="delete" phx-value-id={p.id} data-confirm={"Delete page \"" <> p.title <> "\"?"} class="btn btn-danger btn-sm">Delete</button>
+              <button
+                type="button"
+                phx-click="delete"
+                phx-value-id={p.id}
+                data-confirm={"Delete page \"" <> p.title <> "\"?"}
+                class="btn btn-danger btn-sm"
+              >
+                Delete
+              </button>
             </td>
           </tr>
         </tbody>
@@ -65,7 +80,9 @@ defmodule LedgerWeb.AdminLive.PageIndex do
       <div :if={@pages == []} class="empty-state empty-state-illustrated">
         <img src={~p"/images/illustrations/empty-pages.svg"} alt="" class="empty-illustration" />
         <h2>No pages yet</h2>
-        <p>Pages are standalone content such as About or Contact. Published pages appear in the site navigation.</p>
+        <p>
+          Pages are standalone content such as About or Contact. Published pages appear in the site navigation.
+        </p>
         <.link navigate={~p"/#{@site.slug}/pages/new"} class="btn btn-primary">+ New page</.link>
       </div>
     </.shell>

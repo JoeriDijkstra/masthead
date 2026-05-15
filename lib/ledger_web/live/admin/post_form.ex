@@ -97,10 +97,6 @@ defmodule LedgerWeb.AdminLive.PostForm do
      |> assign_changeset(draft, validate: true)}
   end
 
-  defp update_slug_touched(_prev, "slug", %{"slug" => slug}) when slug != "", do: true
-  defp update_slug_touched(_prev, "slug", _params), do: false
-  defp update_slug_touched(prev, _target, _params), do: prev || false
-
   def handle_event("save", %{"post" => post_params} = params, socket) do
     # New posts use the explicit "draft" / "publish" action from one of two
     # buttons. Existing posts have a single "Save" button — preserve the
@@ -173,6 +169,10 @@ defmodule LedgerWeb.AdminLive.PostForm do
 
   # ---- Helpers ----
 
+  defp update_slug_touched(_prev, "slug", %{"slug" => slug}) when slug != "", do: true
+  defp update_slug_touched(_prev, "slug", _params), do: false
+  defp update_slug_touched(prev, _target, _params), do: prev || false
+
   defp post_to_draft(post) do
     %{
       "title" => post.title,
@@ -210,9 +210,20 @@ defmodule LedgerWeb.AdminLive.PostForm do
   @impl true
   def render(assigns) do
     ~H"""
-    <.shell title={@page_title} site={@site} current_user={@current_user} flash={@flash} active={:posts}>
+    <.shell
+      title={@page_title}
+      site={@site}
+      current_user={@current_user}
+      flash={@flash}
+      active={:posts}
+    >
       <:actions>
-        <button :if={@post} type="button" phx-click="toggle_publish" class={publish_button_class(@post.published)}>
+        <button
+          :if={@post}
+          type="button"
+          phx-click="toggle_publish"
+          class={publish_button_class(@post.published)}
+        >
           {if @post && @post.published, do: "Unpublish", else: "Publish"}
         </button>
       </:actions>
@@ -224,7 +235,8 @@ defmodule LedgerWeb.AdminLive.PostForm do
               locked={@post != nil}
               format={@draft["format"]}
               editing={@post != nil}
-              site_slug={@site.slug} />
+              site_slug={@site.slug}
+            />
           <% 2 -> %>
             <.meta_step
               form={@form}
@@ -232,7 +244,8 @@ defmodule LedgerWeb.AdminLive.PostForm do
               format={@draft["format"]}
               editing={@post != nil}
               site_slug={@site.slug}
-              show_errors={@show_errors} />
+              show_errors={@show_errors}
+            />
           <% 3 -> %>
             <.content_step
               form={@form}
@@ -241,7 +254,8 @@ defmodule LedgerWeb.AdminLive.PostForm do
               preview_html={@preview_html}
               editing={@post != nil}
               site_slug={@site.slug}
-              show_errors={@show_errors} />
+              show_errors={@show_errors}
+            />
         <% end %>
       </div>
     </.shell>
@@ -252,6 +266,7 @@ defmodule LedgerWeb.AdminLive.PostForm do
   defp publish_button_class(_), do: "btn btn-publish-toggle btn-draft"
 
   attr :step, :integer, default: 1
+
   defp stepper(assigns) do
     ~H"""
     <ol class="stepper">
@@ -275,6 +290,7 @@ defmodule LedgerWeb.AdminLive.PostForm do
   attr :format, :string, default: nil
   attr :editing, :boolean, default: false
   attr :site_slug, :string, required: true
+
   defp format_step(assigns) do
     ~H"""
     <.stepper step={1} />
@@ -299,6 +315,7 @@ defmodule LedgerWeb.AdminLive.PostForm do
   attr :editing, :boolean, default: false
   attr :site_slug, :string, required: true
   attr :show_errors, :boolean, default: false
+
   defp meta_step(assigns) do
     ~H"""
     <.stepper step={2} />
@@ -307,19 +324,23 @@ defmodule LedgerWeb.AdminLive.PostForm do
       <.error_list changeset={@changeset} show={@show_errors} />
 
       <label>
-        Title
-        <input type="text" name="post[title]" value={@form[:title].value} required autofocus />
+        Title <input type="text" name="post[title]" value={@form[:title].value} required autofocus />
       </label>
 
       <label>
         Slug
         <input type="text" name="post[slug]" value={@form[:slug].value} placeholder="auto from title" />
-        <small>URL: <code>/posts/{Ecto.Changeset.get_field(@changeset, :slug) || "your-slug"}</code></small>
+        <small>
+          URL: <code>/posts/{Ecto.Changeset.get_field(@changeset, :slug) || "your-slug"}</code>
+        </small>
       </label>
 
       <label>
-        Excerpt
-        <textarea name="post[excerpt]" rows="3" placeholder="One or two sentences shown on the homepage and in the &lt;meta&gt; description.">{@form[:excerpt].value}</textarea>
+        Excerpt <textarea
+          name="post[excerpt]"
+          rows="3"
+          placeholder="One or two sentences shown on the homepage and in the &lt;meta&gt; description."
+        >{@form[:excerpt].value}</textarea>
       </label>
 
       <input type="hidden" name="post[format]" value={@format} />
@@ -340,6 +361,7 @@ defmodule LedgerWeb.AdminLive.PostForm do
   attr :editing, :boolean, default: false
   attr :site_slug, :string, required: true
   attr :show_errors, :boolean, default: false
+
   defp content_step(assigns) do
     ~H"""
     <.stepper step={3} />
@@ -366,7 +388,13 @@ defmodule LedgerWeb.AdminLive.PostForm do
           <button type="submit" form="content-form" name="action" value="draft" class="btn">
             Save as draft
           </button>
-          <button type="submit" form="content-form" name="action" value="publish" class="btn btn-primary">
+          <button
+            type="submit"
+            form="content-form"
+            name="action"
+            value="publish"
+            class="btn btn-primary"
+          >
             Save &amp; publish
           </button>
         <% end %>
@@ -378,12 +406,19 @@ defmodule LedgerWeb.AdminLive.PostForm do
   attr :form, :map, required: true
   attr :format, :string, required: true
   attr :preview_html, :string, required: true
+
   defp body_editor(assigns) do
     ~H"""
     <div class="editor">
       <div class="editor-pane">
         <label for="post-body-textarea" class="editor-label">Body ({format_label(@format)})</label>
-        <textarea id="post-body-textarea" name="post[body]" rows="20" phx-debounce="200" class="markdown-editor">{@form[:body].value}</textarea>
+        <textarea
+          id="post-body-textarea"
+          name="post[body]"
+          rows="20"
+          phx-debounce="200"
+          class="markdown-editor"
+        >{@form[:body].value}</textarea>
       </div>
       <div class="editor-pane">
         <div class="editor-label">Preview</div>

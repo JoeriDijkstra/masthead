@@ -54,7 +54,12 @@ defmodule LedgerWeb.AdminLive.UploadShow do
       {:ok, upload} ->
         {:noreply,
          socket
-         |> assign(upload: upload, rename_open?: false, rename_error: nil, page_title: upload.filename)
+         |> assign(
+           upload: upload,
+           rename_open?: false,
+           rename_error: nil,
+           page_title: upload.filename
+         )
          |> compute_snippets()
          |> put_flash(:info, "Renamed to #{upload.filename}.")}
 
@@ -64,7 +69,10 @@ defmodule LedgerWeb.AdminLive.UploadShow do
   end
 
   defp humanize_error(:empty), do: "Filename can't be empty."
-  defp humanize_error(:invalid_chars), do: "Filename can't contain slashes, leading dots, or be longer than 200 characters."
+
+  defp humanize_error(:invalid_chars),
+    do: "Filename can't contain slashes, leading dots, or be longer than 200 characters."
+
   defp humanize_error(:already_exists), do: "Another file in this site already has that name."
   defp humanize_error(:unchanged), do: "That's the current filename."
   defp humanize_error(%Ecto.Changeset{}), do: "Couldn't save the new name."
@@ -83,7 +91,13 @@ defmodule LedgerWeb.AdminLive.UploadShow do
   @impl true
   def render(assigns) do
     ~H"""
-    <.shell title={@upload.filename} site={@site} current_user={@current_user} flash={@flash} active={:uploads}>
+    <.shell
+      title={@upload.filename}
+      site={@site}
+      current_user={@current_user}
+      flash={@flash}
+      active={:uploads}
+    >
       <:actions>
         <.link navigate={~p"/#{@site.slug}/uploads"} class="btn">&larr; All uploads</.link>
       </:actions>
@@ -97,9 +111,12 @@ defmodule LedgerWeb.AdminLive.UploadShow do
           <section class="upload-side-block">
             <h3 class="section-heading">File</h3>
             <dl class="kv">
-              <dt>Type</dt><dd><code>{@upload.content_type}</code></dd>
-              <dt>Size</dt><dd>{format_bytes(@upload.byte_size)}</dd>
-              <dt>Added</dt><dd>{Calendar.strftime(@upload.inserted_at, "%B %-d, %Y")}</dd>
+              <dt>Type</dt>
+              <dd><code>{@upload.content_type}</code></dd>
+              <dt>Size</dt>
+              <dd>{format_bytes(@upload.byte_size)}</dd>
+              <dt>Added</dt>
+              <dd>{Calendar.strftime(@upload.inserted_at, "%B %-d, %Y")}</dd>
             </dl>
           </section>
 
@@ -112,7 +129,8 @@ defmodule LedgerWeb.AdminLive.UploadShow do
             <button
               type="button"
               class="btn btn-primary copy-btn"
-              phx-click={JS.dispatch("ledger:copy", detail: %{text: @markdown_snippet})}>
+              phx-click={JS.dispatch("ledger:copy", detail: %{text: @markdown_snippet})}
+            >
               Copy as Markdown
             </button>
 
@@ -123,7 +141,8 @@ defmodule LedgerWeb.AdminLive.UploadShow do
             <button
               type="button"
               class="btn btn-primary copy-btn"
-              phx-click={JS.dispatch("ledger:copy", detail: %{text: @html_snippet})}>
+              phx-click={JS.dispatch("ledger:copy", detail: %{text: @html_snippet})}
+            >
               Copy as HTML
             </button>
           </section>
@@ -137,31 +156,41 @@ defmodule LedgerWeb.AdminLive.UploadShow do
               type="button"
               phx-click="delete"
               data-confirm={"Delete \"" <> @upload.filename <> "\" permanently?"}
-              class="btn btn-danger danger-block">
+              class="btn btn-danger danger-block"
+            >
               Delete upload
             </button>
           </section>
         </aside>
       </div>
 
-      <div :if={@rename_open?} class="dialog-backdrop" phx-window-keydown="close_rename" phx-key="Escape">
+      <div
+        :if={@rename_open?}
+        class="dialog-backdrop"
+        phx-window-keydown="close_rename"
+        phx-key="Escape"
+      >
         <button
           type="button"
           phx-click="close_rename"
           class="dialog-close-overlay"
           aria-label="Close"
-          tabindex="-1"></button>
+          tabindex="-1"
+        >
+        </button>
         <div class="dialog">
           <header class="dialog-header">
             <h2>Rename upload</h2>
-            <button type="button" phx-click="close_rename" class="dialog-close" aria-label="Close">&times;</button>
+            <button type="button" phx-click="close_rename" class="dialog-close" aria-label="Close">
+              &times;
+            </button>
           </header>
 
           <form phx-submit="rename" phx-change="rename_change" class="dialog-form">
             <div class="callout callout-warning">
               <strong>Renaming changes the public URL.</strong>
               <span>Any post, page, or external link that already references the current
-              file path will break. The old URL won't redirect.</span>
+                file path will break. The old URL won't redirect.</span>
             </div>
 
             <label>
@@ -172,7 +201,8 @@ defmodule LedgerWeb.AdminLive.UploadShow do
                 value={@rename_value}
                 autofocus
                 spellcheck="false"
-                autocomplete="off" />
+                autocomplete="off"
+              />
               <small class="muted">Keep the extension. No slashes, no leading dots.</small>
             </label>
 

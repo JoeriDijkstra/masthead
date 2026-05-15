@@ -1,7 +1,8 @@
 defmodule LedgerWeb.PublicController do
   use LedgerWeb, :controller
 
-  alias Ledger.{Content, Themes}
+  alias Ledger.Content
+  alias Ledger.Themes.Renderer
 
   plug :require_site
 
@@ -13,7 +14,8 @@ defmodule LedgerWeb.PublicController do
     case Content.get_homepage_page(site) do
       nil ->
         posts = Content.list_published_posts(site.id)
-        render_theme(conn, :render_index, %{site: site, posts: posts, pages: pages})
+        body = Renderer.render_index(%{site: site, posts: posts, pages: pages})
+        send_themed(conn, body)
 
       page ->
         render_page_or_404(conn, page, pages)
@@ -26,13 +28,16 @@ defmodule LedgerWeb.PublicController do
 
     case Content.get_published_post_by_slug(site.id, slug) do
       nil ->
-        conn
-        |> put_status(:not_found)
-        |> render_theme(:render_not_found, %{site: site, pages: pages})
+        body = Renderer.render_not_found(%{site: site, pages: pages})
+        conn |> put_status(:not_found) |> send_themed(body)
 
       post ->
         body_html = Content.render_body(post.body, post.format)
-        render_theme(conn, :render_post, %{site: site, post: post, body_html: body_html, pages: pages})
+
+        body =
+          Renderer.render_post(%{site: site, post: post, body_html: body_html, pages: pages})
+
+        send_themed(conn, body)
     end
   end
 
@@ -45,10 +50,8 @@ defmodule LedgerWeb.PublicController do
 
   defp render_page_or_404(conn, nil, pages) do
     site = conn.assigns.current_site
-
-    conn
-    |> put_status(:not_found)
-    |> render_theme(:render_not_found, %{site: site, pages: pages})
+    body = Renderer.render_not_found(%{site: site, pages: pages})
+    conn |> put_status(:not_found) |> send_themed(body)
   end
 
   defp render_page_or_404(conn, %{format: "blog"} = page, pages) do
@@ -58,19 +61,23 @@ defmodule LedgerWeb.PublicController do
     # the post list. Pass an empty body through harmlessly.
     body_html = Content.render_body(page.body, "markdown")
 
-    render_theme(conn, :render_blog, %{
-      site: site,
-      page: page,
-      posts: posts,
-      body_html: body_html,
-      pages: pages
-    })
+    body =
+      Renderer.render_blog(%{
+        site: site,
+        page: page,
+        posts: posts,
+        body_html: body_html,
+        pages: pages
+      })
+
+    send_themed(conn, body)
   end
 
   defp render_page_or_404(conn, page, pages) do
     site = conn.assigns.current_site
     body_html = Content.render_body(page.body, page.format)
-    render_theme(conn, :render_page, %{site: site, page: page, body_html: body_html, pages: pages})
+    body = Renderer.render_page(%{site: site, page: page, body_html: body_html, pages: pages})
+    send_themed(conn, body)
   end
 
   # Hide the site's designated homepage page from the nav list — it's already
@@ -89,13 +96,9 @@ defmodule LedgerWeb.PublicController do
     end
   end
 
-  defp render_theme(conn, fun, assigns) do
-    theme = Themes.get(conn.assigns.current_site.theme)
-    rendered = apply(theme, fun, [assigns])
-    iodata = Phoenix.HTML.Safe.to_iodata(rendered)
-
+  defp send_themed(conn, body) when is_binary(body) do
     conn
     |> put_resp_content_type("text/html")
-    |> send_resp(conn.status || 200, IO.iodata_to_binary(iodata))
+    |> send_resp(conn.status || 200, body)
   end
 end
