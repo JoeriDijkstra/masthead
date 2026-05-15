@@ -1,7 +1,7 @@
 {
   "name": "Default",
   "slug": "default",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Ledger",
   "description": "Minimal, readable, opinionated about typography.",
   "tokens": [
@@ -20,6 +20,13 @@
       "options": ["contained", "wide"],
       "default": "contained",
       "description": "Use 'wide' to escape the max-width container (e.g. for a landing-style homepage)."
+    },
+    {
+      "key": "show_navigation",
+      "label": "Show site navigation",
+      "type": "boolean",
+      "default": true,
+      "description": "Untick to hide the top nav bar on this page only — useful for splash / landing pages."
     }
   ]
 }

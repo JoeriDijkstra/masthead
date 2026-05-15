@@ -11,14 +11,16 @@
     </style>
   </head>
   <body>
-    <nav class="site-nav">
-      <a class="brand" href="/">{{ site.name | escape }}</a>
-      {% if pages != empty %}
-        <ul>
-          {% for p in pages %}<li><a href="{{ p.url }}">{{ p.title | escape }}</a></li>{% endfor %}
-        </ul>
-      {% endif %}
-    </nav>
+    {% unless page.metadata.show_navigation == false %}
+      <nav class="site-nav">
+        <a class="brand" href="/">{{ site.name | escape }}</a>
+        {% if pages != empty %}
+          <ul>
+            {% for p in pages %}<li><a href="{{ p.url }}">{{ p.title | escape }}</a></li>{% endfor %}
+          </ul>
+        {% endif %}
+      </nav>
+    {% endunless %}
     <main{% if page.metadata.layout == "wide" %} class="wide"{% endif %}>
       {{ content }}
     </main>

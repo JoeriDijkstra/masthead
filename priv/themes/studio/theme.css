@@ -34,6 +34,9 @@ a { color: var(--accent); text-decoration: none; transition: color 0.15s ease; }
 a:hover { color: var(--accent-hover); }
 
 .container { max-width: var(--max-width); margin: 0 auto; padding: 0 1.5rem; width: 100%; }
+/* `wide` page layout escapes the centered column. Header and footer
+   keep their own .container, so only the content area goes wide. */
+.container.wide { max-width: none; padding-left: 0; padding-right: 0; }
 .muted { color: var(--muted); }
 
 /* Header */
