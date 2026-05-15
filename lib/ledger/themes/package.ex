@@ -346,6 +346,17 @@ defmodule Ledger.Themes.Package do
       "tokens" =>
         Enum.map(m.tokens, fn t ->
           %{"key" => t.key, "label" => t.label, "type" => t.type, "default" => t.default}
+        end),
+      "metadata" =>
+        Enum.map(m.metadata, fn f ->
+          %{
+            "key" => f.key,
+            "label" => f.label,
+            "type" => f.type,
+            "default" => f.default,
+            "description" => f.description,
+            "options" => f.options
+          }
         end)
     }
   end
