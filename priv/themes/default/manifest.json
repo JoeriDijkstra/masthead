@@ -1,7 +1,7 @@
 {
   "name": "Default",
   "slug": "default",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Ledger",
   "description": "Minimal, readable, opinionated about typography.",
   "tokens": [
@@ -10,6 +10,16 @@
       "label": "Accent color",
       "type": "color",
       "default": "#0066cc"
+    }
+  ],
+  "metadata": [
+    {
+      "key": "layout",
+      "label": "Page layout",
+      "type": "select",
+      "options": ["contained", "wide"],
+      "default": "contained",
+      "description": "Use 'wide' to escape the max-width container (e.g. for a landing-style homepage)."
     }
   ]
 }

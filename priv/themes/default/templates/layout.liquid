@@ -19,7 +19,7 @@
         </ul>
       {% endif %}
     </nav>
-    <main>
+    <main{% if page.metadata.layout == "wide" %} class="wide"{% endif %}>
       {{ content }}
     </main>
     <footer class="site-footer">
