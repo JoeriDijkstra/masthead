@@ -95,6 +95,21 @@ defmodule LedgerWeb.AdminLive.PageForm do
     {:noreply, assign(socket, step: prev_step(socket))}
   end
 
+  # Stepper navigation — jump directly to any visible step. The draft is
+  # kept in sync by the per-step `phx-change="validate"`, so jumping
+  # around doesn't lose typed content or metadata selections. Final
+  # validation still happens on save.
+  def handle_event("goto_step", %{"step" => step}, socket) do
+    target = String.to_integer(step)
+    valid = visible_steps(socket.assigns.has_metadata?) |> Enum.map(&elem(&1, 0))
+
+    if target in valid do
+      {:noreply, assign(socket, step: target)}
+    else
+      {:noreply, socket}
+    end
+  end
+
   def handle_event("next_meta", %{"page" => params}, socket) do
     draft = Map.merge(socket.assigns.draft, params)
     changeset = build_changeset(socket, draft)
@@ -337,6 +352,10 @@ defmodule LedgerWeb.AdminLive.PageForm do
       <li
         :for={{{step_num, label}, display_idx} <- @entries}
         class={"step " <> step_class(step_num, @step)}
+        phx-click="goto_step"
+        phx-value-step={step_num}
+        role="button"
+        tabindex="0"
       >
         <span class="step-num">{display_idx}</span>
         <span class="step-label">{label}</span>
@@ -437,7 +456,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
       the theme default.
     </p>
 
-    <form id="settings-form" phx-submit="next_settings" class="form">
+    <form id="settings-form" phx-submit="next_settings" phx-change="validate" class="form">
       <div class="settings-fields">
         <.metadata_field :for={f <- @fields} field={f} value={metadata_value(@draft, f.key)} />
       </div>

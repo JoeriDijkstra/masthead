@@ -724,6 +724,19 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   flex: 1;
   font-size: 0.88rem;
   position: relative;
+  cursor: pointer;
+}
+.stepper .step:hover .step-num {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.stepper .step:hover .step-label {
+  color: var(--fg);
+}
+.stepper .step:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 .stepper .step::after {
   content: "";
