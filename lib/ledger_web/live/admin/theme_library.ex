@@ -133,22 +133,60 @@ defmodule LedgerWeb.AdminLive.ThemeLibrary do
 
   defp format_error(reason) do
     case reason do
-      {:archive_too_large, _, _} -> "Archive exceeds the 5 MB size cap."
-      {:too_many_files, _, max} -> "Archive contains more than #{max} files."
-      {:uncompressed_too_large, _, _} -> "Archive's uncompressed contents exceed the cap."
-      {:archive_invalid, _} -> "That doesn't look like a valid zip file."
-      :manifest_missing -> "manifest.json is missing from the archive."
-      {:manifest_invalid, msgs} -> "manifest.json: " <> Enum.join(msgs, "; ")
-      {:template_missing, name} -> "templates/#{name}.liquid is missing."
-      {:template_invalid, name, _} -> "templates/#{name}.liquid failed to parse."
-      :theme_css_missing -> "theme.css is missing."
-      {:slug_reserved, slug} -> "Slug \"#{slug}\" is reserved."
-      {:slug_taken, slug} -> "You already have a theme with slug \"#{slug}\"."
-      {:disallowed_asset, name} -> "Asset \"#{name}\" has an unsupported file extension."
-      {:traversal, name} -> "Unsafe path in entry \"#{name}\"."
-      {:absolute_path, name} -> "Absolute path in entry \"#{name}\"."
-      {:backslash, name} -> "Windows-style path separator in entry \"#{name}\"."
-      other -> "Upload failed: #{inspect(other)}"
+      {:archive_too_large, _, _} ->
+        "Archive exceeds the 5 MB size cap."
+
+      {:too_many_files, _, max} ->
+        "Archive contains more than #{max} files."
+
+      {:uncompressed_too_large, _, _} ->
+        "Archive's uncompressed contents exceed the cap."
+
+      {:archive_invalid, _} ->
+        "That doesn't look like a valid zip file."
+
+      :manifest_missing ->
+        "manifest.json is missing from the archive."
+
+      {:manifest_invalid, msgs} ->
+        "manifest.json: " <> Enum.join(msgs, "; ")
+
+      {:template_missing, name} ->
+        "templates/#{name}.liquid is missing."
+
+      {:template_invalid, name, _} ->
+        "templates/#{name}.liquid failed to parse."
+
+      :theme_css_missing ->
+        "theme.css is missing."
+
+      {:slug_reserved, slug} ->
+        "Slug \"#{slug}\" is reserved."
+
+      {:version_not_newer, slug, old, new} ->
+        "Theme \"#{slug}\" is already at #{old}; uploaded version #{new} is not newer. " <>
+          "Bump the version in manifest.json to update it."
+
+      {:version_unparseable, v} ->
+        "Version \"#{v}\" isn't valid semver (e.g. 1.2.0) — required to update an existing theme."
+
+      {:db_write, _changeset} ->
+        "Could not save the theme. Check the manifest and try again."
+
+      {:disallowed_asset, name} ->
+        "Asset \"#{name}\" has an unsupported file extension."
+
+      {:traversal, name} ->
+        "Unsafe path in entry \"#{name}\"."
+
+      {:absolute_path, name} ->
+        "Absolute path in entry \"#{name}\"."
+
+      {:backslash, name} ->
+        "Windows-style path separator in entry \"#{name}\"."
+
+      other ->
+        "Upload failed: #{inspect(other)}"
     end
   end
 
