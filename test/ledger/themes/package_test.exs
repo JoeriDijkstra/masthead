@@ -83,7 +83,62 @@ defmodule Ledger.Themes.PackageTest do
     File.rm(zip_path)
   end
 
+  test "updates the existing theme in place when the version is newer", %{user: user} do
+    slug = "upd#{System.unique_integer([:positive])}"
+
+    z1 = build_zip(valid_files(slug) |> put_version("1.0.0"))
+    assert {:ok, t1} = Package.install(z1, user.id)
+    assert t1.version == "1.0.0"
+    File.rm(z1)
+
+    z2 = build_zip(valid_files(slug) |> put_version("1.1.0"))
+    assert {:ok, t2} = Package.install(z2, user.id)
+    File.rm(z2)
+
+    assert t2.id == t1.id
+    assert t2.version == "1.1.0"
+  end
+
+  test "rejects an upload whose version is not newer than the installed one", %{user: user} do
+    slug = "same#{System.unique_integer([:positive])}"
+
+    z1 = build_zip(valid_files(slug) |> put_version("2.0.0"))
+    assert {:ok, _} = Package.install(z1, user.id)
+    File.rm(z1)
+
+    z_eq = build_zip(valid_files(slug) |> put_version("2.0.0"))
+
+    assert {:error, {:version_not_newer, ^slug, "2.0.0", "2.0.0"}} =
+             Package.install(z_eq, user.id)
+
+    File.rm(z_eq)
+
+    z_old = build_zip(valid_files(slug) |> put_version("1.9.0"))
+
+    assert {:error, {:version_not_newer, ^slug, "2.0.0", "1.9.0"}} =
+             Package.install(z_old, user.id)
+
+    File.rm(z_old)
+  end
+
+  test "rejects updating when the uploaded version is not valid semver", %{user: user} do
+    slug = "sem#{System.unique_integer([:positive])}"
+
+    z1 = build_zip(valid_files(slug) |> put_version("1.0.0"))
+    assert {:ok, _} = Package.install(z1, user.id)
+    File.rm(z1)
+
+    z2 = build_zip(valid_files(slug) |> put_version("banana"))
+    assert {:error, {:version_unparseable, "banana"}} = Package.install(z2, user.id)
+    File.rm(z2)
+  end
+
   # ---- helpers ----
+
+  defp put_version(files, version) do
+    {:ok, m} = Jason.decode(files["manifest.json"])
+    Map.put(files, "manifest.json", Jason.encode!(Map.put(m, "version", version)))
+  end
 
   defp valid_files(slug) do
     %{

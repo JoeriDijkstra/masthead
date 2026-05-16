@@ -724,6 +724,21 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   flex: 1;
   font-size: 0.88rem;
   position: relative;
+  cursor: pointer;
+}
+/* Hover affordance: only nudge the border + label. Don't recolor the
+   number text — the current/done steps have a filled background, so
+   blue-on-blue would make the digit vanish. */
+.stepper .step:hover .step-num {
+  border-color: var(--accent);
+}
+.stepper .step:hover .step-label {
+  color: var(--fg);
+}
+.stepper .step:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 .stepper .step::after {
   content: "";

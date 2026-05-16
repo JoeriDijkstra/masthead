@@ -23,9 +23,28 @@ defmodule Ledger.Themes.Presenter do
       "title" => s.title,
       "description" => s.description,
       "slug" => s.slug,
-      "css_overrides" => CssSanitizer.sanitize_overrides(s.theme_css_overrides)
+      "css_overrides" => CssSanitizer.sanitize_overrides(s.theme_css_overrides),
+      "homepage_slug" => homepage_slug(s)
     }
   end
+
+  # Returns the slug of the page that's currently set as the site's
+  # homepage, or `nil` if none is set. Themes use this to know whether
+  # the page being rendered is the site's home — useful for applying a
+  # special layout or layout class only there.
+  defp homepage_slug(%Site{homepage_page_id: nil}), do: nil
+
+  defp homepage_slug(%Site{homepage_page: %Ledger.Content.Page{slug: slug}}), do: slug
+
+  defp homepage_slug(%Site{homepage_page_id: id}) when is_integer(id) do
+    # belongs_to wasn't preloaded — one cheap query (id PK lookup).
+    case Ledger.Repo.get(Ledger.Content.Page, id) do
+      %Ledger.Content.Page{slug: slug} -> slug
+      _ -> nil
+    end
+  end
+
+  defp homepage_slug(_), do: nil
 
   def post(%Post{} = p) do
     %{

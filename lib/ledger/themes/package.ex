@@ -18,8 +18,10 @@ defmodule Ledger.Themes.Package do
        the sandbox, and reads `theme.css`.
     4. Promotes the extracted files into `Ledger.Storage` at
        `themes/<slug>/<version>/...`.
-    5. Inserts a row via `Ledger.Themes.create_upload/1` and warms the
-       loader cache.
+    5. Inserts a new row, or — if a theme with the same slug already
+       exists for this owner and the uploaded `version` is strictly
+       newer (semver) — updates the existing row in place. Then warms
+       the loader cache.
 
   Errors short-circuit; nothing is written to Storage or the DB unless
   every previous step succeeded.
@@ -46,8 +48,8 @@ defmodule Ledger.Themes.Package do
          :ok <- check_entry_caps(entries),
          {:ok, tmp_root} <- extract_to_tmp(archive_path, entries),
          {:ok, bundle} <- read_bundle(tmp_root),
-         :ok <- ensure_slug_available(bundle.manifest, owner_id),
-         {:ok, theme} <- promote_and_insert(bundle, owner_id) do
+         {:ok, action} <- resolve_target(bundle.manifest, owner_id),
+         {:ok, theme} <- promote_and_persist(bundle, owner_id, action) do
       _ = File.rm_rf(tmp_root)
       warm_cache(theme, bundle)
       {:ok, theme}
@@ -242,28 +244,50 @@ defmodule Ledger.Themes.Package do
     end
   end
 
-  # ---- step 6: slug availability ----
+  # ---- step 6: resolve install vs update ----
 
-  defp ensure_slug_available(%Manifest{slug: slug}, _owner_id)
+  # Decides what the upload should do:
+  #   {:ok, :install}            — no existing theme; create a new row
+  #   {:ok, {:update, theme}}    — same slug+owner exists and the uploaded
+  #                                version is strictly newer (semver)
+  #   {:error, ...}              — reserved slug, not-newer version, or a
+  #                                version that isn't valid semver
+  defp resolve_target(%Manifest{slug: slug}, _owner_id)
        when slug in ~w(default studio blank) do
     {:error, {:slug_reserved, slug}}
   end
 
-  defp ensure_slug_available(%Manifest{slug: slug}, owner_id) do
-    case Ledger.Repo.get_by(Theme,
-           slug: slug,
-           owner_id: owner_id,
-           source: "uploaded"
-         ) do
-      nil -> :ok
-      _existing -> {:error, {:slug_taken, slug}}
+  defp resolve_target(%Manifest{slug: slug, version: new_version}, owner_id) do
+    case Ledger.Repo.get_by(Theme, slug: slug, owner_id: owner_id, source: "uploaded") do
+      nil ->
+        {:ok, :install}
+
+      %Theme{version: old_version} = existing ->
+        with {:ok, new_v} <- parse_version(new_version),
+             {:ok, old_v} <- parse_version(old_version) do
+          case Version.compare(new_v, old_v) do
+            :gt -> {:ok, {:update, existing}}
+            _ -> {:error, {:version_not_newer, slug, old_version, new_version}}
+          end
+        end
     end
   end
 
-  # ---- step 7: promote + insert ----
+  defp parse_version(v) when is_binary(v) do
+    case Version.parse(v) do
+      {:ok, parsed} -> {:ok, parsed}
+      :error -> {:error, {:version_unparseable, v}}
+    end
+  end
 
-  defp promote_and_insert(bundle, owner_id) do
+  # ---- step 7: promote + persist (insert or update) ----
+
+  defp promote_and_persist(bundle, owner_id, action) do
     manifest = bundle.manifest
+    # The version is part of the storage path, so a newer version writes
+    # to a fresh directory; the previous version's files stay in storage
+    # (orphaned, harmless — versioned storage is forward-compatible with
+    # a future rollback feature).
     storage_path = Theme.upload_storage_path(manifest.slug, manifest.version)
 
     case promote_files(bundle, storage_path) do
@@ -278,16 +302,32 @@ defmodule Ledger.Themes.Package do
           manifest: manifest_to_map(manifest)
         }
 
-        case Themes.create_upload(attrs) do
+        case persist(action, attrs) do
           {:ok, theme} ->
             {:ok, theme}
 
           {:error, changeset} ->
             cleanup_storage(storage_path, bundle)
-            {:error, {:db_insert, changeset}}
+            {:error, {:db_write, changeset}}
         end
 
       {:error, _} = err ->
+        err
+    end
+  end
+
+  defp persist(:install, attrs), do: Themes.create_upload(attrs)
+
+  defp persist({:update, %Theme{} = existing}, attrs) do
+    case Themes.update_theme(existing, attrs) do
+      {:ok, theme} = ok ->
+        # Drop the cached parse of the previous version so the next
+        # render reads the new templates/css. warm_cache/2 (called by
+        # install/3 on success) then repopulates it.
+        Ledger.Themes.Loader.invalidate(theme.id)
+        ok
+
+      err ->
         err
     end
   end
@@ -346,6 +386,17 @@ defmodule Ledger.Themes.Package do
       "tokens" =>
         Enum.map(m.tokens, fn t ->
           %{"key" => t.key, "label" => t.label, "type" => t.type, "default" => t.default}
+        end),
+      "metadata" =>
+        Enum.map(m.metadata, fn f ->
+          %{
+            "key" => f.key,
+            "label" => f.label,
+            "type" => f.type,
+            "default" => f.default,
+            "description" => f.description,
+            "options" => f.options
+          }
         end)
     }
   end
