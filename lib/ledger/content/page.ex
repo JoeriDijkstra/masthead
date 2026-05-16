@@ -8,6 +8,7 @@ defmodule Ledger.Content.Page do
     field :body, :string, default: ""
     field :format, :string, default: "markdown"
     field :published, :boolean, default: false
+    field :show_in_nav, :boolean, default: true
     field :metadata, :map, default: %{}
     belongs_to :site, Ledger.Sites.Site
     timestamps(type: :utc_datetime)
@@ -15,7 +16,7 @@ defmodule Ledger.Content.Page do
 
   def changeset(page, attrs) do
     page
-    |> cast(attrs, [:title, :slug, :body, :format, :published, :metadata, :site_id])
+    |> cast(attrs, [:title, :slug, :body, :format, :published, :show_in_nav, :metadata, :site_id])
     |> validate_required([:title, :site_id])
     |> validate_inclusion(:format, ~w(markdown html blog))
     |> ensure_slug()
