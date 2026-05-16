@@ -691,6 +691,18 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 .form input:focus, .form textarea:focus, .form select:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
 .form small { color: var(--muted); font-weight: 400; }
 .form .checkbox { flex-direction: row; align-items: center; gap: 0.5rem; }
+/* Boolean metadata field: checkbox beside a stacked label + hint.
+   The wrapper is a <div> (not a <label>) so the generic
+   `.form label { flex-direction: column }` rule can't stretch the
+   checkbox full-width. */
+.settings-checkbox { display: flex; align-items: flex-start; gap: 0.6rem; }
+.settings-checkbox input[type="checkbox"] {
+  width: auto;
+  flex: none;
+  margin: 0.2rem 0 0;
+  accent-color: var(--accent);
+}
+.settings-checkbox .settings-checkbox-text { gap: 0.15rem; cursor: pointer; }
 .form-actions { display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; }
 .errors { background: #fef2f2; color: var(--danger); list-style: none; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin: 0; }
 

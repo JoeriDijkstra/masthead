@@ -243,6 +243,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
       "format" => page.format,
       "body" => page.body,
       "published" => to_string(page.published),
+      "show_in_nav" => to_string(page.show_in_nav),
       "metadata" => page.metadata || %{}
     }
   end
@@ -431,6 +432,23 @@ defmodule LedgerWeb.AdminLive.PageForm do
         <small>URL: <code>/{Ecto.Changeset.get_field(@changeset, :slug) || "your-slug"}</code></small>
       </label>
 
+      <div class="settings-checkbox">
+        <input type="hidden" name="page[show_in_nav]" value="false" />
+        <input
+          type="checkbox"
+          id="page-show-in-nav"
+          name="page[show_in_nav]"
+          value="true"
+          checked={@form[:show_in_nav].value not in [false, "false"]}
+        />
+        <label for="page-show-in-nav" class="settings-checkbox-text">
+          <span>Show in top navigation</span>
+          <small>
+            Untick to keep this page out of the nav bar (e.g. a privacy policy or landing page). It stays reachable by its URL.
+          </small>
+        </label>
+      </div>
+
       <input type="hidden" name="page[format]" value={@format} />
     </form>
 
@@ -599,17 +617,20 @@ defmodule LedgerWeb.AdminLive.PageForm do
     assigns = assign(assigns, :checked?, truthy?(assigns.value, assigns.field.default))
 
     ~H"""
-    <label class="checkbox-label">
+    <div class="settings-checkbox">
       <input type="hidden" name={"page[metadata][" <> @field.key <> "]"} value="false" />
       <input
         type="checkbox"
+        id={"meta-" <> @field.key}
         name={"page[metadata][" <> @field.key <> "]"}
         value="true"
         checked={@checked?}
       />
-      <span>{@field.label}</span>
-      <small :if={@field.description}>{@field.description}</small>
-    </label>
+      <label for={"meta-" <> @field.key} class="settings-checkbox-text">
+        <span>{@field.label}</span>
+        <small :if={@field.description}>{@field.description}</small>
+      </label>
+    </div>
     """
   end
 

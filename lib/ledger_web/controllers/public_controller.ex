@@ -80,10 +80,13 @@ defmodule LedgerWeb.PublicController do
     send_themed(conn, body)
   end
 
-  # Hide the site's designated homepage page from the nav list — it's already
-  # reachable via the brand link at `/`.
+  # The nav excludes: the site's designated homepage (already reachable
+  # via the brand link at `/`), and any page explicitly hidden from the
+  # nav via its `show_in_nav` flag.
   defp nav_pages(site, pages) do
-    Enum.reject(pages, &(&1.id == site.homepage_page_id))
+    Enum.reject(pages, fn p ->
+      p.id == site.homepage_page_id or p.show_in_nav == false
+    end)
   end
 
   defp require_site(conn, _opts) do
