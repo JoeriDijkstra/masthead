@@ -70,6 +70,12 @@ config :ledger, LedgerWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :ledger, dev_routes: true
 
+# Custom domains use stub adapters in dev (no real DNS / Fly token).
+# To exercise the happy path locally, set `:dns_stub` / `:fly_stub`
+# entries (see Ledger.CustomDomains.DnsResolver.Stub for the shape).
+config :ledger, :dns_resolver, Ledger.CustomDomains.DnsResolver.Stub
+config :ledger, :fly_client, Ledger.CustomDomains.FlyClient.Stub
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 

@@ -17,7 +17,13 @@ defmodule LedgerWeb.Plugs.Subdomain do
   def call(conn, _opts) do
     case extract_subdomain(conn.host) do
       nil ->
-        conn
+        # Not a `*.app_host` request. Either the bare app host (admin /
+        # marketing) or a foreign host — which may be a verified custom
+        # domain pointing at us. Only `active` domains resolve here.
+        case Sites.get_site_by_custom_domain(conn.host) do
+          nil -> conn
+          site -> Plug.Conn.assign(conn, :current_site, site)
+        end
 
       slug ->
         case Sites.get_site_by_slug(slug) do

@@ -73,9 +73,17 @@ if config_env() == :prod do
     host: List.first(app_hosts),
     port: nil
 
+  # Custom domains: users CNAME their domain at the Fly app's edge.
+  # Derive the target from FLY_APP_NAME so it tracks the deployed app.
+  if fly_app = System.get_env("FLY_APP_NAME") do
+    config :ledger, :custom_domain,
+      cname_target: "#{fly_app}.fly.dev",
+      txt_prefix: "_ledger-verify"
+  end
+
   config :ledger, LedgerWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
-    check_origin: ["https://#{host}" | Enum.map(app_hosts, &"//*.#{&1}")],
+    check_origin: {LedgerWeb.CheckOrigin, :allowed?, [%{host: host, app_hosts: app_hosts}]},
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.

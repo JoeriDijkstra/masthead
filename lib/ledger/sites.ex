@@ -21,6 +21,32 @@ defmodule Ledger.Sites do
     Repo.get_by(Site, slug: slug)
   end
 
+  @doc """
+  Resolves a site by an `active` custom domain. Only domains that have
+  completed verification + cert issuance route traffic — a merely
+  configured-but-not-active domain must not serve a site.
+  """
+  def get_site_by_custom_domain(host) when is_binary(host) do
+    host = host |> String.downcase() |> String.trim_trailing(".")
+
+    Repo.one(
+      from s in Site,
+        where: s.custom_domain == ^host and s.custom_domain_status == "active"
+    )
+  end
+
+  @doc """
+  All custom domains currently serving traffic. Used to build the
+  endpoint's dynamic `check_origin` allow-list.
+  """
+  def list_active_custom_domains do
+    Repo.all(
+      from s in Site,
+        where: s.custom_domain_status == "active" and not is_nil(s.custom_domain),
+        select: s.custom_domain
+    )
+  end
+
   def create_site(attrs) do
     %Site{}
     |> Site.create_changeset(attrs_with_default_theme(attrs))

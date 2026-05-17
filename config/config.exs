@@ -24,6 +24,14 @@ config :ledger, :site_url,
   host: "lvh.me",
   port: 4000
 
+# Custom-domain feature. `cname_target` is the hostname users point
+# their domain's CNAME at (the Fly app's edge); `txt_prefix` is the
+# label under which the ownership token is published as a TXT record.
+# Prod overrides `cname_target` from FLY_APP_NAME in runtime.exs.
+config :ledger, :custom_domain,
+  cname_target: "dijkstra-ledger.fly.dev",
+  txt_prefix: "_ledger-verify"
+
 # Configure the endpoint
 config :ledger, LedgerWeb.Endpoint,
   url: [host: "localhost"],

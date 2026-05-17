@@ -20,6 +20,11 @@ config :ledger, LedgerWeb.Endpoint,
   secret_key_base: "nfXqtIqfqTjxEngG1ccHrd+wHjl4LkfDY6FkWvMI4NcIPYdrtOWRuSotkgHcQfte",
   server: false
 
+# Custom domains: stub adapters; tests drive them via :dns_stub /
+# :fly_stub application env (set per-test).
+config :ledger, :dns_resolver, Ledger.CustomDomains.DnsResolver.Stub
+config :ledger, :fly_client, Ledger.CustomDomains.FlyClient.Stub
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 
