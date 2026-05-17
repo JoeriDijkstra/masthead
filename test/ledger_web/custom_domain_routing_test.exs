@@ -64,18 +64,22 @@ defmodule LedgerWeb.CustomDomainRoutingTest do
   describe "CheckOrigin.allowed?/2" do
     @config %{host: "ledger-cloud.com", app_hosts: ["ledger-cloud.com"]}
 
+    # Phoenix invokes the {M,F,A} check_origin callback with the
+    # request %URI{} FIRST, then the configured args. These tests call
+    # it in that exact order so the argument contract can't regress
+    # (getting it wrong rejected every origin in prod).
     test "allows the bare app host and its subdomains" do
-      assert CheckOrigin.allowed?(@config, URI.parse("https://ledger-cloud.com"))
-      assert CheckOrigin.allowed?(@config, URI.parse("https://acme.ledger-cloud.com"))
+      assert CheckOrigin.allowed?(URI.parse("https://ledger-cloud.com"), @config)
+      assert CheckOrigin.allowed?(URI.parse("https://acme.ledger-cloud.com"), @config)
     end
 
     test "rejects an unknown foreign host" do
-      refute CheckOrigin.allowed?(@config, URI.parse("https://evil.example.com"))
+      refute CheckOrigin.allowed?(URI.parse("https://evil.example.com"), @config)
     end
 
     test "allows an active custom domain", %{site: site} do
       activate(site, "blog.example.com")
-      assert CheckOrigin.allowed?(@config, URI.parse("https://blog.example.com"))
+      assert CheckOrigin.allowed?(URI.parse("https://blog.example.com"), @config)
     end
   end
 end
