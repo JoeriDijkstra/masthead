@@ -9,16 +9,18 @@ defmodule LedgerWeb.CheckOrigin do
 
       check_origin: {LedgerWeb.CheckOrigin, :allowed?, [%{host: host, app_hosts: app_hosts}]}
 
-  Phoenix appends the request origin `%URI{}` as the final argument.
+  Phoenix invokes the MFA with the request origin `%URI{}` as the
+  FIRST argument, followed by the configured args — so the URI comes
+  before the config map here.
   """
-  def allowed?(%{host: host, app_hosts: app_hosts}, %URI{host: origin_host})
+  def allowed?(%URI{host: origin_host}, %{host: host, app_hosts: app_hosts})
       when is_binary(origin_host) do
     origin_host == host or
       Enum.any?(app_hosts, &String.ends_with?(origin_host, "." <> &1)) or
       active_custom_domain?(origin_host)
   end
 
-  def allowed?(_config, _uri), do: false
+  def allowed?(_uri, _config), do: false
 
   defp active_custom_domain?(origin_host) do
     origin_host in Ledger.Sites.list_active_custom_domains()
