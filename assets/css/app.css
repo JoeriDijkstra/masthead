@@ -1955,4 +1955,73 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   text-overflow: ellipsis;
 }
 
+/* ---- Custom domain ---- */
+.domain-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.domain-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: lowercase;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.domain-badge-active {
+  background: #dcfce7;
+  color: #166534;
+}
+.domain-badge-failed {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.dns-steps { margin: 0.5rem 0 1rem; }
+.dns-steps p { margin: 1rem 0 0.5rem; }
+.dns-kind { color: var(--muted); font-size: 0.9rem; }
+
+.dns-records {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.9rem;
+}
+.dns-records th,
+.dns-records td {
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--rule);
+}
+.dns-records th {
+  background: var(--bg-soft);
+  font-weight: 600;
+  color: var(--fg-soft);
+}
+.dns-records td code {
+  word-break: break-all;
+}
+
+.domain-status { font-size: 0.95rem; }
+.domain-status-active {
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-box);
+  background: #dcfce7;
+  color: #166534;
+}
+.domain-error {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-box);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
 /* This file is for your main application CSS */

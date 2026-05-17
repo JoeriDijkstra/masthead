@@ -3,7 +3,7 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
   on_mount {LedgerWeb.AdminLive.Hooks, :load_site}
 
   import LedgerWeb.AdminLive.Components
-  alias Ledger.{Sites, Themes, Content, CustomDomains}
+  alias Ledger.{Sites, Themes, Content}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -20,7 +20,6 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
        show_errors: false,
        selected_theme: pick_theme(themes, current_theme_id(changeset, site))
      )
-     |> assign_domain(site)
      |> assign_form(changeset)}
   end
 
@@ -55,80 +54,6 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
       {:error, changeset} ->
         {:noreply, socket |> assign(show_errors: true) |> assign_form(changeset)}
     end
-  end
-
-  def handle_event("set_domain", %{"custom_domain" => domain}, socket) do
-    case CustomDomains.set_domain(socket.assigns.site, domain) do
-      {:ok, site} ->
-        {:noreply,
-         socket
-         |> assign_domain(site)
-         |> put_flash(:info, "Domain saved. Add the DNS records below, then verify.")}
-
-      {:error, changeset} ->
-        {:noreply, put_flash(socket, :error, domain_error(changeset))}
-    end
-  end
-
-  def handle_event("verify_domain", _params, socket) do
-    case CustomDomains.verify(socket.assigns.site) do
-      {:ok, site} ->
-        {:noreply,
-         socket
-         |> assign_domain(site)
-         |> put_flash(:info, "Domain verified. Requesting an SSL certificate from Fly…")}
-
-      {:error, reason, site} ->
-        {:noreply,
-         socket
-         |> assign_domain(site)
-         |> put_flash(:error, "Verification failed: #{reason}")}
-    end
-  end
-
-  def handle_event("refresh_domain", _params, socket) do
-    case CustomDomains.refresh_status(socket.assigns.site) do
-      {:ok, %{custom_domain_status: "active"} = site} ->
-        {:noreply,
-         socket
-         |> assign_domain(site)
-         |> put_flash(:info, "Certificate issued — your domain is live.")}
-
-      {:ok, site} ->
-        {:noreply,
-         socket
-         |> assign_domain(site)
-         |> put_flash(:info, "Still provisioning — check back in a minute.")}
-
-      {:error, reason, site} ->
-        {:noreply,
-         socket |> assign_domain(site) |> put_flash(:error, "Status check failed: #{reason}")}
-    end
-  end
-
-  def handle_event("clear_domain", _params, socket) do
-    {:ok, site} = CustomDomains.clear_domain(socket.assigns.site)
-
-    {:noreply, socket |> assign_domain(site) |> put_flash(:info, "Custom domain removed.")}
-  end
-
-  defp domain_error(changeset) do
-    case changeset.errors[:custom_domain] do
-      {msg, _} -> "Domain: #{msg}"
-      _ -> "Could not save the domain."
-    end
-  end
-
-  # Recompute the DNS instructions whenever the site changes. Fly IPs
-  # (for apex A/AAAA records) are only fetched when a domain is set, so
-  # the common no-custom-domain path makes no Fly API call.
-  defp assign_domain(socket, site) do
-    dns =
-      if site.custom_domain,
-        do: CustomDomains.dns_instructions(site, CustomDomains.fly_ips()),
-        else: nil
-
-    assign(socket, site: site, dns: dns)
   end
 
   defp assign_form(socket, changeset) do
@@ -182,6 +107,13 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
   defp html_input_type("color"), do: "color"
   defp html_input_type("number"), do: "number"
   defp html_input_type(_), do: "text"
+
+  defp domain_status_label("pending_dns"), do: "awaiting DNS"
+  defp domain_status_label("verified"), do: "verified"
+  defp domain_status_label("cert_provisioning"), do: "issuing SSL"
+  defp domain_status_label("active"), do: "active"
+  defp domain_status_label("failed"), do: "needs attention"
+  defp domain_status_label(other), do: other
 
   @impl true
   def render(assigns) do
@@ -311,174 +243,39 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
             </div>
           </div>
 
+          <div class="settings-section">
+            <header class="settings-section-head">
+              <h2>Custom domain</h2>
+              <p>Serve this site from your own domain instead of a Ledger subdomain.</p>
+            </header>
+
+            <div class="settings-fields">
+              <div :if={@site.custom_domain} class="domain-summary">
+                <span>
+                  <strong>{@site.custom_domain}</strong>
+                  <span class={"domain-badge domain-badge-" <> @site.custom_domain_status}>
+                    {domain_status_label(@site.custom_domain_status)}
+                  </span>
+                </span>
+                <.link navigate={~p"/#{@site.slug}/domain"} class="btn">Manage</.link>
+              </div>
+
+              <div :if={is_nil(@site.custom_domain)} class="domain-summary">
+                <span class="muted">No custom domain configured.</span>
+                <.link navigate={~p"/#{@site.slug}/domain"} class="btn btn-primary">
+                  Set up a custom domain
+                </.link>
+              </div>
+            </div>
+          </div>
+
           <div class="wizard-footer">
             <.link navigate={~p"/#{@site.slug}"} class="btn">Cancel</.link>
             <button type="submit" class="btn btn-primary">Save settings</button>
           </div>
         </.form>
-
-        <div class="settings-section">
-          <header class="settings-section-head">
-            <h2>Custom domain</h2>
-            <p>
-              Serve this site from your own domain — a subdomain
-              (<code>blog.example.com</code>) or an apex/root domain
-              (<code>example.com</code>).
-            </p>
-          </header>
-
-          <div class="settings-fields">
-            <%= cond do %>
-              <% @site.custom_domain_status == "active" -> %>
-                <p class="domain-status domain-status-active">
-                  <strong>{@site.custom_domain}</strong> is live and secured with SSL.
-                </p>
-                <p>
-                  <a href={"https://#{@site.custom_domain}"} target="_blank" rel="noopener">
-                    Open https://{@site.custom_domain}
-                  </a>
-                </p>
-                <button
-                  type="button"
-                  class="btn"
-                  phx-click="clear_domain"
-                  data-confirm="Remove this custom domain? The SSL certificate will be deleted."
-                >
-                  Remove domain
-                </button>
-              <% @site.custom_domain_status in ["pending_dns", "verified", "cert_provisioning", "failed"] -> %>
-                <p>
-                  Domain: <strong>{@site.custom_domain}</strong>
-                  <span class="domain-status">— {humanize_status(@site.custom_domain_status)}</span>
-                </p>
-
-                <p :if={@site.custom_domain_last_error} class="domain-error">
-                  {@site.custom_domain_last_error}
-                </p>
-
-                <div :if={@dns}>
-                  <p><strong>1. Prove ownership</strong> — add this TXT record:</p>
-                  <table class="dns-records">
-                    <thead>
-                      <tr>
-                        <th>Type</th>
-                        <th>Name</th>
-                        <th>Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>{@dns.txt.type}</td>
-                        <td><code>{@dns.txt.name}</code></td>
-                        <td><code>{@dns.txt.value}</code></td>
-                      </tr>
-                    </tbody>
-                  </table>
-
-                  <p>
-                    <strong>2. Point the domain at Ledger</strong> — pick the
-                    option that matches your domain:
-                  </p>
-
-                  <p><em>Subdomain</em> (e.g. <code>blog.example.com</code>):</p>
-                  <table class="dns-records">
-                    <thead>
-                      <tr>
-                        <th>Type</th>
-                        <th>Name</th>
-                        <th>Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>{@dns.cname.type}</td>
-                        <td><code>{@dns.cname.name}</code></td>
-                        <td><code>{@dns.cname.value}</code></td>
-                      </tr>
-                    </tbody>
-                  </table>
-
-                  <p><em>Apex / root domain</em> (e.g. <code>example.com</code>):</p>
-                  <table :if={@dns.a_records != []} class="dns-records">
-                    <thead>
-                      <tr>
-                        <th>Type</th>
-                        <th>Name</th>
-                        <th>Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr :for={rec <- @dns.a_records}>
-                        <td>{rec.type}</td>
-                        <td><code>{rec.name}</code></td>
-                        <td><code>{rec.value}</code></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <p :if={@dns.a_records == []} class="domain-error">
-                    Could not fetch the Fly app IPs for apex setup — use the
-                    subdomain (CNAME) option, or retry later.
-                  </p>
-
-                  <small>
-                    A CNAME can't be set on an apex domain, so apex domains use
-                    A/AAAA records instead. Add only one option's records.
-                  </small>
-                </div>
-
-                <div class="domain-actions">
-                  <button
-                    :if={@site.custom_domain_status in ["pending_dns", "failed"]}
-                    type="button"
-                    class="btn btn-primary"
-                    phx-click="verify_domain"
-                  >
-                    Verify domain
-                  </button>
-
-                  <button
-                    :if={@site.custom_domain_status in ["verified", "cert_provisioning"]}
-                    type="button"
-                    class="btn btn-primary"
-                    phx-click="refresh_domain"
-                  >
-                    Refresh status
-                  </button>
-
-                  <button
-                    type="button"
-                    class="btn"
-                    phx-click="clear_domain"
-                    data-confirm="Remove this custom domain?"
-                  >
-                    Remove
-                  </button>
-                </div>
-              <% true -> %>
-                <form phx-submit="set_domain" class="form">
-                  <label>
-                    Domain
-                    <input
-                      type="text"
-                      name="custom_domain"
-                      placeholder="blog.example.com"
-                      autocomplete="off"
-                    />
-                    <small>A subdomain you control. Apex domains aren't supported yet.</small>
-                  </label>
-                  <button type="submit" class="btn btn-primary">Save domain</button>
-                </form>
-            <% end %>
-          </div>
-        </div>
       </div>
     </.shell>
     """
   end
-
-  defp humanize_status("pending_dns"), do: "awaiting DNS records"
-  defp humanize_status("verified"), do: "verified, requesting certificate"
-  defp humanize_status("cert_provisioning"), do: "certificate provisioning"
-  defp humanize_status("failed"), do: "verification failed"
-  defp humanize_status(other), do: other
 end

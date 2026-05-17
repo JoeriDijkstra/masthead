@@ -4,7 +4,7 @@ defmodule Ledger.MixProject do
   def project do
     [
       app: :ledger,
-      version: "1.5.0",
+      version: "1.6.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,

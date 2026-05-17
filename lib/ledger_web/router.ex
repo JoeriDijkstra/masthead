@@ -37,6 +37,7 @@ defmodule LedgerWeb.Router do
 
       live "/:site_slug", AdminLive.SiteDashboard, :show
       live "/:site_slug/settings", AdminLive.SiteSettings, :edit
+      live "/:site_slug/domain", AdminLive.DomainSetup, :show
 
       live "/:site_slug/posts", AdminLive.PostIndex, :index
       live "/:site_slug/posts/new", AdminLive.PostForm, :new
