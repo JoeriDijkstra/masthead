@@ -157,73 +157,77 @@ defmodule LedgerWeb.AdminLive.DomainSetup do
               {@site.custom_domain_last_error}
             </p>
 
-            <div :if={@dns} class="dns-steps">
-              <p><strong>1. Prove ownership</strong> — add this TXT record:</p>
-              <table class="dns-records">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Name</th>
-                    <th>Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>{@dns.txt.type}</td>
-                    <td><code>{@dns.txt.name}</code></td>
-                    <td><code>{@dns.txt.value}</code></td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <p>
-                <strong>2. Point the domain at Ledger</strong> — use the row that matches your domain:
+            <div :if={@dns} class="dns-card">
+              <p class="dns-intro">
+                Add these records at your DNS provider, then click <strong>Verify</strong>. Changes can take a few minutes to
+                propagate.
               </p>
 
-              <p class="dns-kind"><em>Subdomain</em> (e.g. <code>blog.example.com</code>)</p>
-              <table class="dns-records">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Name</th>
-                    <th>Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>{@dns.cname.type}</td>
-                    <td><code>{@dns.cname.name}</code></td>
-                    <td><code>{@dns.cname.value}</code></td>
-                  </tr>
-                </tbody>
-              </table>
+              <div class="dns-record">
+                <div class="dns-record-head">
+                  <span class="dns-type">{@dns.txt.type}</span>
+                  <span class="dns-purpose">Proves you own this domain.</span>
+                </div>
+                <dl class="dns-fields">
+                  <div>
+                    <dt>Name</dt>
+                    <dd><code>{@dns.txt.name}</code></dd>
+                  </div>
+                  <div>
+                    <dt>Value</dt>
+                    <dd><code>{@dns.txt.value}</code></dd>
+                  </div>
+                </dl>
+              </div>
 
-              <p class="dns-kind"><em>Apex / root domain</em> (e.g. <code>example.com</code>)</p>
-              <table :if={@dns.a_records != []} class="dns-records">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Name</th>
-                    <th>Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr :for={rec <- @dns.a_records}>
-                    <td>{rec.type}</td>
-                    <td><code>{rec.name}</code></td>
-                    <td><code>{rec.value}</code></td>
-                  </tr>
-                </tbody>
-              </table>
-              <p :if={@dns.a_records == []} class="domain-error">
-                Could not fetch the Fly app IPs for apex setup — use the
-                subdomain (CNAME) option, or retry later.
-              </p>
+              <div class="dns-record">
+                <div class="dns-record-head">
+                  <span class="dns-type">{@dns.cname.type}</span>
+                  <span class="dns-purpose">
+                    Points the domain at Ledger (for <code>blog.example.com</code>-style subdomains).
+                  </span>
+                </div>
+                <dl class="dns-fields">
+                  <div>
+                    <dt>Name</dt>
+                    <dd><code>{@dns.cname.name}</code></dd>
+                  </div>
+                  <div>
+                    <dt>Value</dt>
+                    <dd><code>{@dns.cname.value}</code></dd>
+                  </div>
+                </dl>
+              </div>
 
-              <small>
-                A CNAME can't be set on an apex domain, so apex domains use
-                A/AAAA records instead. Add only one option's records.
-              </small>
+              <details class="dns-apex">
+                <summary>Using a root/apex domain (<code>example.com</code>) instead?</summary>
+                <p class="dns-apex-note">
+                  A <code>CNAME</code> can't be set on a root domain — add
+                  these A/AAAA records <em>instead of</em> the CNAME above.
+                </p>
+
+                <div :for={rec <- @dns.a_records} class="dns-record">
+                  <div class="dns-record-head">
+                    <span class="dns-type">{rec.type}</span>
+                    <span class="dns-purpose">Points the root domain at Ledger.</span>
+                  </div>
+                  <dl class="dns-fields">
+                    <div>
+                      <dt>Name</dt>
+                      <dd><code>{rec.name}</code></dd>
+                    </div>
+                    <div>
+                      <dt>Value</dt>
+                      <dd><code>{rec.value}</code></dd>
+                    </div>
+                  </dl>
+                </div>
+
+                <p :if={@dns.a_records == []} class="domain-error">
+                  Could not fetch the Fly app IPs for apex setup — use the
+                  subdomain (CNAME) option above, or retry later.
+                </p>
+              </details>
             </div>
 
             <div class="wizard-footer">

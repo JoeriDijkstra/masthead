@@ -43,7 +43,8 @@ defmodule LedgerWeb.DomainSetupLiveTest do
       |> render_submit()
 
     assert html =~ "blog.example.com"
-    assert html =~ "Prove ownership"
+    assert html =~ "Proves you own this domain"
+    assert html =~ "Add these records at your DNS provider"
   end
 
   test "settings shows the set-up link", %{conn: conn, site: site} do
