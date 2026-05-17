@@ -20,6 +20,7 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
        show_errors: false,
        selected_theme: pick_theme(themes, current_theme_id(changeset, site))
      )
+     |> assign_domain(site)
      |> assign_form(changeset)}
   end
 
@@ -61,7 +62,7 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
       {:ok, site} ->
         {:noreply,
          socket
-         |> assign(site: site)
+         |> assign_domain(site)
          |> put_flash(:info, "Domain saved. Add the DNS records below, then verify.")}
 
       {:error, changeset} ->
@@ -74,13 +75,13 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
       {:ok, site} ->
         {:noreply,
          socket
-         |> assign(site: site)
+         |> assign_domain(site)
          |> put_flash(:info, "Domain verified. Requesting an SSL certificate from Fly…")}
 
       {:error, reason, site} ->
         {:noreply,
          socket
-         |> assign(site: site)
+         |> assign_domain(site)
          |> put_flash(:error, "Verification failed: #{reason}")}
     end
   end
@@ -90,25 +91,25 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
       {:ok, %{custom_domain_status: "active"} = site} ->
         {:noreply,
          socket
-         |> assign(site: site)
+         |> assign_domain(site)
          |> put_flash(:info, "Certificate issued — your domain is live.")}
 
       {:ok, site} ->
         {:noreply,
          socket
-         |> assign(site: site)
+         |> assign_domain(site)
          |> put_flash(:info, "Still provisioning — check back in a minute.")}
 
       {:error, reason, site} ->
         {:noreply,
-         socket |> assign(site: site) |> put_flash(:error, "Status check failed: #{reason}")}
+         socket |> assign_domain(site) |> put_flash(:error, "Status check failed: #{reason}")}
     end
   end
 
   def handle_event("clear_domain", _params, socket) do
     {:ok, site} = CustomDomains.clear_domain(socket.assigns.site)
 
-    {:noreply, socket |> assign(site: site) |> put_flash(:info, "Custom domain removed.")}
+    {:noreply, socket |> assign_domain(site) |> put_flash(:info, "Custom domain removed.")}
   end
 
   defp domain_error(changeset) do
@@ -116,6 +117,18 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
       {msg, _} -> "Domain: #{msg}"
       _ -> "Could not save the domain."
     end
+  end
+
+  # Recompute the DNS instructions whenever the site changes. Fly IPs
+  # (for apex A/AAAA records) are only fetched when a domain is set, so
+  # the common no-custom-domain path makes no Fly API call.
+  defp assign_domain(socket, site) do
+    dns =
+      if site.custom_domain,
+        do: CustomDomains.dns_instructions(site, CustomDomains.fly_ips()),
+        else: nil
+
+    assign(socket, site: site, dns: dns)
   end
 
   defp assign_form(socket, changeset) do
@@ -304,11 +317,14 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
           </div>
         </.form>
 
-        <% dns = CustomDomains.dns_instructions(@site) %>
         <div class="settings-section">
           <header class="settings-section-head">
             <h2>Custom domain</h2>
-            <p>Serve this site from your own subdomain (e.g. <code>blog.example.com</code>).</p>
+            <p>
+              Serve this site from your own domain — a subdomain
+              (<code>blog.example.com</code>) or an apex/root domain
+              (<code>example.com</code>).
+            </p>
           </header>
 
           <div class="settings-fields">
@@ -340,32 +356,75 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
                   {@site.custom_domain_last_error}
                 </p>
 
-                <table :if={dns} class="dns-records">
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Name</th>
-                      <th>Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>{dns.cname.type}</td>
-                      <td><code>{dns.cname.name}</code></td>
-                      <td><code>{dns.cname.value}</code></td>
-                    </tr>
-                    <tr>
-                      <td>{dns.txt.type}</td>
-                      <td><code>{dns.txt.name}</code></td>
-                      <td><code>{dns.txt.value}</code></td>
-                    </tr>
-                  </tbody>
-                </table>
+                <div :if={@dns}>
+                  <p><strong>1. Prove ownership</strong> — add this TXT record:</p>
+                  <table class="dns-records">
+                    <thead>
+                      <tr>
+                        <th>Type</th>
+                        <th>Name</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>{@dns.txt.type}</td>
+                        <td><code>{@dns.txt.name}</code></td>
+                        <td><code>{@dns.txt.value}</code></td>
+                      </tr>
+                    </tbody>
+                  </table>
 
-                <small>
-                  Add both records at your DNS provider. Verification checks the
-                  TXT token and that the CNAME points at the Ledger edge.
-                </small>
+                  <p>
+                    <strong>2. Point the domain at Ledger</strong> — pick the
+                    option that matches your domain:
+                  </p>
+
+                  <p><em>Subdomain</em> (e.g. <code>blog.example.com</code>):</p>
+                  <table class="dns-records">
+                    <thead>
+                      <tr>
+                        <th>Type</th>
+                        <th>Name</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>{@dns.cname.type}</td>
+                        <td><code>{@dns.cname.name}</code></td>
+                        <td><code>{@dns.cname.value}</code></td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <p><em>Apex / root domain</em> (e.g. <code>example.com</code>):</p>
+                  <table :if={@dns.a_records != []} class="dns-records">
+                    <thead>
+                      <tr>
+                        <th>Type</th>
+                        <th>Name</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr :for={rec <- @dns.a_records}>
+                        <td>{rec.type}</td>
+                        <td><code>{rec.name}</code></td>
+                        <td><code>{rec.value}</code></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p :if={@dns.a_records == []} class="domain-error">
+                    Could not fetch the Fly app IPs for apex setup — use the
+                    subdomain (CNAME) option, or retry later.
+                  </p>
+
+                  <small>
+                    A CNAME can't be set on an apex domain, so apex domains use
+                    A/AAAA records instead. Add only one option's records.
+                  </small>
+                </div>
 
                 <div class="domain-actions">
                   <button

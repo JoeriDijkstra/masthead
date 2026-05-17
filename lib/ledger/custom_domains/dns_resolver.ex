@@ -10,6 +10,8 @@ defmodule Ledger.CustomDomains.DnsResolver do
   """
   @callback lookup_txt(String.t()) :: [String.t()]
   @callback lookup_cname(String.t()) :: [String.t()]
+  @callback lookup_a(String.t()) :: [String.t()]
+  @callback lookup_aaaa(String.t()) :: [String.t()]
 
   def adapter do
     Application.get_env(
@@ -21,6 +23,8 @@ defmodule Ledger.CustomDomains.DnsResolver do
 
   def lookup_txt(name), do: adapter().lookup_txt(name)
   def lookup_cname(name), do: adapter().lookup_cname(name)
+  def lookup_a(name), do: adapter().lookup_a(name)
+  def lookup_aaaa(name), do: adapter().lookup_aaaa(name)
 end
 
 defmodule Ledger.CustomDomains.DnsResolver.Inet do
@@ -48,6 +52,21 @@ defmodule Ledger.CustomDomains.DnsResolver.Inet do
   rescue
     _ -> []
   end
+
+  @impl true
+  def lookup_a(name), do: lookup_ip(name, :a)
+
+  @impl true
+  def lookup_aaaa(name), do: lookup_ip(name, :aaaa)
+
+  defp lookup_ip(name, type) do
+    name
+    |> to_charlist()
+    |> :inet_res.lookup(:in, type)
+    |> Enum.map(fn addr -> addr |> :inet.ntoa() |> to_string() end)
+  rescue
+    _ -> []
+  end
 end
 
 defmodule Ledger.CustomDomains.DnsResolver.Stub do
@@ -66,6 +85,12 @@ defmodule Ledger.CustomDomains.DnsResolver.Stub do
 
   @impl true
   def lookup_cname(name), do: get(:cname, name)
+
+  @impl true
+  def lookup_a(name), do: get(:a, name)
+
+  @impl true
+  def lookup_aaaa(name), do: get(:aaaa, name)
 
   defp get(kind, name) do
     :ledger

@@ -36,6 +36,15 @@ defmodule Ledger.CustomDomainsTest do
     })
   end
 
+  defp put_apex_dns(domain, token, ips) do
+    Application.put_env(:ledger, :dns_stub, %{
+      txt: %{"_ledger-verify.#{domain}" => [token]},
+      a: %{domain => ips}
+    })
+
+    Application.put_env(:ledger, :fly_stub, %{add: :ok, ips: ips})
+  end
+
   describe "set_domain/2" do
     test "normalizes input and moves to pending_dns with a token", %{site: site} do
       assert {:ok, site} = CustomDomains.set_domain(site, "  HTTPS://Blog.Example.com/path  ")
@@ -44,10 +53,10 @@ defmodule Ledger.CustomDomainsTest do
       assert is_binary(site.custom_domain_token) and byte_size(site.custom_domain_token) > 0
     end
 
-    test "rejects apex domains", %{site: site} do
-      assert {:error, changeset} = CustomDomains.set_domain(site, "example.com")
-      assert %{custom_domain: [msg]} = errors_on(changeset)
-      assert msg =~ "subdomain"
+    test "accepts apex domains", %{site: site} do
+      assert {:ok, site} = CustomDomains.set_domain(site, "example.com")
+      assert site.custom_domain == "example.com"
+      assert site.custom_domain_status == "pending_dns"
     end
 
     test "rejects a platform host", %{site: site} do
@@ -89,6 +98,29 @@ defmodule Ledger.CustomDomainsTest do
       assert site.custom_domain_status == "cert_provisioning"
       assert is_nil(site.custom_domain_last_error)
       refute is_nil(site.custom_domain_verified_at)
+    end
+
+    test "verifies an apex domain via A records pointing at Fly IPs", %{site: site} do
+      {:ok, site} = CustomDomains.set_domain(site, "example.com")
+      put_apex_dns("example.com", site.custom_domain_token, ["66.66.66.66"])
+
+      assert {:ok, site} = CustomDomains.verify(site)
+      assert site.custom_domain_status == "cert_provisioning"
+    end
+
+    test "fails an apex domain whose A records point elsewhere", %{site: site} do
+      {:ok, site} = CustomDomains.set_domain(site, "example.com")
+
+      Application.put_env(:ledger, :dns_stub, %{
+        txt: %{"_ledger-verify.example.com" => [site.custom_domain_token]},
+        a: %{"example.com" => ["9.9.9.9"]}
+      })
+
+      Application.put_env(:ledger, :fly_stub, %{ips: ["66.66.66.66"]})
+
+      assert {:error, reason, site} = CustomDomains.verify(site)
+      assert reason =~ "delegated"
+      assert site.custom_domain_status == "failed"
     end
   end
 

@@ -49,7 +49,7 @@ defmodule Ledger.CustomDomains do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     with :ok <- check_txt(site),
-         :ok <- check_cname(site) do
+         :ok <- check_delegation(site) do
       site
       |> state_changeset(%{
         custom_domain_status: "verified",
@@ -122,15 +122,37 @@ defmodule Ledger.CustomDomains do
   @doc """
   The DNS records the user must create, for display in the admin UI.
   """
-  def dns_instructions(%Site{custom_domain: domain, custom_domain_token: token})
+  def dns_instructions(site, fly_ips \\ [])
+
+  def dns_instructions(
+        %Site{custom_domain: domain, custom_domain_token: token},
+        fly_ips
+      )
       when is_binary(domain) do
     %{
+      txt: %{type: "TXT", name: "#{txt_prefix()}.#{domain}", value: token},
+      # Subdomain setups use the CNAME; apex setups use the A/AAAA
+      # records. The UI shows both and the user picks the one their
+      # domain allows.
       cname: %{type: "CNAME", name: domain, value: cname_target()},
-      txt: %{type: "TXT", name: "#{txt_prefix()}.#{domain}", value: token}
+      a_records:
+        Enum.map(fly_ips, fn ip ->
+          %{type: ip_record_type(ip), name: domain, value: ip}
+        end)
     }
   end
 
-  def dns_instructions(_site), do: nil
+  def dns_instructions(_site, _fly_ips), do: nil
+
+  @doc "The Fly app's public IPs (for apex A/AAAA instructions). [] on error."
+  def fly_ips do
+    case FlyClient.get_ips() do
+      {:ok, ips} -> ips
+      _ -> []
+    end
+  end
+
+  defp ip_record_type(ip), do: if(String.contains?(ip, ":"), do: "AAAA", else: "A")
 
   # --- internals ---------------------------------------------------------
 
@@ -162,14 +184,31 @@ defmodule Ledger.CustomDomains do
     end
   end
 
-  defp check_cname(%Site{custom_domain: domain}) do
-    target = cname_target()
-
-    if target in DnsResolver.lookup_cname(domain) do
-      :ok
-    else
-      {:error, "CNAME for #{domain} does not point at #{target}"}
+  # A subdomain delegates via CNAME → the Fly edge. An apex domain
+  # cannot hold a CNAME (RFC 1034/2181), so it instead points A/AAAA
+  # records at the Fly app's IPs. Either is acceptable.
+  defp check_delegation(%Site{custom_domain: domain}) do
+    cond do
+      cname_target() in DnsResolver.lookup_cname(domain) -> :ok
+      apex_points_at_fly?(domain) -> :ok
+      true -> {:error, delegation_error(domain)}
     end
+  end
+
+  defp apex_points_at_fly?(domain) do
+    case FlyClient.get_ips() do
+      {:ok, [_ | _] = fly_ips} ->
+        resolved = DnsResolver.lookup_a(domain) ++ DnsResolver.lookup_aaaa(domain)
+        resolved != [] and Enum.all?(resolved, &(&1 in fly_ips))
+
+      _ ->
+        false
+    end
+  end
+
+  defp delegation_error(domain) do
+    "#{domain} is not delegated to Ledger: add a CNAME to #{cname_target()} " <>
+      "(subdomain) or A/AAAA records pointing at the Fly app IPs (apex)"
   end
 
   defp fail(site, reason, now) do

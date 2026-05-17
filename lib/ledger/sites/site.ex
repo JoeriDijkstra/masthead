@@ -122,6 +122,11 @@ defmodule Ledger.Sites.Site do
     end
   end
 
+  # Both apex (`example.com`) and subdomains (`blog.example.com`) are
+  # allowed — the regex already requires at least two labels, so bare
+  # hostnames like `localhost` are rejected. Which DNS records the user
+  # must create depends on apex vs subdomain; that's handled at verify
+  # time, not here.
   defp validate_custom_domain_format(changeset) do
     changeset
     |> validate_length(:custom_domain, max: 253)
@@ -130,16 +135,6 @@ defmodule Ledger.Sites.Site do
       ~r/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/,
       message: "must be a valid domain name"
     )
-    |> validate_change(:custom_domain, fn :custom_domain, domain ->
-      if length(String.split(domain, ".")) >= 3 do
-        []
-      else
-        [
-          custom_domain:
-            "must be a subdomain (e.g. blog.example.com); apex domains are not supported yet"
-        ]
-      end
-    end)
   end
 
   # A custom domain must never collide with the platform's own hosts or

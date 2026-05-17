@@ -13,6 +13,7 @@ defmodule Ledger.CustomDomains.FlyClient do
   @callback add_certificate(String.t()) :: :ok | {:error, term()}
   @callback get_certificate(String.t()) :: {:ok, cert_status()} | {:error, term()}
   @callback delete_certificate(String.t()) :: :ok | {:error, term()}
+  @callback get_ips() :: {:ok, [String.t()]} | {:error, term()}
 
   def adapter do
     Application.get_env(
@@ -25,6 +26,7 @@ defmodule Ledger.CustomDomains.FlyClient do
   def add_certificate(domain), do: adapter().add_certificate(domain)
   def get_certificate(domain), do: adapter().get_certificate(domain)
   def delete_certificate(domain), do: adapter().delete_certificate(domain)
+  def get_ips, do: adapter().get_ips()
 end
 
 defmodule Ledger.CustomDomains.FlyClient.Http do
@@ -98,6 +100,28 @@ defmodule Ledger.CustomDomains.FlyClient.Http do
     end
   end
 
+  @impl true
+  def get_ips do
+    query = """
+    query($appName: String!) {
+      app(name: $appName) {
+        ipAddresses { nodes { address } }
+      }
+    }
+    """
+
+    case request(query, %{appName: app_name()}) do
+      {:ok, %{"app" => %{"ipAddresses" => %{"nodes" => nodes}}}} ->
+        {:ok, Enum.map(nodes, & &1["address"])}
+
+      {:ok, _} ->
+        {:ok, []}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   defp request(query, variables) do
     body = Jason.encode!(%{query: query, variables: variables})
 
@@ -160,6 +184,9 @@ defmodule Ledger.CustomDomains.FlyClient.Stub do
 
   @impl true
   def delete_certificate(_domain), do: cfg(:delete, :ok)
+
+  @impl true
+  def get_ips, do: {:ok, cfg(:ips, ["66.66.66.66", "2a09:8280::1"])}
 
   defp cfg(key, default) do
     :ledger
