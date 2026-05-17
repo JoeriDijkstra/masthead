@@ -145,6 +145,25 @@ defmodule Ledger.CustomDomainsTest do
     end
   end
 
+  describe "FlyClient.Http without credentials" do
+    alias Ledger.CustomDomains.FlyClient.Http
+
+    test "returns an error tuple instead of raising" do
+      # FLY_API_TOKEN / FLY_APP_NAME are unset in test — the adapter
+      # must degrade gracefully, never raise (which used to crash the
+      # whole LiveView via fly_ips/0).
+      assert {:error, msg} = Http.get_ips()
+      assert msg =~ "FLY_"
+      assert {:error, _} = Http.add_certificate("blog.example.com")
+      assert {:error, _} = Http.get_certificate("blog.example.com")
+      assert {:error, _} = Http.delete_certificate("blog.example.com")
+    end
+
+    test "CustomDomains.fly_ips/0 always returns a list, never raises" do
+      assert is_list(CustomDomains.fly_ips())
+    end
+  end
+
   describe "clear_domain/1 and lookup" do
     test "resets all custom-domain fields", %{site: site} do
       {:ok, site} = CustomDomains.set_domain(site, "blog.example.com")

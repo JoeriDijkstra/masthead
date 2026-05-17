@@ -144,12 +144,18 @@ defmodule Ledger.CustomDomains do
 
   def dns_instructions(_site, _fly_ips), do: nil
 
-  @doc "The Fly app's public IPs (for apex A/AAAA instructions). [] on error."
+  @doc """
+  The Fly app's public IPs (for apex A/AAAA instructions). Returns []
+  on any failure — missing credentials, network error, or unexpected
+  exception — so callers never crash on the apex-instructions path.
+  """
   def fly_ips do
     case FlyClient.get_ips() do
       {:ok, ips} -> ips
       _ -> []
     end
+  rescue
+    _ -> []
   end
 
   defp ip_record_type(ip), do: if(String.contains?(ip, ":"), do: "AAAA", else: "A")

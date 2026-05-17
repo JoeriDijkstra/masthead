@@ -51,9 +51,9 @@ defmodule Ledger.CustomDomains.FlyClient.Http do
     }
     """
 
-    case request(query, %{appId: app_name(), hostname: domain}) do
-      {:ok, _data} -> :ok
-      {:error, reason} -> {:error, reason}
+    with {:ok, token, app} <- credentials(),
+         {:ok, _data} <- request(token, query, %{appId: app, hostname: domain}) do
+      :ok
     end
   end
 
@@ -71,16 +71,19 @@ defmodule Ledger.CustomDomains.FlyClient.Http do
     }
     """
 
-    case request(query, %{appName: app_name(), hostname: domain}) do
-      {:ok, %{"app" => %{"certificate" => nil}}} ->
-        {:ok, %{ready?: false, status: "unknown"}}
+    with {:ok, token, app} <- credentials(),
+         {:ok, data} <- request(token, query, %{appName: app, hostname: domain}) do
+      case data do
+        %{"app" => %{"certificate" => nil}} ->
+          {:ok, %{ready?: false, status: "unknown"}}
 
-      {:ok, %{"app" => %{"certificate" => cert}}} ->
-        status = cert["clientStatus"] || "unknown"
-        {:ok, %{ready?: status == "Ready", status: status}}
+        %{"app" => %{"certificate" => cert}} ->
+          status = cert["clientStatus"] || "unknown"
+          {:ok, %{ready?: status == "Ready", status: status}}
 
-      {:error, reason} ->
-        {:error, reason}
+        _ ->
+          {:ok, %{ready?: false, status: "unknown"}}
+      end
     end
   end
 
@@ -94,9 +97,9 @@ defmodule Ledger.CustomDomains.FlyClient.Http do
     }
     """
 
-    case request(query, %{appId: app_name(), hostname: domain}) do
-      {:ok, _data} -> :ok
-      {:error, reason} -> {:error, reason}
+    with {:ok, token, app} <- credentials(),
+         {:ok, _data} <- request(token, query, %{appId: app, hostname: domain}) do
+      :ok
     end
   end
 
@@ -110,23 +113,23 @@ defmodule Ledger.CustomDomains.FlyClient.Http do
     }
     """
 
-    case request(query, %{appName: app_name()}) do
-      {:ok, %{"app" => %{"ipAddresses" => %{"nodes" => nodes}}}} ->
-        {:ok, Enum.map(nodes, & &1["address"])}
+    with {:ok, token, app} <- credentials(),
+         {:ok, data} <- request(token, query, %{appName: app}) do
+      case data do
+        %{"app" => %{"ipAddresses" => %{"nodes" => nodes}}} ->
+          {:ok, Enum.map(nodes, & &1["address"])}
 
-      {:ok, _} ->
-        {:ok, []}
-
-      {:error, reason} ->
-        {:error, reason}
+        _ ->
+          {:ok, []}
+      end
     end
   end
 
-  defp request(query, variables) do
+  defp request(token, query, variables) do
     body = Jason.encode!(%{query: query, variables: variables})
 
     headers = [
-      {"Authorization", "Bearer #{token()}"},
+      {"Authorization", "Bearer #{token}"},
       {"Content-Type", "application/json"}
     ]
 
@@ -151,14 +154,26 @@ defmodule Ledger.CustomDomains.FlyClient.Http do
     end
   end
 
-  defp token do
-    System.get_env("FLY_API_TOKEN") ||
-      raise "FLY_API_TOKEN is not set — cannot manage custom-domain certificates"
-  end
+  # Missing credentials is an expected state (dev, unconfigured prod) —
+  # return an error tuple so callers degrade gracefully instead of the
+  # whole LiveView crashing.
+  defp credentials do
+    case {System.get_env("FLY_API_TOKEN"), System.get_env("FLY_APP_NAME")} do
+      {nil, _} ->
+        {:error, "FLY_API_TOKEN is not set — custom-domain certificates are unavailable"}
 
-  defp app_name do
-    System.get_env("FLY_APP_NAME") ||
-      raise "FLY_APP_NAME is not set — cannot manage custom-domain certificates"
+      {_, nil} ->
+        {:error, "FLY_APP_NAME is not set — custom-domain certificates are unavailable"}
+
+      {"", _} ->
+        {:error, "FLY_API_TOKEN is not set — custom-domain certificates are unavailable"}
+
+      {_, ""} ->
+        {:error, "FLY_APP_NAME is not set — custom-domain certificates are unavailable"}
+
+      {token, app} ->
+        {:ok, token, app}
+    end
   end
 end
 
