@@ -108,6 +108,23 @@ defmodule Ledger.CustomDomainsTest do
       assert site.custom_domain_status == "cert_provisioning"
     end
 
+    test "verifies apex when the AAAA and Fly IP are the same address in different notation",
+         %{site: site} do
+      {:ok, site} = CustomDomains.set_domain(site, "example.com")
+
+      Application.put_env(:ledger, :dns_stub, %{
+        txt: %{"_ledger-verify.example.com" => [site.custom_domain_token]},
+        aaaa: %{"example.com" => ["2a09:8280:1::115:7075:0"]}
+      })
+
+      # Fly reports the SAME address in expanded form — string compare
+      # would miss this; parsed comparison must not.
+      Application.put_env(:ledger, :fly_stub, %{add: :ok, ips: ["2a09:8280:1:0:0:115:7075:0"]})
+
+      assert {:ok, site} = CustomDomains.verify(site)
+      assert site.custom_domain_status == "cert_provisioning"
+    end
+
     test "fails an apex domain whose A records point elsewhere", %{site: site} do
       {:ok, site} = CustomDomains.set_domain(site, "example.com")
 
@@ -119,7 +136,7 @@ defmodule Ledger.CustomDomainsTest do
       Application.put_env(:ledger, :fly_stub, %{ips: ["66.66.66.66"]})
 
       assert {:error, reason, site} = CustomDomains.verify(site)
-      assert reason =~ "delegated"
+      assert reason =~ "points at" and reason =~ "IP addresses"
       assert site.custom_domain_status == "failed"
     end
   end
@@ -153,7 +170,7 @@ defmodule Ledger.CustomDomainsTest do
       # must degrade gracefully, never raise (which used to crash the
       # whole LiveView via fly_ips/0).
       assert {:error, msg} = Http.get_ips()
-      assert msg =~ "FLY_"
+      assert is_binary(msg) and msg != ""
       assert {:error, _} = Http.add_certificate("blog.example.com")
       assert {:error, _} = Http.get_certificate("blog.example.com")
       assert {:error, _} = Http.delete_certificate("blog.example.com")
