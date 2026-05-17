@@ -252,6 +252,10 @@ defmodule LedgerWeb.AdminLive.Components do
   #
   #   * `scheme: "http", host: "lvh.me", port: 4000`        -> http://slug.lvh.me:4000
   #   * `scheme: "https", host: "yourdomain.com", port: nil` -> https://slug.yourdomain.com
+  defp site_url(%{custom_domain: domain, custom_domain_status: "active"})
+       when is_binary(domain),
+       do: "https://#{domain}"
+
   defp site_url(site) do
     cfg = Application.get_env(:ledger, :site_url, scheme: "http", host: "lvh.me", port: 4000)
     scheme = Keyword.fetch!(cfg, :scheme)

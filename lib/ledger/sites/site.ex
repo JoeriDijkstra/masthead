@@ -11,6 +11,12 @@ defmodule Ledger.Sites.Site do
     field :description, :string, default: ""
     field :theme_tokens, :map, default: %{}
     field :theme_css_overrides, :string, default: ""
+    field :custom_domain, :string
+    field :custom_domain_status, :string, default: "unconfigured"
+    field :custom_domain_token, :string
+    field :custom_domain_verified_at, :utc_datetime
+    field :custom_domain_last_checked_at, :utc_datetime
+    field :custom_domain_last_error, :string
     belongs_to :owner, Ledger.Accounts.User
     belongs_to :theme_ref, Ledger.Themes.Theme, foreign_key: :theme_id
     belongs_to :homepage_page, Ledger.Content.Page, foreign_key: :homepage_page_id
@@ -57,6 +63,95 @@ defmodule Ledger.Sites.Site do
     |> validate_length(:description, max: 1000)
     |> validate_length(:theme_css_overrides, max: 50_000)
     |> assoc_constraint(:theme_ref)
+  end
+
+  @doc """
+  User-facing changeset for setting/changing the custom domain. Only
+  the domain string is cast here; lifecycle fields (`status`, `token`,
+  timestamps) are managed by `Ledger.CustomDomains` via
+  `custom_domain_state_changeset/2`.
+  """
+  def custom_domain_changeset(site, attrs) do
+    site
+    |> cast(attrs, [:custom_domain])
+    |> normalize_custom_domain()
+    |> validate_required([:custom_domain])
+    |> validate_custom_domain_format()
+    |> validate_custom_domain_not_app_host()
+    |> unique_constraint(:custom_domain)
+  end
+
+  @doc """
+  Internal changeset for lifecycle transitions driven by the
+  `Ledger.CustomDomains` context (status, token, timestamps, errors).
+  """
+  def custom_domain_state_changeset(site, attrs) do
+    cast(site, attrs, [
+      :custom_domain,
+      :custom_domain_status,
+      :custom_domain_token,
+      :custom_domain_verified_at,
+      :custom_domain_last_checked_at,
+      :custom_domain_last_error
+    ])
+  end
+
+  # Accept anything a user might paste — a bare host, a URL, mixed
+  # case, a trailing dot or path — and reduce it to a bare lowercase
+  # hostname before validating.
+  defp normalize_custom_domain(changeset) do
+    case get_change(changeset, :custom_domain) do
+      domain when is_binary(domain) ->
+        normalized =
+          domain
+          |> String.trim()
+          |> String.downcase()
+          |> String.replace(~r{^https?://}, "")
+          |> String.split("/", parts: 2)
+          |> List.first()
+          |> String.split("?", parts: 2)
+          |> List.first()
+          |> String.split(":", parts: 2)
+          |> List.first()
+          |> String.trim_trailing(".")
+
+        put_change(changeset, :custom_domain, normalized)
+
+      _ ->
+        changeset
+    end
+  end
+
+  # Both apex (`example.com`) and subdomains (`blog.example.com`) are
+  # allowed — the regex already requires at least two labels, so bare
+  # hostnames like `localhost` are rejected. Which DNS records the user
+  # must create depends on apex vs subdomain; that's handled at verify
+  # time, not here.
+  defp validate_custom_domain_format(changeset) do
+    changeset
+    |> validate_length(:custom_domain, max: 253)
+    |> validate_format(
+      :custom_domain,
+      ~r/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/,
+      message: "must be a valid domain name"
+    )
+  end
+
+  # A custom domain must never collide with the platform's own hosts or
+  # any `<slug>.<app_host>` — those are served by subdomain routing and
+  # allowing them here would be a hijack vector.
+  defp validate_custom_domain_not_app_host(changeset) do
+    validate_change(changeset, :custom_domain, fn :custom_domain, domain ->
+      hosts =
+        Application.get_env(:ledger, :app_hosts, ~w(ledger.local lvh.me localhost 127.0.0.1))
+
+      reserved? =
+        domain in hosts or Enum.any?(hosts, &String.ends_with?(domain, "." <> &1))
+
+      if reserved?,
+        do: [custom_domain: "cannot be a Ledger platform host"],
+        else: []
+    end)
   end
 
   # Site settings is a flat HTML form, so token overrides come in as

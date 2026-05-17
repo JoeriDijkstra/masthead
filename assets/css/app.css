@@ -1955,4 +1955,125 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   text-overflow: ellipsis;
 }
 
+/* ---- Custom domain ---- */
+.domain-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.domain-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: lowercase;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.domain-badge-active {
+  background: #dcfce7;
+  color: #166534;
+}
+.domain-badge-failed {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.dns-card {
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem 1.75rem;
+  margin: 0 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.dns-intro {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.dns-record {
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  padding: 0.9rem 1rem;
+}
+.dns-record-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+}
+.dns-type {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+.dns-purpose { color: var(--muted); font-size: 0.85rem; }
+.dns-fields {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.dns-fields > div {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+}
+.dns-fields dt {
+  margin: 0;
+  width: 3.5rem;
+  flex: none;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.dns-fields dd { margin: 0; min-width: 0; }
+.dns-fields dd code { word-break: break-all; }
+.dns-apex { margin-top: 0.25rem; }
+.dns-apex > summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.dns-apex-note {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0.6rem 0;
+}
+.dns-apex .dns-record { margin-top: 0.6rem; }
+
+.domain-status { font-size: 0.95rem; }
+.domain-status-active {
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-box);
+  background: #dcfce7;
+  color: #166534;
+}
+.domain-error {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-box);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
 /* This file is for your main application CSS */

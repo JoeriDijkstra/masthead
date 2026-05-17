@@ -108,6 +108,13 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
   defp html_input_type("number"), do: "number"
   defp html_input_type(_), do: "text"
 
+  defp domain_status_label("pending_dns"), do: "awaiting DNS"
+  defp domain_status_label("verified"), do: "verified"
+  defp domain_status_label("cert_provisioning"), do: "issuing SSL"
+  defp domain_status_label("active"), do: "active"
+  defp domain_status_label("failed"), do: "needs attention"
+  defp domain_status_label(other), do: other
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -233,6 +240,32 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
                 >{@form[:theme_css_overrides].value}</textarea>
                 <small>Up to 50 KB. No imports or external resources.</small>
               </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <header class="settings-section-head">
+              <h2>Custom domain</h2>
+              <p>Serve this site from your own domain instead of a Ledger subdomain.</p>
+            </header>
+
+            <div class="settings-fields">
+              <div :if={@site.custom_domain} class="domain-summary">
+                <span>
+                  <strong>{@site.custom_domain}</strong>
+                  <span class={"domain-badge domain-badge-" <> @site.custom_domain_status}>
+                    {domain_status_label(@site.custom_domain_status)}
+                  </span>
+                </span>
+                <.link navigate={~p"/#{@site.slug}/domain"} class="btn">Manage</.link>
+              </div>
+
+              <div :if={is_nil(@site.custom_domain)} class="domain-summary">
+                <span class="muted">No custom domain configured.</span>
+                <.link navigate={~p"/#{@site.slug}/domain"} class="btn btn-primary">
+                  Set up a custom domain
+                </.link>
+              </div>
             </div>
           </div>
 
