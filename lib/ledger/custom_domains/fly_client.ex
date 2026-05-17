@@ -137,20 +137,27 @@ defmodule Ledger.CustomDomains.FlyClient.Http do
       {:ok, status, _headers, resp} when status in 200..299 ->
         decode(resp)
 
-      {:ok, status, _headers, resp} ->
-        {:error, "Fly API HTTP #{status}: #{resp}"}
+      {:ok, status, _headers, _resp} ->
+        {:error, "certificate provider returned HTTP #{status}"}
 
       {:error, reason} ->
-        {:error, "Fly API request failed: #{inspect(reason)}"}
+        {:error, "could not reach the certificate provider: #{inspect(reason)}"}
     end
   end
 
   defp decode(resp) do
     case Jason.decode(resp) do
-      {:ok, %{"errors" => [%{"message" => msg} | _]}} -> {:error, msg}
-      {:ok, %{"data" => data}} when not is_nil(data) -> {:ok, data}
-      {:ok, other} -> {:error, "Unexpected Fly API response: #{inspect(other)}"}
-      {:error, _} -> {:error, "Invalid JSON from Fly API"}
+      {:ok, %{"errors" => [%{"message" => msg} | _]}} ->
+        {:error, msg}
+
+      {:ok, %{"data" => data}} when not is_nil(data) ->
+        {:ok, data}
+
+      {:ok, other} ->
+        {:error, "unexpected response from the certificate provider: #{inspect(other)}"}
+
+      {:error, _} ->
+        {:error, "invalid response from the certificate provider"}
     end
   end
 
@@ -160,16 +167,16 @@ defmodule Ledger.CustomDomains.FlyClient.Http do
   defp credentials do
     case {System.get_env("FLY_API_TOKEN"), System.get_env("FLY_APP_NAME")} do
       {nil, _} ->
-        {:error, "FLY_API_TOKEN is not set — custom-domain certificates are unavailable"}
+        {:error, "certificate management is not configured"}
 
       {_, nil} ->
-        {:error, "FLY_APP_NAME is not set — custom-domain certificates are unavailable"}
+        {:error, "certificate management is not configured"}
 
       {"", _} ->
-        {:error, "FLY_API_TOKEN is not set — custom-domain certificates are unavailable"}
+        {:error, "certificate management is not configured"}
 
       {_, ""} ->
-        {:error, "FLY_APP_NAME is not set — custom-domain certificates are unavailable"}
+        {:error, "certificate management is not configured"}
 
       {token, app} ->
         {:ok, token, app}

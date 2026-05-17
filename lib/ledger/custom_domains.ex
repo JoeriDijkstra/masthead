@@ -92,12 +92,12 @@ defmodule Ledger.CustomDomains do
         |> state_changeset(%{
           custom_domain_status: "cert_provisioning",
           custom_domain_last_checked_at: now,
-          custom_domain_last_error: "Certificate not ready yet (Fly status: #{status})"
+          custom_domain_last_error: "Certificate not ready yet (status: #{status})"
         })
         |> Repo.update()
 
       {:error, reason} ->
-        fail(site, "Fly certificate check failed: #{inspect(reason)}", now)
+        fail(site, "Certificate status check failed: #{inspect(reason)}", now)
     end
   end
 
@@ -176,7 +176,7 @@ defmodule Ledger.CustomDomains do
         |> Repo.update()
 
       {:error, reason} ->
-        fail(site, "Fly certificate request failed: #{inspect(reason)}", now)
+        fail(site, "Certificate request failed: #{inspect(reason)}", now)
     end
   end
 
@@ -194,27 +194,55 @@ defmodule Ledger.CustomDomains do
   # cannot hold a CNAME (RFC 1034/2181), so it instead points A/AAAA
   # records at the Fly app's IPs. Either is acceptable.
   defp check_delegation(%Site{custom_domain: domain}) do
-    cond do
-      cname_target() in DnsResolver.lookup_cname(domain) -> :ok
-      apex_points_at_fly?(domain) -> :ok
-      true -> {:error, delegation_error(domain)}
+    if cname_target() in DnsResolver.lookup_cname(domain) do
+      :ok
+    else
+      check_apex_delegation(domain)
     end
   end
 
-  defp apex_points_at_fly?(domain) do
+  defp check_apex_delegation(domain) do
     case FlyClient.get_ips() do
-      {:ok, [_ | _] = fly_ips} ->
-        resolved = DnsResolver.lookup_a(domain) ++ DnsResolver.lookup_aaaa(domain)
-        resolved != [] and Enum.all?(resolved, &(&1 in fly_ips))
+      {:ok, []} ->
+        {:error,
+         "#{domain} has no CNAME to #{cname_target()}, and there are no IP " <>
+           "addresses available to point an apex domain at"}
 
-      _ ->
-        false
+      {:ok, fly_ips} ->
+        resolved = DnsResolver.lookup_a(domain) ++ DnsResolver.lookup_aaaa(domain)
+
+        cond do
+          resolved == [] ->
+            {:error, "#{domain} has no CNAME to #{cname_target()} and no A/AAAA records yet"}
+
+          ips_subset?(resolved, fly_ips) ->
+            :ok
+
+          true ->
+            {:error,
+             "#{domain} points at #{Enum.join(resolved, ", ")} but the required " <>
+               "IP addresses are #{Enum.join(fly_ips, ", ")} — update the A/AAAA records to match"}
+        end
+
+      {:error, reason} ->
+        {:error, "Couldn't confirm apex delegation: #{reason}"}
     end
   end
 
-  defp delegation_error(domain) do
-    "#{domain} is not delegated to Ledger: add a CNAME to #{cname_target()} " <>
-      "(subdomain) or A/AAAA records pointing at the Fly app IPs (apex)"
+  # IPv6 (and IPv4) addresses have several valid textual forms, so
+  # compare parsed addresses rather than strings — `:inet.ntoa` (our
+  # resolved value) and Fly's API string can render the same address
+  # differently (`::` placement, leading zeros, case).
+  defp ips_subset?(resolved, fly_ips) do
+    fly = MapSet.new(fly_ips, &parse_ip/1)
+    Enum.all?(resolved, &MapSet.member?(fly, parse_ip(&1)))
+  end
+
+  defp parse_ip(str) do
+    case :inet.parse_address(String.to_charlist(str)) do
+      {:ok, addr} -> addr
+      _ -> str
+    end
   end
 
   defp fail(site, reason, now) do

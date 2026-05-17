@@ -35,7 +35,7 @@ defmodule LedgerWeb.AdminLive.DomainSetup do
         {:noreply,
          socket
          |> assign_domain(site)
-         |> put_flash(:info, "Domain verified. Requesting an SSL certificate from Fly…")}
+         |> put_flash(:info, "Domain verified. Requesting an SSL certificate…")}
 
       {:error, reason, site} ->
         {:noreply,
@@ -224,8 +224,8 @@ defmodule LedgerWeb.AdminLive.DomainSetup do
                 </div>
 
                 <p :if={@dns.a_records == []} class="domain-error">
-                  Could not fetch the Fly app IPs for apex setup — use the
-                  subdomain (CNAME) option above, or retry later.
+                  Could not load the apex IP addresses — use the subdomain
+                  (CNAME) option above, or retry later.
                 </p>
               </details>
             </div>
@@ -272,8 +272,8 @@ defmodule LedgerWeb.AdminLive.DomainSetup do
                 — {humanize_status(@site.custom_domain_status)}.
               </p>
               <p class="muted">
-                Fly is provisioning a Let's Encrypt certificate. This usually
-                takes a minute or two after DNS has propagated.
+                Your SSL certificate is being provisioned. This usually takes
+                a minute or two after DNS has propagated.
               </p>
               <p :if={@site.custom_domain_last_error} class="domain-error">
                 {@site.custom_domain_last_error}
