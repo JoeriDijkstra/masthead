@@ -37,11 +37,10 @@ defmodule LedgerWeb.AdminLive.DomainSetup do
          |> assign_domain(site)
          |> put_flash(:info, "Domain verified. Requesting an SSL certificate…")}
 
-      {:error, reason, site} ->
-        {:noreply,
-         socket
-         |> assign_domain(site)
-         |> put_flash(:error, "Verification failed: #{reason}")}
+      {:error, _reason, site} ->
+        # The failure is shown inline (persistent, contextual) via the
+        # site's last_error — no transient flash, which would duplicate it.
+        {:noreply, assign_domain(socket, site)}
     end
   end
 
@@ -59,9 +58,8 @@ defmodule LedgerWeb.AdminLive.DomainSetup do
          |> assign_domain(site)
          |> put_flash(:info, "Still provisioning — check back in a minute.")}
 
-      {:error, reason, site} ->
-        {:noreply,
-         socket |> assign_domain(site) |> put_flash(:error, "Status check failed: #{reason}")}
+      {:error, _reason, site} ->
+        {:noreply, assign_domain(socket, site)}
     end
   end
 
@@ -246,14 +244,16 @@ defmodule LedgerWeb.AdminLive.DomainSetup do
           <% 3 -> %>
             <%= if @site.custom_domain_status == "active" do %>
               <h2 class="wizard-heading">Your domain is live</h2>
-              <p class="domain-status domain-status-active">
-                <strong>{@site.custom_domain}</strong> is serving traffic over HTTPS.
-              </p>
-              <p>
-                <a href={"https://#{@site.custom_domain}"} target="_blank" rel="noopener">
-                  Open https://{@site.custom_domain} &rarr;
-                </a>
-              </p>
+              <div class="dns-card">
+                <p class="domain-status domain-status-active">
+                  <strong>{@site.custom_domain}</strong> is serving traffic over HTTPS.
+                </p>
+                <p>
+                  <a href={"https://#{@site.custom_domain}"} target="_blank" rel="noopener">
+                    Open https://{@site.custom_domain} &rarr;
+                  </a>
+                </p>
+              </div>
               <div class="wizard-footer">
                 <.link navigate={~p"/#{@site.slug}/settings"} class="btn">Back to settings</.link>
                 <button
@@ -267,17 +267,19 @@ defmodule LedgerWeb.AdminLive.DomainSetup do
               </div>
             <% else %>
               <h2 class="wizard-heading">Issuing your SSL certificate</h2>
-              <p class="domain-status">
-                <strong>{@site.custom_domain}</strong>
-                — {humanize_status(@site.custom_domain_status)}.
-              </p>
-              <p class="muted">
-                Your SSL certificate is being provisioned. This usually takes
-                a minute or two after DNS has propagated.
-              </p>
-              <p :if={@site.custom_domain_last_error} class="domain-error">
-                {@site.custom_domain_last_error}
-              </p>
+              <div class="dns-card">
+                <p class="domain-status">
+                  <strong>{@site.custom_domain}</strong>
+                  — {humanize_status(@site.custom_domain_status)}.
+                </p>
+                <p class="muted">
+                  Your SSL certificate is being provisioned. This usually takes
+                  a minute or two after DNS has propagated.
+                </p>
+                <p :if={@site.custom_domain_last_error} class="domain-error">
+                  {@site.custom_domain_last_error}
+                </p>
+              </div>
               <div class="wizard-footer">
                 <button
                   type="button"

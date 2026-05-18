@@ -108,6 +108,7 @@ defmodule Ledger.CustomDomains.FlyClient.Http do
     query = """
     query($appName: String!) {
       app(name: $appName) {
+        sharedIpAddress
         ipAddresses { nodes { address } }
       }
     }
@@ -115,15 +116,34 @@ defmodule Ledger.CustomDomains.FlyClient.Http do
 
     with {:ok, token, app} <- credentials(),
          {:ok, data} <- request(token, query, %{appName: app}) do
-      case data do
-        %{"app" => %{"ipAddresses" => %{"nodes" => nodes}}} ->
-          {:ok, Enum.map(nodes, & &1["address"])}
-
-        _ ->
-          {:ok, []}
-      end
+      {:ok, extract_ips(data)}
     end
   end
+
+  # Dedicated IPs (`ipAddresses`) first, then Fly's free shared IPv4
+  # (`sharedIpAddress`) as a fallback so apex domains have an A record
+  # to point at even without a dedicated v4. Apex tenants set DNS by
+  # value, so a dedicated IPv4 is strongly preferred for stability — if
+  # one is ever allocated it appears here automatically and takes
+  # precedence over the shared address.
+  defp extract_ips(%{"app" => app}) when is_map(app) do
+    dedicated =
+      case app do
+        %{"ipAddresses" => %{"nodes" => nodes}} when is_list(nodes) ->
+          Enum.map(nodes, & &1["address"])
+
+        _ ->
+          []
+      end
+
+    shared = List.wrap(app["sharedIpAddress"])
+
+    (dedicated ++ shared)
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.uniq()
+  end
+
+  defp extract_ips(_), do: []
 
   defp request(token, query, variables) do
     body = Jason.encode!(%{query: query, variables: variables})
