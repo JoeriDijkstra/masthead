@@ -2069,11 +2069,16 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   color: #166534;
 }
 .domain-error {
-  padding: 0.5rem 0.75rem;
+  margin: 0 0 1.25rem;
+  padding: 0.6rem 0.85rem;
   border-radius: var(--radius-box);
   background: var(--danger-soft);
   color: var(--danger);
   font-size: 0.9rem;
+}
+/* Inside the result card the flex gap already spaces it. */
+.dns-card .domain-error {
+  margin: 0;
 }
 
 /* This file is for your main application CSS */

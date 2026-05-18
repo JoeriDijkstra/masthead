@@ -37,11 +37,10 @@ defmodule LedgerWeb.AdminLive.DomainSetup do
          |> assign_domain(site)
          |> put_flash(:info, "Domain verified. Requesting an SSL certificate…")}
 
-      {:error, reason, site} ->
-        {:noreply,
-         socket
-         |> assign_domain(site)
-         |> put_flash(:error, "Verification failed: #{reason}")}
+      {:error, _reason, site} ->
+        # The failure is shown inline (persistent, contextual) via the
+        # site's last_error — no transient flash, which would duplicate it.
+        {:noreply, assign_domain(socket, site)}
     end
   end
 
@@ -59,9 +58,8 @@ defmodule LedgerWeb.AdminLive.DomainSetup do
          |> assign_domain(site)
          |> put_flash(:info, "Still provisioning — check back in a minute.")}
 
-      {:error, reason, site} ->
-        {:noreply,
-         socket |> assign_domain(site) |> put_flash(:error, "Status check failed: #{reason}")}
+      {:error, _reason, site} ->
+        {:noreply, assign_domain(socket, site)}
     end
   end
 
