@@ -24,6 +24,9 @@ defmodule LedgerWeb.Router do
 
     get "/signup", RegistrationController, :new
     post "/signup", RegistrationController, :create
+
+    get "/confirm/:token", ConfirmationController, :confirm
+    post "/confirm", ConfirmationController, :create
   end
 
   scope "/", LedgerWeb do

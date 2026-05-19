@@ -2,6 +2,7 @@ defmodule Ledger.Accounts do
   alias Ledger.Repo
   alias Ledger.Accounts.User
   alias Ledger.Accounts.UserToken
+  alias Ledger.Accounts.UserNotifier
 
   def get_user!(id), do: Repo.get!(User, id)
 
@@ -57,5 +58,45 @@ defmodule Ledger.Accounts do
   """
   def delete_user_tokens(%User{} = user, contexts) do
     Repo.delete_all(UserToken.by_user_and_contexts_query(user, contexts))
+  end
+
+  ## Email confirmation
+
+  @doc """
+  Sends a confirmation link. `url_fun` turns a raw token into the full
+  confirmation URL. No-op (`{:error, :already_confirmed}`) if the email
+  is already confirmed.
+  """
+  def deliver_user_confirmation_instructions(%User{} = user, url_fun)
+      when is_function(url_fun, 1) do
+    if User.confirmed?(user) do
+      {:error, :already_confirmed}
+    else
+      token = generate_email_token(user, "confirm")
+      UserNotifier.deliver_confirmation_instructions(user, url_fun.(token))
+    end
+  end
+
+  @doc """
+  Confirms the account behind `token`. Marks the email confirmed and
+  burns every outstanding confirm token (single-use). `:error` if the
+  token is invalid or expired.
+  """
+  def confirm_user(token) when is_binary(token) do
+    with %User{} = user <- get_user_by_token(token, "confirm"),
+         {:ok, %{user: user}} <- Repo.transaction(confirm_user_multi(user)) do
+      {:ok, user}
+    else
+      _ -> :error
+    end
+  end
+
+  defp confirm_user_multi(user) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, User.confirm_changeset(user))
+    |> Ecto.Multi.delete_all(
+      :tokens,
+      UserToken.by_user_and_contexts_query(user, ["confirm"])
+    )
   end
 end

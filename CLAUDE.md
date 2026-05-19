@@ -66,7 +66,7 @@ as a single Phoenix/OTP release.
 
 ## Versioning — bump before every commit
 
-**Before every commit, bump `version:` in `mix.exs`**, sized to the
+**Before a branch is ready for a PR, bump `version:` in `mix.exs`**, sized to the
 change (SemVer):
 
 - **patch** (`x.y.Z`) — bug fixes, copy tweaks, small CSS/UI

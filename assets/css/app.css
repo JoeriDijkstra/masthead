@@ -418,6 +418,34 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 .flash-info { background: #ecfdf5; color: var(--good); border: 1px solid #a7f3d0; }
 .flash-error { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
 
+.account-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0.95rem;
+  margin-bottom: 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+.account-banner p { margin: 0; flex: 1; min-width: 14rem; }
+.account-banner form { margin: 0; display: inline; }
+.account-banner-btn {
+  display: inline-block;
+  border: 1px solid currentColor;
+  color: inherit;
+  text-decoration: none;
+  padding: 0.3rem 0.7rem;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.account-banner-btn:hover { background: rgba(146, 64, 14, 0.08); }
+
 .page-head {
   display: flex;
   align-items: center;
