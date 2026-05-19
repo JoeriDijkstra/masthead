@@ -1,4 +1,6 @@
 defmodule Ledger.Accounts do
+  import Ecto.Query
+
   alias Ledger.Repo
   alias Ledger.Accounts.User
   alias Ledger.Accounts.UserToken
@@ -194,6 +196,30 @@ defmodule Ledger.Accounts do
       {:ok, %{user: user}} -> {:ok, user}
       {:error, _, reason, _} -> {:error, reason}
     end
+  end
+
+  @doc """
+  Disables accounts that never confirmed their email within
+  `older_than_days` (default 7) of signing up. Skips already-disabled
+  accounts. Returns the number disabled. Driven by
+  `Ledger.Workers.DisableUnconfirmed` on a daily cron.
+  """
+  def disable_unconfirmed_accounts(older_than_days \\ 7) do
+    cutoff =
+      DateTime.utc_now()
+      |> DateTime.add(-older_than_days * 24 * 60 * 60, :second)
+      |> DateTime.truncate(:second)
+
+    stale =
+      Repo.all(
+        from u in User,
+          where:
+            is_nil(u.confirmed_at) and is_nil(u.disabled_at) and
+              u.inserted_at < ^cutoff
+      )
+
+    Enum.each(stale, &disable_user/1)
+    length(stale)
   end
 
   @doc """

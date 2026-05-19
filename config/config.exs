@@ -90,7 +90,12 @@ config :ledger, Oban,
   repo: Ledger.Repo,
   queues: [mailers: 10, maintenance: 5],
   plugins: [
-    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7}
+    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
+    {Oban.Plugins.Cron,
+     crontab: [
+       # Daily 03:00 UTC: disable accounts unconfirmed for 7+ days.
+       {"0 3 * * *", Ledger.Workers.DisableUnconfirmed}
+     ]}
   ]
 
 # Import environment specific config. This must remain at the bottom
