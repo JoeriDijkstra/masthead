@@ -457,6 +457,42 @@ button.danger {
 }
 button.danger:hover { filter: brightness(0.92); }
 
+.account-email { font-weight: 600; margin: 0 0 0.25rem; }
+
+dialog.modal {
+  border: none;
+  border-radius: 12px;
+  padding: 0;
+  width: min(420px, 92vw);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+}
+dialog.modal::backdrop { background: rgba(15, 23, 42, 0.45); }
+.modal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.5rem;
+}
+.modal-card h2 { margin: 0; font-size: 1.05rem; }
+.modal-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+}
+.modal-card input {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font: inherit;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
 .sso-divider {
   display: flex;
   align-items: center;
