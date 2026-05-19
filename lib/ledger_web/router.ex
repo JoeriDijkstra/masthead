@@ -37,6 +37,10 @@ defmodule LedgerWeb.Router do
   scope "/", LedgerWeb do
     pipe_through [:browser, :require_authenticated_user]
 
+    get "/account", AccountController, :show
+    post "/account/password", AccountController, :update_password
+    post "/account/disable", AccountController, :disable
+
     live_session :authenticated,
       on_mount: [{LedgerWeb.UserAuth, :require_authenticated}] do
       live "/sites", AdminLive.SiteIndex, :index

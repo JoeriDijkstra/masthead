@@ -3,6 +3,7 @@ defmodule Ledger.Accounts do
   alias Ledger.Accounts.User
   alias Ledger.Accounts.UserToken
   alias Ledger.Accounts.UserNotifier
+  alias Ledger.Sites
 
   def get_user!(id), do: Repo.get!(User, id)
 
@@ -155,6 +156,60 @@ defmodule Ledger.Accounts do
 
       _ ->
         changeset
+    end
+  end
+
+  ## Password change (signed-in)
+
+  @doc """
+  Changes the password of a signed-in user, requiring the current
+  password. `{:error, :invalid_current_password}` if it doesn't match.
+  """
+  def update_user_password(%User{} = user, current_password, attrs) do
+    if User.valid_password?(user, current_password) do
+      user
+      |> User.password_changeset(attrs)
+      |> Repo.update()
+    else
+      {:error, :invalid_current_password}
+    end
+  end
+
+  ## Account disable / enable
+
+  @doc """
+  Soft-disables `user`: stamps `disabled_at`, cascades to every site the
+  user owns (those sites stop resolving — 404), and revokes all tokens.
+  Idempotent. Re-enable via `enable_user/1`.
+  """
+  def disable_user(%User{} = user) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, User.disable_changeset(user))
+    |> Ecto.Multi.run(:sites, fn _repo, _ ->
+      {:ok, Sites.disable_sites_for_user(user.id)}
+    end)
+    |> Ecto.Multi.delete_all(:tokens, UserToken.by_user_and_contexts_query(user, :all))
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, _, reason, _} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Re-enables a disabled account and restores its sites. Intended for
+  console / admin use (there is no self-service re-enable).
+  """
+  def enable_user(%User{} = user) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, User.enable_changeset(user))
+    |> Ecto.Multi.run(:sites, fn _repo, _ ->
+      {:ok, Sites.enable_sites_for_user(user.id)}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, _, reason, _} -> {:error, reason}
     end
   end
 end

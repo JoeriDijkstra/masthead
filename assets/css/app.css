@@ -446,6 +446,17 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 }
 .account-banner-btn:hover { background: rgba(146, 64, 14, 0.08); }
 
+.auth-card section { margin-top: 1.75rem; }
+.auth-card section h2 { font-size: 1rem; margin-bottom: 0.5rem; }
+.danger-zone { border-top: 1px solid #fecaca; padding-top: 1.25rem; }
+.danger-zone h2 { color: var(--danger); }
+button.danger {
+  background: var(--danger);
+  color: #fff;
+  border: none;
+}
+button.danger:hover { filter: brightness(0.92); }
+
 .page-head {
   display: flex;
   align-items: center;

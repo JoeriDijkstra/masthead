@@ -75,7 +75,9 @@ defmodule LedgerWeb.AdminLive.Components do
 
         <div :if={@current_user} class="sidebar-user">
           <div class="user-avatar">{user_initial(@current_user)}</div>
-          <div class="user-email" title={@current_user.email}>{@current_user.email}</div>
+          <.link navigate={~p"/account"} class="user-email" title="Account settings">
+            {@current_user.email}
+          </.link>
           <.link href={~p"/logout"} method="delete" class="logout-link" title="Log out">
             <.icon_logout />
           </.link>
