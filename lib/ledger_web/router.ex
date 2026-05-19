@@ -27,6 +27,11 @@ defmodule LedgerWeb.Router do
 
     get "/confirm/:token", ConfirmationController, :confirm
     post "/confirm", ConfirmationController, :create
+
+    get "/reset-password", ResetPasswordController, :new
+    post "/reset-password", ResetPasswordController, :create
+    get "/reset-password/:token", ResetPasswordController, :edit
+    put "/reset-password/:token", ResetPasswordController, :update
   end
 
   scope "/", LedgerWeb do

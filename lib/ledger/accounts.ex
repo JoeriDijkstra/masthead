@@ -99,4 +99,62 @@ defmodule Ledger.Accounts do
       UserToken.by_user_and_contexts_query(user, ["confirm"])
     )
   end
+
+  ## Password reset
+
+  @doc "Changeset for the set-new-password form."
+  def change_user_password(%User{} = user, attrs \\ %{}) do
+    User.password_changeset(user, attrs)
+  end
+
+  @doc """
+  Sends a reset link. `url_fun` turns a raw token into the full URL.
+  Callers must keep this enumeration-safe (don't reveal whether the
+  address exists).
+  """
+  def deliver_user_reset_password_instructions(%User{} = user, url_fun)
+      when is_function(url_fun, 1) do
+    token = generate_email_token(user, "reset_password")
+    UserNotifier.deliver_reset_password_instructions(user, url_fun.(token))
+  end
+
+  @doc "User behind a valid, unexpired reset token, or nil."
+  def get_user_by_reset_password_token(token) when is_binary(token) do
+    get_user_by_token(token, "reset_password")
+  end
+
+  @doc """
+  Sets a new password. Reaching here proves control of the email, so we
+  also confirm the account (if not already) and revoke every token so
+  outstanding reset/confirm links die.
+  """
+  def reset_user_password(%User{} = user, attrs) do
+    changeset =
+      user
+      |> User.password_changeset(attrs)
+      |> maybe_confirm()
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, changeset)
+    |> Ecto.Multi.delete_all(:tokens, UserToken.by_user_and_contexts_query(user, :all))
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, :user, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  defp maybe_confirm(changeset) do
+    case changeset.data do
+      %User{confirmed_at: nil} ->
+        Ecto.Changeset.put_change(
+          changeset,
+          :confirmed_at,
+          DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      _ ->
+        changeset
+    end
+  end
 end
