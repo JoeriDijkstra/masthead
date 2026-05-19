@@ -72,6 +72,32 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Transactional email (Swoosh). Adapter is environment-specific: Local in
+# dev, Test in test, Resend in prod (see the respective config files).
+# Hackney is the HTTP API client (already a dependency).
+config :ledger, Ledger.Mailer, adapter: Swoosh.Adapters.Local
+config :swoosh, :api_client, Swoosh.ApiClient.Hackney
+
+# Default "from" for account email. Prod overrides this from MAIL_FROM in
+# runtime.exs once a verified sending domain exists.
+config :ledger, :mail_from, {"Ledger", "noreply@ledger-cloud.com"}
+
+# Background jobs (Oban). The maintenance queue runs the unconfirmed-account
+# sweep; mailers runs transactional email with retries. The Cron schedule
+# itself is attached where the job is defined. Test disables execution
+# (`testing: :manual`).
+config :ledger, Oban,
+  repo: Ledger.Repo,
+  queues: [mailers: 10, maintenance: 5],
+  plugins: [
+    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
+    {Oban.Plugins.Cron,
+     crontab: [
+       # Daily 03:00 UTC: disable accounts unconfirmed for 7+ days.
+       {"0 3 * * *", Ledger.Workers.DisableUnconfirmed}
+     ]}
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

@@ -76,12 +76,16 @@ defmodule LedgerWeb.UserAuth do
     end
   end
 
+  # A disabled account resolves to nil everywhere a session is read, so
+  # an in-flight session (e.g. the user just disabled themselves) is
+  # effectively logged out on the next request.
   defp safe_get_user(id) do
-    try do
-      Accounts.get_user!(id)
-    rescue
-      Ecto.NoResultsError -> nil
+    case Accounts.get_user!(id) do
+      %{disabled_at: nil} = user -> user
+      _ -> nil
     end
+  rescue
+    Ecto.NoResultsError -> nil
   end
 
   defp renew_session(conn) do

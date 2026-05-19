@@ -38,3 +38,11 @@ config :phoenix_live_view,
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# Capture mail in-memory; assert with Swoosh.TestAssertions.
+config :ledger, Ledger.Mailer, adapter: Swoosh.Adapters.Test
+config :swoosh, :api_client, false
+
+# Don't run queues/plugins in test. Jobs are inserted and asserted with
+# Oban.Testing (drain or assert_enqueued).
+config :ledger, Oban, testing: :manual

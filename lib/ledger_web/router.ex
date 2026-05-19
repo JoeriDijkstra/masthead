@@ -24,10 +24,22 @@ defmodule LedgerWeb.Router do
 
     get "/signup", RegistrationController, :new
     post "/signup", RegistrationController, :create
+
+    get "/confirm/:token", ConfirmationController, :confirm
+    post "/confirm", ConfirmationController, :create
+
+    get "/reset-password", ResetPasswordController, :new
+    post "/reset-password", ResetPasswordController, :create
+    get "/reset-password/:token", ResetPasswordController, :edit
+    put "/reset-password/:token", ResetPasswordController, :update
   end
 
   scope "/", LedgerWeb do
     pipe_through [:browser, :require_authenticated_user]
+
+    get "/account", AccountController, :show
+    post "/account/password", AccountController, :update_password
+    post "/account/disable", AccountController, :disable
 
     live_session :authenticated,
       on_mount: [{LedgerWeb.UserAuth, :require_authenticated}] do
@@ -59,6 +71,7 @@ defmodule LedgerWeb.Router do
       pipe_through :browser
 
       live_dashboard "/dashboard", metrics: LedgerWeb.Telemetry
+      forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end
 end

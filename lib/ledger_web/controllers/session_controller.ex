@@ -2,6 +2,7 @@ defmodule LedgerWeb.SessionController do
   use LedgerWeb, :controller
 
   alias Ledger.Accounts
+  alias Ledger.Accounts.User
   alias LedgerWeb.UserAuth
 
   def new(conn, _params) do
@@ -14,6 +15,14 @@ defmodule LedgerWeb.SessionController do
         conn
         |> put_status(:unauthorized)
         |> render(:new, error: "Invalid email or password", email: email)
+
+      %User{disabled_at: at} when not is_nil(at) ->
+        conn
+        |> put_status(:unauthorized)
+        |> render(:new,
+          error: "This account has been disabled. Contact support if this is unexpected.",
+          email: email
+        )
 
       user ->
         UserAuth.log_in_user(conn, user)

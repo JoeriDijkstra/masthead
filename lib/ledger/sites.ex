@@ -17,8 +17,12 @@ defmodule Ledger.Sites do
     Repo.one!(from s in Site, where: s.slug == ^slug and s.owner_id == ^user_id)
   end
 
+  @doc """
+  Public resolver used by the Subdomain plug. Disabled sites (the owning
+  account was disabled) resolve to `nil` so the request 404s.
+  """
   def get_site_by_slug(slug) when is_binary(slug) do
-    Repo.get_by(Site, slug: slug)
+    Repo.one(from s in Site, where: s.slug == ^slug and is_nil(s.disabled_at))
   end
 
   @doc """
@@ -31,7 +35,10 @@ defmodule Ledger.Sites do
 
     Repo.one(
       from s in Site,
-        where: s.custom_domain == ^host and s.custom_domain_status == "active"
+        where:
+          s.custom_domain == ^host and
+            s.custom_domain_status == "active" and
+            is_nil(s.disabled_at)
     )
   end
 
@@ -42,8 +49,29 @@ defmodule Ledger.Sites do
   def list_active_custom_domains do
     Repo.all(
       from s in Site,
-        where: s.custom_domain_status == "active" and not is_nil(s.custom_domain),
+        where:
+          s.custom_domain_status == "active" and
+            not is_nil(s.custom_domain) and
+            is_nil(s.disabled_at),
         select: s.custom_domain
+    )
+  end
+
+  @doc "Soft-disables every site owned by `user_id` (account-disable cascade)."
+  def disable_sites_for_user(user_id) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    Repo.update_all(
+      from(s in Site, where: s.owner_id == ^user_id and is_nil(s.disabled_at)),
+      set: [disabled_at: now]
+    )
+  end
+
+  @doc "Re-enables every site owned by `user_id` (account re-enable)."
+  def enable_sites_for_user(user_id) do
+    Repo.update_all(
+      from(s in Site, where: s.owner_id == ^user_id and not is_nil(s.disabled_at)),
+      set: [disabled_at: nil]
     )
   end
 

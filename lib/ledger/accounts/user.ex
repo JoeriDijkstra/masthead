@@ -6,8 +6,45 @@ defmodule Ledger.Accounts.User do
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
+    field :confirmed_at, :utc_datetime
+    field :disabled_at, :utc_datetime
+
+    has_many :tokens, Ledger.Accounts.UserToken
+
     timestamps(type: :utc_datetime)
   end
+
+  @doc "Email is confirmed."
+  def confirmed?(%__MODULE__{confirmed_at: at}), do: not is_nil(at)
+
+  @doc "Account is disabled (self-serve or auto-disabled)."
+  def disabled?(%__MODULE__{disabled_at: at}), do: not is_nil(at)
+
+  @doc "Marks the email confirmed (no-op effect if already confirmed)."
+  def confirm_changeset(user) do
+    change(user, confirmed_at: now())
+  end
+
+  @doc "Soft-disables the account."
+  def disable_changeset(user) do
+    change(user, disabled_at: now())
+  end
+
+  @doc "Clears the disabled flag (re-enable)."
+  def enable_changeset(user) do
+    change(user, disabled_at: nil)
+  end
+
+  @doc "Sets a new password (password-reset flow)."
+  def password_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:password])
+    |> validate_required([:password])
+    |> validate_length(:password, min: 8, max: 72)
+    |> hash_password()
+  end
+
+  defp now, do: DateTime.utc_now() |> DateTime.truncate(:second)
 
   def registration_changeset(user, attrs) do
     user

@@ -3,6 +3,8 @@ defmodule LedgerWeb.AdminLive.Components do
   use Phoenix.Component
   use LedgerWeb, :verified_routes
 
+  alias Ledger.Accounts.User
+
   attr :title, :string, default: nil
   attr :site, :map, default: nil
   attr :current_user, :map, default: nil
@@ -73,7 +75,9 @@ defmodule LedgerWeb.AdminLive.Components do
 
         <div :if={@current_user} class="sidebar-user">
           <div class="user-avatar">{user_initial(@current_user)}</div>
-          <div class="user-email" title={@current_user.email}>{@current_user.email}</div>
+          <.link navigate={~p"/account"} class="user-email" title="Account settings">
+            {@current_user.email}
+          </.link>
           <.link href={~p"/logout"} method="delete" class="logout-link" title="Log out">
             <.icon_logout />
           </.link>
@@ -81,6 +85,8 @@ defmodule LedgerWeb.AdminLive.Components do
       </aside>
 
       <main class="admin-content">
+        <.unconfirmed_banner :if={@current_user} user={@current_user} />
+
         <div :if={@flash != %{} and Phoenix.Flash.get(@flash, :info)} class="admin-flash">
           <p class="flash flash-info">{Phoenix.Flash.get(@flash, :info)}</p>
         </div>
@@ -95,6 +101,26 @@ defmodule LedgerWeb.AdminLive.Components do
 
         {render_slot(@inner_block)}
       </main>
+    </div>
+    """
+  end
+
+  attr :user, :map, required: true
+
+  @doc """
+  Persistent reminder shown to signed-in users whose email is not yet
+  confirmed. Renders nothing once confirmed. The resend action posts to
+  `/confirm`; the controller is enumeration-safe.
+  """
+  def unconfirmed_banner(assigns) do
+    ~H"""
+    <div :if={not User.confirmed?(@user)} class="account-banner" role="status">
+      <p>
+        Please confirm your email address. We sent a link to <strong>{@user.email}</strong>. Unconfirmed accounts are disabled after 7 days.
+      </p>
+      <.link href={~p"/confirm"} method="post" class="account-banner-btn">
+        Resend confirmation
+      </.link>
     </div>
     """
   end

@@ -10,6 +10,7 @@ defmodule Ledger.Application do
     children = [
       LedgerWeb.Telemetry,
       Ledger.Repo,
+      {Oban, Application.fetch_env!(:ledger, Oban)},
       {DNSCluster, query: Application.get_env(:ledger, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Ledger.PubSub},
       # Start a worker by calling: Ledger.Worker.start_link(arg)

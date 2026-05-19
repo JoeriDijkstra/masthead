@@ -17,6 +17,10 @@ defmodule Ledger.Sites.Site do
     field :custom_domain_verified_at, :utc_datetime
     field :custom_domain_last_checked_at, :utc_datetime
     field :custom_domain_last_error, :string
+    # Set/cleared by the owning account's disable cascade
+    # (Ledger.Accounts.disable_user/1). Non-null => the site does not
+    # resolve publicly (Subdomain plug 404s).
+    field :disabled_at, :utc_datetime
     belongs_to :owner, Ledger.Accounts.User
     belongs_to :theme_ref, Ledger.Themes.Theme, foreign_key: :theme_id
     belongs_to :homepage_page, Ledger.Content.Page, foreign_key: :homepage_page_id

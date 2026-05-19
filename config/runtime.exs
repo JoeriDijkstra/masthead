@@ -114,6 +114,28 @@ if config_env() == :prod do
       region: s3_region
   end
 
+  # Transactional email via Resend. Account confirmation and password
+  # reset depend on this, so a missing key is a hard boot failure (same
+  # posture as DATABASE_URL above) rather than silently dropping mail.
+  config :ledger, Ledger.Mailer,
+    adapter: Swoosh.Adapters.Resend,
+    api_key:
+      System.get_env("RESEND_API_KEY") ||
+        raise("""
+        environment variable RESEND_API_KEY is missing.
+        Create a Resend API key and set it as a Fly secret.
+        """)
+
+  config :ledger,
+         :mail_from,
+         {System.get_env("MAIL_FROM_NAME") || "Ledger",
+          System.get_env("MAIL_FROM") ||
+            raise("""
+            environment variable MAIL_FROM is missing.
+            Set it to an address on your Resend-verified sending domain,
+            e.g. noreply@ledger-cloud.com
+            """)}
+
   # ## SSL Support
   #
   # To get SSL working, you will need to add the `https` key
