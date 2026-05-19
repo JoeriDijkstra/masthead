@@ -19,6 +19,12 @@ defmodule LedgerWeb.SessionHTML do
           <button type="submit">Sign in</button>
         </form>
 
+        <div class="sso-divider"><span>or</span></div>
+        <div class="sso-buttons">
+          <a class="sso-btn" href={~p"/auth/google"}>Continue with Google</a>
+          <a class="sso-btn" href={~p"/auth/github"}>Continue with GitHub</a>
+        </div>
+
         <p class="meta">
           Need an account? <a href={~p"/signup"}>Sign up</a>
         </p>

@@ -44,6 +44,27 @@ defmodule Ledger.Accounts.User do
     |> hash_password()
   end
 
+  @doc """
+  Registers a user that authenticated via OAuth. The email is owned by
+  the provider (and we only reach here for verified emails), so the
+  account starts confirmed. A random password is set so password login
+  is effectively disabled until the user resets it.
+  """
+  def oauth_registration_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:email])
+    |> validate_required([:email])
+    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/)
+    |> validate_length(:email, max: 160)
+    |> unsafe_validate_unique(:email, Ledger.Repo)
+    |> unique_constraint(:email)
+    |> put_change(:password, random_password())
+    |> put_change(:confirmed_at, now())
+    |> hash_password()
+  end
+
+  defp random_password, do: :crypto.strong_rand_bytes(24) |> Base.url_encode64()
+
   defp now, do: DateTime.utc_now() |> DateTime.truncate(:second)
 
   def registration_changeset(user, attrs) do

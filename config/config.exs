@@ -86,6 +86,19 @@ config :ledger, :mail_from, {"Ledger", "noreply@ledger-cloud.com"}
 # sweep; mailers runs transactional email with retries. The Cron schedule
 # itself is attached where the job is defined. Test disables execution
 # (`testing: :manual`).
+# Social sign-in (Ueberauth). Client id/secret per provider are read
+# from env in runtime.exs (prod) and dev.exs (local testing) — only set
+# when present so a missing provider doesn't break boot.
+config :ueberauth, Ueberauth,
+  providers: [
+    google: {Ueberauth.Strategy.Google, [default_scope: "email profile"]},
+    github: {Ueberauth.Strategy.Github, [default_scope: "user:email"]}
+  ]
+
+# Ueberauth's OAuth strategies use Tesla; route it through Hackney
+# (already a dependency) instead of the bare :httpc default.
+config :tesla, adapter: Tesla.Adapter.Hackney
+
 config :ledger, Oban,
   repo: Ledger.Repo,
   queues: [mailers: 10, maintenance: 5],

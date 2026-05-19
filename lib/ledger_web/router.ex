@@ -34,6 +34,14 @@ defmodule LedgerWeb.Router do
     put "/reset-password/:token", ResetPasswordController, :update
   end
 
+  scope "/auth", LedgerWeb do
+    pipe_through :browser
+
+    get "/:provider", AuthController, :request
+    get "/:provider/callback", AuthController, :callback
+    post "/:provider/callback", AuthController, :callback
+  end
+
   scope "/", LedgerWeb do
     pipe_through [:browser, :require_authenticated_user]
 
