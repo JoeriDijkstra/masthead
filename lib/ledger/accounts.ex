@@ -5,6 +5,7 @@ defmodule Ledger.Accounts do
   alias Ledger.Accounts.User
   alias Ledger.Accounts.UserToken
   alias Ledger.Accounts.UserNotifier
+  alias Ledger.Accounts.UserIdentity
   alias Ledger.Sites
 
   def get_user!(id), do: Repo.get!(User, id)
@@ -220,6 +221,80 @@ defmodule Ledger.Accounts do
 
     Enum.each(stale, &disable_user/1)
     length(stale)
+  end
+
+  ## OAuth / SSO
+
+  @doc """
+  Resolves an OAuth login to a user. `info` is
+  `%{provider, uid, email, email_verified}`.
+
+    * known identity → that user
+    * else, a verified email matching an existing account → link a new
+      identity to it (account takeover is prevented by requiring the
+      provider to vouch the email is verified)
+    * else → create a fresh, already-confirmed account + identity
+
+  Returns `{:ok, user}` or `{:error, :disabled | :no_email |
+  :email_unverified}`.
+  """
+  def get_or_create_user_from_oauth(%{provider: provider, uid: uid} = info) do
+    provider = to_string(provider)
+    uid = to_string(uid)
+
+    case Repo.get_by(UserIdentity, provider: provider, provider_uid: uid) do
+      %UserIdentity{} = identity ->
+        return_if_active(Repo.preload(identity, :user).user)
+
+      nil ->
+        link_or_create(provider, uid, info)
+    end
+  end
+
+  defp link_or_create(provider, uid, %{email: email} = info)
+       when is_binary(email) and email != "" do
+    case get_user_by_email(email) do
+      %User{} = user ->
+        cond do
+          User.disabled?(user) -> {:error, :disabled}
+          not Map.get(info, :email_verified, false) -> {:error, :email_unverified}
+          true -> link_identity(user, provider, uid)
+        end
+
+      nil ->
+        create_user_with_identity(email, provider, uid)
+    end
+  end
+
+  defp link_or_create(_provider, _uid, _info), do: {:error, :no_email}
+
+  defp link_identity(user, provider, uid) do
+    %UserIdentity{}
+    |> UserIdentity.changeset(%{user_id: user.id, provider: provider, provider_uid: uid})
+    |> Repo.insert(on_conflict: :nothing)
+
+    {:ok, user}
+  end
+
+  defp create_user_with_identity(email, provider, uid) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.insert(:user, User.oauth_registration_changeset(%User{}, %{email: email}))
+    |> Ecto.Multi.insert(:identity, fn %{user: user} ->
+      UserIdentity.changeset(%UserIdentity{}, %{
+        user_id: user.id,
+        provider: provider,
+        provider_uid: uid
+      })
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, _, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  defp return_if_active(%User{} = user) do
+    if User.disabled?(user), do: {:error, :disabled}, else: {:ok, user}
   end
 
   @doc """

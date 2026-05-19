@@ -27,6 +27,8 @@ defmodule LedgerWeb.RegistrationHTML do
           <button type="submit">Create account</button>
         </form>
 
+        <LedgerWeb.SSO.buttons />
+
         <p class="meta">
           Already have an account? <a href={~p"/login"}>Sign in</a>
         </p>

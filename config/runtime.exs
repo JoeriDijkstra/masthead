@@ -23,6 +23,22 @@ end
 config :ledger, LedgerWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# Social sign-in credentials. Read in every environment so the flow can
+# be tested locally by exporting the env vars. A provider is only
+# configured when its client id is present, so an unconfigured provider
+# never breaks boot (the button just fails with a clear error).
+if google_id = System.get_env("GOOGLE_CLIENT_ID") do
+  config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+    client_id: google_id,
+    client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+end
+
+if github_id = System.get_env("GITHUB_CLIENT_ID") do
+  config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+    client_id: github_id,
+    client_secret: System.get_env("GITHUB_CLIENT_SECRET")
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
