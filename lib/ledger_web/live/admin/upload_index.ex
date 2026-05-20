@@ -118,23 +118,43 @@ defmodule LedgerWeb.AdminLive.UploadIndex do
         </li>
       </ul>
 
-      <div :if={@modal_open?} class="dialog-backdrop" phx-window-keydown="close_modal" phx-key="Escape">
+      <div
+        :if={@modal_open?}
+        class="dialog-backdrop"
+        phx-window-keydown="close_modal"
+        phx-key="Escape"
+      >
         <button
           type="button"
           phx-click="close_modal"
           class="dialog-close-overlay"
           aria-label="Close"
-          tabindex="-1"></button>
+          tabindex="-1"
+        >
+        </button>
         <div class="dialog">
           <header class="dialog-header">
             <h2>New upload</h2>
-            <button type="button" phx-click="close_modal" class="dialog-close" aria-label="Close">&times;</button>
+            <button type="button" phx-click="close_modal" class="dialog-close" aria-label="Close">
+              &times;
+            </button>
           </header>
 
           <form id="upload-form" phx-submit="save" phx-change="validate" class="dialog-form">
             <label class="dropzone" phx-drop-target={@uploads.image.ref}>
-              <svg class="dropzone-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 7.5m0 0L7.5 12m4.5-4.5v12" />
+              <svg
+                class="dropzone-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 7.5m0 0L7.5 12m4.5-4.5v12"
+                />
               </svg>
               <.live_file_input upload={@uploads.image} />
               <p class="dropzone-headline">Drop images here, or click to browse</p>
@@ -150,10 +170,15 @@ defmodule LedgerWeb.AdminLive.UploadIndex do
                   spellcheck="false"
                   autocomplete="off"
                   phx-debounce="200"
-                  class="rename-input" />
+                  class="rename-input"
+                />
                 <span class="muted entry-progress">{entry.progress}%</span>
-                <button type="button" phx-click="cancel" phx-value-ref={entry.ref} class="btn btn-sm">Remove</button>
-                <p :for={err <- upload_errors(@uploads.image, entry)} class="error entry-error">{error_to_string(err)}</p>
+                <button type="button" phx-click="cancel" phx-value-ref={entry.ref} class="btn btn-sm">
+                  Remove
+                </button>
+                <p :for={err <- upload_errors(@uploads.image, entry)} class="error entry-error">
+                  {error_to_string(err)}
+                </p>
               </li>
             </ul>
 
@@ -161,7 +186,9 @@ defmodule LedgerWeb.AdminLive.UploadIndex do
 
             <footer class="dialog-footer">
               <button type="button" phx-click="close_modal" class="btn">Cancel</button>
-              <button type="submit" class="btn btn-primary" disabled={@uploads.image.entries == []}>Upload</button>
+              <button type="submit" class="btn btn-primary" disabled={@uploads.image.entries == []}>
+                Upload
+              </button>
             </footer>
           </form>
         </div>

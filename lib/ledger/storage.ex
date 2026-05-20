@@ -11,7 +11,10 @@ defmodule Ledger.Storage do
   """
 
   def put(site_slug, key, binary), do: adapter().put(site_slug, key, binary)
-  def stream_into(site_slug, key, source_path), do: adapter().stream_into(site_slug, key, source_path)
+
+  def stream_into(site_slug, key, source_path),
+    do: adapter().stream_into(site_slug, key, source_path)
+
   def delete(rel), do: adapter().delete(rel)
   def rename(old_rel, new_rel), do: adapter().rename(old_rel, new_rel)
   def url(rel), do: adapter().url(rel)

@@ -11,12 +11,10 @@ defmodule LedgerWeb.SessionHTML do
         <form action={~p"/login"} method="post">
           <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
           <label>
-            Email
-            <input type="email" name="user[email]" value={@email} required autofocus />
+            Email <input type="email" name="user[email]" value={@email} required autofocus />
           </label>
           <label>
-            Password
-            <input type="password" name="user[password]" required />
+            Password <input type="password" name="user[password]" required />
           </label>
           <button type="submit">Sign in</button>
         </form>

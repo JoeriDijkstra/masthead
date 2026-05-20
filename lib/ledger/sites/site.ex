@@ -23,7 +23,8 @@ defmodule Ledger.Sites.Site do
     |> normalize_slug()
     |> validate_required([:slug, :name, :owner_id])
     |> validate_format(:slug, ~r/^[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?$/,
-      message: "must be 1-32 chars, lowercase letters/digits/hyphens, no leading/trailing hyphen")
+      message: "must be 1-32 chars, lowercase letters/digits/hyphens, no leading/trailing hyphen"
+    )
     |> validate_exclusion(:slug, @reserved_slugs)
     |> validate_length(:name, max: 100)
     |> validate_length(:title, max: 200)
@@ -50,8 +51,11 @@ defmodule Ledger.Sites.Site do
 
   defp normalize_slug(changeset) do
     case get_change(changeset, :slug) do
-      slug when is_binary(slug) -> put_change(changeset, :slug, String.downcase(String.trim(slug)))
-      _ -> changeset
+      slug when is_binary(slug) ->
+        put_change(changeset, :slug, String.downcase(String.trim(slug)))
+
+      _ ->
+        changeset
     end
   end
 end

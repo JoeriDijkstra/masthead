@@ -27,8 +27,7 @@ defmodule LedgerWeb.AdminLive.SiteIndex do
       </ul>
 
       <p :if={@sites == []} class="empty">
-        You don't have any sites yet.
-        <.link navigate={~p"/sites/new"}>Create your first site</.link>.
+        You don't have any sites yet. <.link navigate={~p"/sites/new"}>Create your first site</.link>.
       </p>
     </.shell>
     """

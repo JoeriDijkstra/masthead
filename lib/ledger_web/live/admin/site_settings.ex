@@ -55,7 +55,13 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
   @impl true
   def render(assigns) do
     ~H"""
-    <.shell title="Settings" site={@site} current_user={@current_user} flash={@flash} active={:settings}>
+    <.shell
+      title="Settings"
+      site={@site}
+      current_user={@current_user}
+      flash={@flash}
+      active={:settings}
+    >
       <div class="wizard">
         <.form for={@form} phx-change="validate" phx-submit="save" class="form settings-form">
           <.error_list changeset={@changeset} show={@show_errors} />
@@ -69,20 +75,17 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
             <div class="settings-fields">
               <div class="form-row">
                 <label class="flex-1">
-                  Name
-                  <input type="text" name="site[name]" value={@form[:name].value} required />
+                  Name <input type="text" name="site[name]" value={@form[:name].value} required />
                 </label>
 
                 <label class="flex-1">
-                  Title
-                  <input type="text" name="site[title]" value={@form[:title].value} />
+                  Title <input type="text" name="site[title]" value={@form[:title].value} />
                   <small>Used in the browser tab and as the homepage heading.</small>
                 </label>
               </div>
 
               <label>
-                Description
-                <textarea name="site[description]" rows="3">{@form[:description].value}</textarea>
+                Description <textarea name="site[description]" rows="3">{@form[:description].value}</textarea>
                 <small>Shown on the default homepage and in the &lt;meta&gt; description.</small>
               </label>
             </div>
@@ -99,11 +102,14 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
                 <label class="flex-1">
                   Homepage
                   <select name="site[homepage_page_id]">
-                    <option value="" selected={is_nil(homepage_value(@form))}>Default — list of posts</option>
+                    <option value="" selected={is_nil(homepage_value(@form))}>
+                      Default — list of posts
+                    </option>
                     <option
                       :for={page <- @published_pages}
                       value={page.id}
-                      selected={to_string(page.id) == to_string(homepage_value(@form))}>
+                      selected={to_string(page.id) == to_string(homepage_value(@form))}
+                    >
                       {page.title} ({page.format})
                     </option>
                   </select>
@@ -113,7 +119,9 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
                 <label class="flex-1">
                   Theme
                   <select name="site[theme]">
-                    <option :for={t <- @themes} value={t} selected={t == @form[:theme].value}>{t}</option>
+                    <option :for={t <- @themes} value={t} selected={t == @form[:theme].value}>
+                      {t}
+                    </option>
                   </select>
                   <small>Rendering style applied to the public site.</small>
                 </label>

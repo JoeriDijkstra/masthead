@@ -19,7 +19,8 @@ defmodule Ledger.Content.Page do
     |> validate_inclusion(:format, ~w(markdown html blog))
     |> ensure_slug()
     |> validate_format(:slug, ~r/^[a-z0-9]([a-z0-9-]{0,80}[a-z0-9])?$/,
-      message: "lowercase letters, numbers, hyphens")
+      message: "lowercase letters, numbers, hyphens"
+    )
     |> unique_constraint([:site_id, :slug], name: :pages_site_id_slug_index)
     |> assoc_constraint(:site)
   end

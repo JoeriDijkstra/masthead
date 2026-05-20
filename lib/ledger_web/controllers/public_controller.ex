@@ -32,7 +32,13 @@ defmodule LedgerWeb.PublicController do
 
       post ->
         body_html = Content.render_body(post.body, post.format)
-        render_theme(conn, :render_post, %{site: site, post: post, body_html: body_html, pages: pages})
+
+        render_theme(conn, :render_post, %{
+          site: site,
+          post: post,
+          body_html: body_html,
+          pages: pages
+        })
     end
   end
 
@@ -70,6 +76,7 @@ defmodule LedgerWeb.PublicController do
   defp render_page_or_404(conn, page, pages) do
     site = conn.assigns.current_site
     body_html = Content.render_body(page.body, page.format)
+
     render_theme(conn, :render_page, %{site: site, page: page, body_html: body_html, pages: pages})
   end
 

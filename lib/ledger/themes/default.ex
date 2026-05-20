@@ -21,7 +21,7 @@ defmodule Ledger.Themes.Default do
         <p>No posts yet.</p>
       </section>
 
-      <ul class="post-list" :if={@posts != []}>
+      <ul :if={@posts != []} class="post-list">
         <li :for={post <- @posts}>
           <a href={"/posts/" <> post.slug}>
             <h2>{post.title}</h2>
@@ -85,7 +85,7 @@ defmodule Ledger.Themes.Default do
         <p>No posts yet.</p>
       </section>
 
-      <ul class="post-list" :if={@posts != []}>
+      <ul :if={@posts != []} class="post-list">
         <li :for={post <- @posts}>
           <a href={"/posts/" <> post.slug}>
             <h2>{post.title}</h2>
@@ -137,7 +137,10 @@ defmodule Ledger.Themes.Default do
           {render_slot(@inner_block)}
         </main>
         <footer class="site-footer">
-          <p>Published with <a href="https://ledger-cloud.com" target="_blank" rel="noopener">Ledger</a></p>
+          <p>
+            Published with
+            <a href="https://ledger-cloud.com" target="_blank" rel="noopener">Ledger</a>
+          </p>
         </footer>
       </body>
     </html>

@@ -68,29 +68,24 @@ defmodule LedgerWeb.AdminLive.SiteNew do
         <.error_list changeset={@changeset} show={@show_errors} />
 
         <label>
-          Name
-          <input type="text" name="site[name]" value={@form[:name].value} required autofocus />
+          Name <input type="text" name="site[name]" value={@form[:name].value} required autofocus />
           <small>Shown in nav and as default page title.</small>
         </label>
 
         <label>
-          Slug (subdomain)
-          <input type="text" name="site[slug]" value={@form[:slug].value} required />
+          Slug (subdomain) <input type="text" name="site[slug]" value={@form[:slug].value} required />
           <small>
-            Used to build the site's public URL:
-            <code>{(@form[:slug].value || "your-slug") <> "." <> @host_example}</code>.
+            Used to build the site's public URL: <code>{(@form[:slug].value || "your-slug") <> "." <> @host_example}</code>.
             Lowercase letters, numbers, and hyphens only.
           </small>
         </label>
 
         <label>
-          Title
-          <input type="text" name="site[title]" value={@form[:title].value} />
+          Title <input type="text" name="site[title]" value={@form[:title].value} />
         </label>
 
         <label>
-          Description
-          <textarea name="site[description]" rows="3">{@form[:description].value}</textarea>
+          Description <textarea name="site[description]" rows="3">{@form[:description].value}</textarea>
         </label>
 
         <div class="form-actions">
