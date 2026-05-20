@@ -4,7 +4,7 @@ defmodule Ledger.MixProject do
   def project do
     [
       app: :ledger,
-      version: "1.0.3",
+      version: "1.9.1",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -71,7 +71,13 @@ defmodule Ledger.MixProject do
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
       {:hackney, "~> 1.20"},
-      {:sweet_xml, "~> 0.7"}
+      {:sweet_xml, "~> 0.7"},
+      {:solid, "~> 1.3"},
+      {:swoosh, "~> 1.16"},
+      {:oban, "~> 2.18"},
+      {:ueberauth, "~> 0.10"},
+      {:ueberauth_google, "~> 0.12"},
+      {:ueberauth_github, "~> 0.8"}
     ]
   end
 

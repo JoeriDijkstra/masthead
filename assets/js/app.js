@@ -58,6 +58,21 @@ window.addEventListener("ledger:copy", e => {
   })
 })
 
+// Sign-up: block submit unless the two password fields match. Uses the
+// native validity bubble — no server round-trip, no LiveView needed.
+function wirePasswordConfirm(form) {
+  const pw = form.querySelector("input[name='user[password]']")
+  const confirm = form.querySelector("input[name='user[password_confirmation]']")
+  if (!pw || !confirm) return
+  const check = () => {
+    const mismatch = confirm.value && confirm.value !== pw.value
+    confirm.setCustomValidity(mismatch ? "Passwords do not match" : "")
+  }
+  pw.addEventListener("input", check)
+  confirm.addEventListener("input", check)
+}
+document.querySelectorAll("form[data-confirm-password]").forEach(wirePasswordConfirm)
+
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 

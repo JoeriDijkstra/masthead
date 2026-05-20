@@ -7,7 +7,7 @@ defmodule LedgerWeb.RegistrationHTML do
       <div class="auth-card">
         <h1>Create your Ledger account</h1>
 
-        <form action={~p"/signup"} method="post">
+        <form action={~p"/signup"} method="post" data-confirm-password>
           <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
           <.error_list changeset={@changeset} />
           <label>
@@ -24,8 +24,14 @@ defmodule LedgerWeb.RegistrationHTML do
             Password (min 8 chars)
             <input type="password" name="user[password]" required minlength="8" />
           </label>
+          <label>
+            Confirm password
+            <input type="password" name="user[password_confirmation]" required minlength="8" />
+          </label>
           <button type="submit">Create account</button>
         </form>
+
+        <LedgerWeb.SSO.buttons />
 
         <p class="meta">
           Already have an account? <a href={~p"/login"}>Sign in</a>
@@ -39,7 +45,7 @@ defmodule LedgerWeb.RegistrationHTML do
 
   defp error_list(assigns) do
     ~H"""
-    <ul :if={@changeset.errors != []} class="errors">
+    <ul :if={@changeset.action && @changeset.errors != []} class="errors">
       <li :for={{field, {msg, _}} <- @changeset.errors}>{field}: {msg}</li>
     </ul>
     """

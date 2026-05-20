@@ -418,6 +418,118 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 .flash-info { background: #ecfdf5; color: var(--good); border: 1px solid #a7f3d0; }
 .flash-error { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
 
+.account-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0.95rem;
+  margin-bottom: 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+.account-banner p { margin: 0; flex: 1; min-width: 14rem; }
+.account-banner form { margin: 0; display: inline; }
+.account-banner-btn {
+  display: inline-block;
+  border: 1px solid currentColor;
+  color: inherit;
+  text-decoration: none;
+  padding: 0.3rem 0.7rem;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.account-banner-btn:hover { background: rgba(146, 64, 14, 0.08); }
+
+.auth-card section { margin-top: 1.75rem; }
+.auth-card section h2 { font-size: 1rem; margin-bottom: 0.5rem; }
+.danger-zone { border-top: 1px solid #fecaca; padding-top: 1.25rem; }
+.danger-zone h2 { color: var(--danger); }
+button.danger {
+  background: var(--danger);
+  color: #fff;
+  border: none;
+}
+button.danger:hover { filter: brightness(0.92); }
+
+/* Account page (mirrors the settings-section layout) */
+.account-fields { gap: 1.4rem; }
+.account-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.account-row-label { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.2rem; }
+.account-row-value { font-size: 0.95rem; }
+.account-hint { font-size: 0.85rem; line-height: 1.55; margin: 0.3rem 0 0; max-width: 48ch; }
+.account-divider { border: 0; border-top: 1px solid var(--rule); margin: 0.4rem 0; }
+.account-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+.account-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  width: 100%;
+  max-width: 360px;
+}
+.account-form input {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--card);
+}
+.account-form input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+/* Buttons sit in a flex column — keep them their natural size, not stretched */
+.account-fields .btn { align-self: flex-start; }
+
+.sso-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+.sso-divider::before,
+.sso-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid #e5e7eb;
+}
+.sso-buttons { display: flex; flex-direction: column; gap: 0.5rem; }
+.sso-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+  font-size: 0.9rem;
+}
+.sso-btn svg { width: 18px; height: 18px; flex: none; }
+.sso-btn:hover { background: #f9fafb; }
+
 .page-head {
   display: flex;
   align-items: center;
@@ -691,6 +803,18 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 .form input:focus, .form textarea:focus, .form select:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
 .form small { color: var(--muted); font-weight: 400; }
 .form .checkbox { flex-direction: row; align-items: center; gap: 0.5rem; }
+/* Boolean metadata field: checkbox beside a stacked label + hint.
+   The wrapper is a <div> (not a <label>) so the generic
+   `.form label { flex-direction: column }` rule can't stretch the
+   checkbox full-width. */
+.settings-checkbox { display: flex; align-items: flex-start; gap: 0.6rem; }
+.settings-checkbox input[type="checkbox"] {
+  width: auto;
+  flex: none;
+  margin: 0.2rem 0 0;
+  accent-color: var(--accent);
+}
+.settings-checkbox .settings-checkbox-text { gap: 0.15rem; cursor: pointer; }
 .form-actions { display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; }
 .errors { background: #fef2f2; color: var(--danger); list-style: none; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin: 0; }
 
@@ -724,6 +848,21 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   flex: 1;
   font-size: 0.88rem;
   position: relative;
+  cursor: pointer;
+}
+/* Hover affordance: only nudge the border + label. Don't recolor the
+   number text — the current/done steps have a filled background, so
+   blue-on-blue would make the digit vanish. */
+.stepper .step:hover .step-num {
+  border-color: var(--accent);
+}
+.stepper .step:hover .step-label {
+  color: var(--fg);
+}
+.stepper .step:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 .stepper .step::after {
   content: "";
@@ -973,7 +1112,7 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   color: var(--muted);
   font-size: 0.85rem;
 }
-.theme-card {
+.theme-picker-card {
   position: relative;
   display: flex;
   align-items: center;
@@ -990,25 +1129,39 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   color: var(--fg);
   transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
 }
-.theme-card input[type="radio"] {
+.theme-picker-card input[type="radio"] {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
-.theme-card:hover { border-color: var(--rule-strong); background: var(--bg-soft); }
-.theme-card-selected {
+.theme-picker-card:hover { border-color: var(--rule-strong); background: var(--bg-soft); }
+.theme-picker-card-selected {
   border-color: var(--accent);
   background: var(--bg-soft);
 }
-.theme-card-name { font-weight: 600; font-size: 0.95rem; }
-.theme-card-add {
+.theme-picker-card-name { font-weight: 600; font-size: 0.95rem; }
+.theme-picker-card-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.theme-picker-card-add {
   flex-direction: column;
   gap: 0.25rem;
   border-style: dashed;
   color: var(--muted);
 }
-.theme-card-add:hover { color: var(--fg); border-color: var(--accent); background: var(--bg); }
-.theme-card-icon { font-size: 1.25rem; line-height: 1; font-weight: 400; }
+.theme-picker-card-add:hover { color: var(--fg); border-color: var(--accent); background: var(--bg); }
+.theme-picker-card-icon { font-size: 1.25rem; line-height: 1; font-weight: 400; }
 
 @media (max-width: 800px) {
   .settings-section {
@@ -1856,6 +2009,263 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 @media (max-width: 500px) {
   .landing-nav .github-btn span { display: none; }
   .landing-nav .github-btn { padding: 0.4rem; }
+}
+
+/* Page intro paragraph — sits below the page-head title. */
+.page-intro {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  max-width: 60ch;
+  line-height: 1.55;
+}
+
+/* Generic chip — small labelled tag without the pill's leading dot. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.chip-neutral { background: var(--rule); color: var(--fg-soft, #525252); }
+.chip-accent { background: var(--accent-soft); color: var(--accent-strong); }
+
+/* Theme library grid — cards rather than a table. */
+.theme-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+.theme-grid li { display: block; }
+.theme-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  height: 100%;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  /* Extra bottom padding reserves space for the absolutely-positioned
+     delete icon so the description never overlaps it. */
+  padding: 1.1rem 1.15rem 2.7rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.theme-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--rule-strong);
+}
+.theme-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.theme-card-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+.theme-card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.theme-card-desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+/* Quiet, icon-only delete in the bottom-right of the card. Fades in
+   slightly on card hover and turns destructive-red on its own hover.
+   Disabled state (built-ins, themes owned by someone else) stays muted
+   and unresponsive. */
+.theme-card-delete {
+  position: absolute;
+  bottom: 0.6rem;
+  right: 0.6rem;
+  width: 1.85rem;
+  height: 1.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.55;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+.theme-card:hover .theme-card-delete { opacity: 1; }
+.theme-card-delete:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.theme-card-delete:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.theme-card-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+.theme-card-delete svg { width: 1.05rem; height: 1.05rem; }
+.theme-card-version {
+  /* Version numbers shouldn't get the chip's all-caps treatment — the
+     'v' prefix and digits read better as-is, with tabular numerals so
+     the right column doesn't jitter across cards. */
+  text-transform: none;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Theme upload — single-file row inside the upload modal. */
+.upload-entries .entry-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Custom domain ---- */
+.domain-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.domain-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: lowercase;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.domain-badge-active {
+  background: #dcfce7;
+  color: #166534;
+}
+.domain-badge-failed {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.dns-card {
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem 1.75rem;
+  margin: 0 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.dns-intro {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.dns-record {
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  padding: 0.9rem 1rem;
+}
+.dns-record-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+}
+.dns-type {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+.dns-purpose { color: var(--muted); font-size: 0.85rem; }
+.dns-fields {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.dns-fields > div {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+}
+.dns-fields dt {
+  margin: 0;
+  width: 3.5rem;
+  flex: none;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.dns-fields dd { margin: 0; min-width: 0; }
+.dns-fields dd code { word-break: break-all; }
+.dns-apex { margin-top: 0.25rem; }
+.dns-apex > summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.dns-apex-note {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0.6rem 0;
+}
+.dns-apex .dns-record { margin-top: 0.6rem; }
+
+.domain-status { font-size: 0.95rem; }
+.domain-status-active {
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-box);
+  background: #dcfce7;
+  color: #166534;
+}
+.domain-error {
+  margin: 0 0 1.25rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-box);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+/* Inside the result card the flex gap already spaces it. */
+.dns-card .domain-error {
+  margin: 0;
 }
 
 /* This file is for your main application CSS */

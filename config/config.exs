@@ -24,6 +24,14 @@ config :ledger, :site_url,
   host: "lvh.me",
   port: 4000
 
+# Custom-domain feature. `cname_target` is the hostname users point
+# their domain's CNAME at (the Fly app's edge); `txt_prefix` is the
+# label under which the ownership token is published as a TXT record.
+# Prod overrides `cname_target` from FLY_APP_NAME in runtime.exs.
+config :ledger, :custom_domain,
+  cname_target: "dijkstra-ledger.fly.dev",
+  txt_prefix: "_ledger-verify"
+
 # Configure the endpoint
 config :ledger, LedgerWeb.Endpoint,
   url: [host: "localhost"],
@@ -63,6 +71,45 @@ config :logger, :default_formatter,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Transactional email (Swoosh). Adapter is environment-specific: Local in
+# dev, Test in test, Resend in prod (see the respective config files).
+# Hackney is the HTTP API client (already a dependency).
+config :ledger, Ledger.Mailer, adapter: Swoosh.Adapters.Local
+config :swoosh, :api_client, Swoosh.ApiClient.Hackney
+
+# Default "from" for account email. Prod overrides this from MAIL_FROM in
+# runtime.exs once a verified sending domain exists.
+config :ledger, :mail_from, {"Ledger", "noreply@ledger-cloud.com"}
+
+# Background jobs (Oban). The maintenance queue runs the unconfirmed-account
+# sweep; mailers runs transactional email with retries. The Cron schedule
+# itself is attached where the job is defined. Test disables execution
+# (`testing: :manual`).
+# Social sign-in (Ueberauth). Client id/secret per provider are read
+# from env in runtime.exs (prod) and dev.exs (local testing) — only set
+# when present so a missing provider doesn't break boot.
+config :ueberauth, Ueberauth,
+  providers: [
+    google: {Ueberauth.Strategy.Google, [default_scope: "email profile"]},
+    github: {Ueberauth.Strategy.Github, [default_scope: "user:email"]}
+  ]
+
+# Ueberauth's OAuth strategies use Tesla; route it through Hackney
+# (already a dependency) instead of the bare :httpc default.
+config :tesla, adapter: Tesla.Adapter.Hackney
+
+config :ledger, Oban,
+  repo: Ledger.Repo,
+  queues: [mailers: 10, maintenance: 5],
+  plugins: [
+    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
+    {Oban.Plugins.Cron,
+     crontab: [
+       # Daily 03:00 UTC: disable accounts unconfirmed for 7+ days.
+       {"0 3 * * *", Ledger.Workers.DisableUnconfirmed}
+     ]}
+  ]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

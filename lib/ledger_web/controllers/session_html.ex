@@ -19,8 +19,13 @@ defmodule LedgerWeb.SessionHTML do
           <button type="submit">Sign in</button>
         </form>
 
+        <LedgerWeb.SSO.buttons />
+
         <p class="meta">
           Need an account? <a href={~p"/signup"}>Sign up</a>
+        </p>
+        <p class="meta">
+          <a href={~p"/reset-password"}>Forgot your password?</a>
         </p>
       </div>
     </div>

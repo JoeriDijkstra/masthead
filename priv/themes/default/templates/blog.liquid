@@ -1,0 +1,25 @@
+<header class="site-header">
+  <h1>{{ page.title | escape }}</h1>
+</header>
+
+{% if body_html != "" %}
+  <div class="page-body">{{ body_html }}</div>
+{% endif %}
+
+{% if posts == empty %}
+  <section class="empty"><p>No posts yet.</p></section>
+{% else %}
+  <ul class="post-list">
+    {% for post in posts %}
+      <li>
+        <a href="{{ post.url }}">
+          <h2>{{ post.title | escape }}</h2>
+          {% if post.excerpt != "" %}<p class="excerpt">{{ post.excerpt | escape }}</p>{% endif %}
+          {% if post.published_at %}
+            <time datetime="{{ post.published_at | iso8601 }}">{{ post.published_at | strftime: "%B %-d, %Y" }}</time>
+          {% endif %}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}

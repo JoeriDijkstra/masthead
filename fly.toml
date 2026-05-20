@@ -17,6 +17,13 @@ kill_signal = 'SIGTERM'
   APP_HOSTS = 'ledger-cloud.com'
   PHX_SERVER = 'true'
   PORT = '8080'
+  # Used by the custom-domains feature to manage Fly TLS certs and to
+  # derive the CNAME target. FLY_API_TOKEN is set via `fly secrets`.
+  FLY_APP_NAME = 'dijkstra-ledger'
+  # Transactional email sender (account confirmation / password reset).
+  # Must be on the Resend-verified sending domain. RESEND_API_KEY is set
+  # via `fly secrets`.
+  MAIL_FROM = 'noreply@ledger-cloud.com'
 
 [http_service]
   internal_port = 8080

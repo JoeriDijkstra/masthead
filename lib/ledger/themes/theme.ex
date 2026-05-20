@@ -1,47 +1,84 @@
 defmodule Ledger.Themes.Theme do
   @moduledoc """
-  Behaviour for themes.
+  Persistent representation of a theme.
 
-  A theme is a single module that knows how to render each public page of a
-  site. The module receives a normalised assigns map and returns a
-  `Phoenix.LiveView.Rendered` struct (typically via `~H`).
+  Two kinds of rows coexist in this table:
 
-  See `Ledger.Themes.Default` for a reference implementation.
+    * `source: "built_in"` — seeded from `priv/themes/*` on every release
+      boot. `owner_id` is `nil`; the slug is globally reserved.
+    * `source: "uploaded"` — created when a user uploads a theme zip
+      through the admin UI. `owner_id` is the uploader; slugs are unique
+      per owner.
 
-  Note: themes receive a plain `assigns` map (not a Phoenix.LiveView socket).
-  If a callback needs to compute extra values before the `~H` block, use
-  `Map.merge(assigns, %{...})` — `Phoenix.Component.assign/3` will raise
-  because it requires HEEx change-tracking context.
-
-  Note: HEEx will NOT interpolate `{...}` inside `<style>` or `<script>`
-  tags — those are HTML "raw text" elements. To inline CSS or JS, build
-  the whole tag in a helper and interpolate the result:
-
-      defp inline_styles do
-        Phoenix.HTML.raw(["<style>", theme_css(), "</style>"])
-      end
-
-      # in the layout HEEx:
-      {inline_styles()}
+  The CSS body and template sources do **not** live in this row. The
+  `storage_path` field points to either a `priv/themes/<slug>` directory
+  (for built-ins) or `themes/<slug>/<version>/` inside `Ledger.Storage`
+  (for uploads). The renderer reads files through `Ledger.Themes.Loader`
+  and caches the parsed results in `:persistent_term`.
   """
-  alias Phoenix.LiveView.Rendered
+  use Ecto.Schema
+  import Ecto.Changeset
 
-  @doc "Site landing page (list of recent posts)."
-  @callback render_index(assigns :: map()) :: Rendered.t()
+  @sources ~w(built_in uploaded)
+  @reserved_slugs ~w(default studio blank)
 
-  @doc "A single blog post."
-  @callback render_post(assigns :: map()) :: Rendered.t()
-
-  @doc "A standalone page."
-  @callback render_page(assigns :: map()) :: Rendered.t()
+  schema "themes" do
+    field :slug, :string
+    field :name, :string
+    field :description, :string, default: ""
+    field :version, :string
+    field :source, :string
+    field :storage_path, :string
+    field :manifest, :map, default: %{}
+    field :public, :boolean, default: false
+    belongs_to :owner, Ledger.Accounts.User
+    has_many :sites, Ledger.Sites.Site
+    timestamps(type: :utc_datetime)
+  end
 
   @doc """
-  A `blog`-format page: the page's body is rendered as a Markdown intro,
-  followed by the site's published post list. Assigns: `site`, `page`,
-  `posts`, `body_html`, `pages`.
+  Changeset used by the seed task to upsert a built-in theme. Built-ins
+  have no owner and use a reserved slug.
   """
-  @callback render_blog(assigns :: map()) :: Rendered.t()
+  def built_in_changeset(theme, attrs) do
+    theme
+    |> cast(attrs, [:slug, :name, :description, :version, :storage_path, :manifest, :public])
+    |> put_change(:source, "built_in")
+    |> put_change(:owner_id, nil)
+    |> validate_required([:slug, :name, :version, :storage_path])
+    |> validate_inclusion(:source, @sources)
+    |> validate_format(:slug, ~r/^[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?$/)
+    |> unique_constraint(:slug, name: :themes_system_slug_index)
+  end
 
-  @doc "404 for the site."
-  @callback render_not_found(assigns :: map()) :: Rendered.t()
+  @doc """
+  Changeset used by the upload flow. The uploader becomes the owner; the
+  slug cannot collide with any built-in.
+  """
+  def upload_changeset(theme, attrs) do
+    theme
+    |> cast(attrs, [
+      :slug,
+      :name,
+      :description,
+      :version,
+      :storage_path,
+      :manifest,
+      :public,
+      :owner_id
+    ])
+    |> put_change(:source, "uploaded")
+    |> validate_required([:slug, :name, :version, :storage_path, :owner_id])
+    |> validate_inclusion(:source, @sources)
+    |> validate_format(:slug, ~r/^[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?$/)
+    |> validate_exclusion(:slug, @reserved_slugs, message: "is reserved for a built-in theme")
+    |> unique_constraint([:owner_id, :slug], name: :themes_owner_slug_index)
+    |> assoc_constraint(:owner)
+  end
+
+  @doc "Slugs that can never be claimed by uploaded themes."
+  def reserved_slugs, do: @reserved_slugs
+
+  @doc "Storage adapter path for an uploaded theme."
+  def upload_storage_path(slug, version), do: Path.join(["themes", slug, version])
 end

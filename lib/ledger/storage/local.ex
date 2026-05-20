@@ -57,6 +57,15 @@ defmodule Ledger.Storage.Local do
   @impl true
   def url(rel_path), do: "/uploads/" <> rel_path
 
+  @impl true
+  def read(rel_path) when is_binary(rel_path) do
+    case File.read(absolute(rel_path)) do
+      {:ok, body} -> {:ok, body}
+      {:error, :enoent} -> {:error, :not_found}
+      {:error, _} = err -> err
+    end
+  end
+
   def absolute(rel_path), do: Path.join(root_path(), rel_path)
 
   @doc "Storage root on disk. Public so Plug.Static can call into it."

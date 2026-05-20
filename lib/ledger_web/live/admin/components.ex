@@ -3,6 +3,8 @@ defmodule LedgerWeb.AdminLive.Components do
   use Phoenix.Component
   use LedgerWeb, :verified_routes
 
+  alias Ledger.Accounts.User
+
   attr :title, :string, default: nil
   attr :site, :map, default: nil
   attr :current_user, :map, default: nil
@@ -10,7 +12,7 @@ defmodule LedgerWeb.AdminLive.Components do
 
   attr :active, :atom,
     default: nil,
-    doc: ":overview | :posts | :pages | :uploads | :settings | :sites | :new_site"
+    doc: ":overview | :posts | :pages | :uploads | :settings | :sites | :themes"
 
   slot :inner_block, required: true
   slot :actions
@@ -65,15 +67,17 @@ defmodule LedgerWeb.AdminLive.Components do
               <.icon_grid />
             </.nav_link>
 
-            <.nav_link href={~p"/sites/new"} label="New site" active={@active == :new_site}>
-              <.icon_plus />
+            <.nav_link href={~p"/themes"} label="Themes" active={@active == :themes}>
+              <.icon_palette />
             </.nav_link>
           <% end %>
         </nav>
 
         <div :if={@current_user} class="sidebar-user">
           <div class="user-avatar">{user_initial(@current_user)}</div>
-          <div class="user-email" title={@current_user.email}>{@current_user.email}</div>
+          <.link navigate={~p"/account"} class="user-email" title="Account settings">
+            {@current_user.email}
+          </.link>
           <.link href={~p"/logout"} method="delete" class="logout-link" title="Log out">
             <.icon_logout />
           </.link>
@@ -81,6 +85,8 @@ defmodule LedgerWeb.AdminLive.Components do
       </aside>
 
       <main class="admin-content">
+        <.unconfirmed_banner :if={@current_user} user={@current_user} />
+
         <div :if={@flash != %{} and Phoenix.Flash.get(@flash, :info)} class="admin-flash">
           <p class="flash flash-info">{Phoenix.Flash.get(@flash, :info)}</p>
         </div>
@@ -95,6 +101,26 @@ defmodule LedgerWeb.AdminLive.Components do
 
         {render_slot(@inner_block)}
       </main>
+    </div>
+    """
+  end
+
+  attr :user, :map, required: true
+
+  @doc """
+  Persistent reminder shown to signed-in users whose email is not yet
+  confirmed. Renders nothing once confirmed. The resend action posts to
+  `/confirm`; the controller is enumeration-safe.
+  """
+  def unconfirmed_banner(assigns) do
+    ~H"""
+    <div :if={not User.confirmed?(@user)} class="account-banner" role="status">
+      <p>
+        Please confirm your email address. We sent a link to <strong>{@user.email}</strong>. Unconfirmed accounts are disabled after 7 days.
+      </p>
+      <.link href={~p"/confirm"} method="post" class="account-banner-btn">
+        Resend confirmation
+      </.link>
     </div>
     """
   end
@@ -252,6 +278,10 @@ defmodule LedgerWeb.AdminLive.Components do
   #
   #   * `scheme: "http", host: "lvh.me", port: 4000`        -> http://slug.lvh.me:4000
   #   * `scheme: "https", host: "yourdomain.com", port: nil` -> https://slug.yourdomain.com
+  defp site_url(%{custom_domain: domain, custom_domain_status: "active"})
+       when is_binary(domain),
+       do: "https://#{domain}"
+
   defp site_url(site) do
     cfg = Application.get_env(:ledger, :site_url, scheme: "http", host: "lvh.me", port: 4000)
     scheme = Keyword.fetch!(cfg, :scheme)
@@ -405,21 +435,6 @@ defmodule LedgerWeb.AdminLive.Components do
     """
   end
 
-  defp icon_plus(assigns) do
-    ~H"""
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke-width="1.5"
-      stroke="currentColor"
-      class="icon"
-    >
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-    </svg>
-    """
-  end
-
   defp icon_logout(assigns) do
     ~H"""
     <svg
@@ -434,6 +449,25 @@ defmodule LedgerWeb.AdminLive.Components do
         stroke-linecap="round"
         stroke-linejoin="round"
         d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
+      />
+    </svg>
+    """
+  end
+
+  defp icon_palette(assigns) do
+    ~H"""
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="icon"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"
       />
     </svg>
     """

@@ -12,7 +12,14 @@ defmodule LedgerWeb.RegistrationController do
   def create(conn, %{"user" => user_params}) do
     case Accounts.register_user(user_params) do
       {:ok, user} ->
-        UserAuth.log_in_user(conn, user)
+        Accounts.deliver_user_confirmation_instructions(
+          user,
+          &url(~p"/confirm/#{&1}")
+        )
+
+        UserAuth.log_in_user(conn, user, %{
+          "flash" => "Account created. Check your email to confirm it."
+        })
 
       {:error, changeset} ->
         conn

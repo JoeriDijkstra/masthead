@@ -20,6 +20,11 @@ config :ledger, LedgerWeb.Endpoint,
   secret_key_base: "nfXqtIqfqTjxEngG1ccHrd+wHjl4LkfDY6FkWvMI4NcIPYdrtOWRuSotkgHcQfte",
   server: false
 
+# Custom domains: stub adapters; tests drive them via :dns_stub /
+# :fly_stub application env (set per-test).
+config :ledger, :dns_resolver, Ledger.CustomDomains.DnsResolver.Stub
+config :ledger, :fly_client, Ledger.CustomDomains.FlyClient.Stub
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 
@@ -33,3 +38,11 @@ config :phoenix_live_view,
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# Capture mail in-memory; assert with Swoosh.TestAssertions.
+config :ledger, Ledger.Mailer, adapter: Swoosh.Adapters.Test
+config :swoosh, :api_client, false
+
+# Don't run queues/plugins in test. Jobs are inserted and asserted with
+# Oban.Testing (drain or assert_enqueued).
+config :ledger, Oban, testing: :manual

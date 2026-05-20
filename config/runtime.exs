@@ -23,6 +23,22 @@ end
 config :ledger, LedgerWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# Social sign-in credentials. Read in every environment so the flow can
+# be tested locally by exporting the env vars. A provider is only
+# configured when its client id is present, so an unconfigured provider
+# never breaks boot (the button just fails with a clear error).
+if google_id = System.get_env("GOOGLE_CLIENT_ID") do
+  config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+    client_id: google_id,
+    client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+end
+
+if github_id = System.get_env("GITHUB_CLIENT_ID") do
+  config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+    client_id: github_id,
+    client_secret: System.get_env("GITHUB_CLIENT_SECRET")
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
@@ -73,9 +89,17 @@ if config_env() == :prod do
     host: List.first(app_hosts),
     port: nil
 
+  # Custom domains: users CNAME their domain at the Fly app's edge.
+  # Derive the target from FLY_APP_NAME so it tracks the deployed app.
+  if fly_app = System.get_env("FLY_APP_NAME") do
+    config :ledger, :custom_domain,
+      cname_target: "#{fly_app}.fly.dev",
+      txt_prefix: "_ledger-verify"
+  end
+
   config :ledger, LedgerWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
-    check_origin: ["https://#{host}" | Enum.map(app_hosts, &"//*.#{&1}")],
+    check_origin: {LedgerWeb.CheckOrigin, :allowed?, [%{host: host, app_hosts: app_hosts}]},
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
@@ -105,6 +129,28 @@ if config_env() == :prod do
       host: s3_host,
       region: s3_region
   end
+
+  # Transactional email via Resend. Account confirmation and password
+  # reset depend on this, so a missing key is a hard boot failure (same
+  # posture as DATABASE_URL above) rather than silently dropping mail.
+  config :ledger, Ledger.Mailer,
+    adapter: Swoosh.Adapters.Resend,
+    api_key:
+      System.get_env("RESEND_API_KEY") ||
+        raise("""
+        environment variable RESEND_API_KEY is missing.
+        Create a Resend API key and set it as a Fly secret.
+        """)
+
+  config :ledger,
+         :mail_from,
+         {System.get_env("MAIL_FROM_NAME") || "Ledger",
+          System.get_env("MAIL_FROM") ||
+            raise("""
+            environment variable MAIL_FROM is missing.
+            Set it to an address on your Resend-verified sending domain,
+            e.g. noreply@ledger-cloud.com
+            """)}
 
   # ## SSL Support
   #

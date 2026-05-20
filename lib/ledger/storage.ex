@@ -20,6 +20,12 @@ defmodule Ledger.Storage do
   def url(rel), do: adapter().url(rel)
 
   @doc """
+  Read the bytes at `rel_path` from the configured adapter. Used by the
+  theme renderer to repopulate its cache on a cold miss.
+  """
+  def read(rel_path), do: adapter().read(rel_path)
+
+  @doc """
   Local-disk-only helper kept on the top-level module so the Endpoint's
   `Plug.Static` can resolve it at startup regardless of which adapter is
   active. Returns the local storage root even when the S3 adapter is in
