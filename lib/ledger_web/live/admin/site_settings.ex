@@ -285,7 +285,9 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
 
           <div class="wizard-footer">
             <.link navigate={~p"/#{@site.slug}"} class="btn">Cancel</.link>
-            <button type="submit" class="btn btn-primary">Save settings</button>
+            <button type="submit" class="btn btn-primary" data-shortcut="save">
+              Save settings
+            </button>
           </div>
         </.form>
       </div>

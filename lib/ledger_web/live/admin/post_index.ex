@@ -35,7 +35,13 @@ defmodule LedgerWeb.AdminLive.PostIndex do
     ~H"""
     <.shell title="Posts" site={@site} current_user={@current_user} flash={@flash} active={:posts}>
       <:actions>
-        <.link navigate={~p"/#{@site.slug}/posts/new"} class="btn btn-primary">+ New post</.link>
+        <.link
+          navigate={~p"/#{@site.slug}/posts/new"}
+          class="btn btn-primary"
+          data-shortcut="new"
+        >
+          + New post
+        </.link>
       </:actions>
 
       <table :if={@posts != []} class="table">

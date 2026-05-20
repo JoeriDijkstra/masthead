@@ -36,7 +36,13 @@ defmodule LedgerWeb.AdminLive.PageIndex do
     ~H"""
     <.shell title="Pages" site={@site} current_user={@current_user} flash={@flash} active={:pages}>
       <:actions>
-        <.link navigate={~p"/#{@site.slug}/pages/new"} class="btn btn-primary">+ New page</.link>
+        <.link
+          navigate={~p"/#{@site.slug}/pages/new"}
+          class="btn btn-primary"
+          data-shortcut="new"
+        >
+          + New page
+        </.link>
       </:actions>
 
       <table :if={@pages != []} class="table">
