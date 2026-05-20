@@ -951,6 +951,65 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   margin: 0 0.15rem;
 }
 
+/* Theme picker — card grid for the public-site theme selection. */
+.theme-picker {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+.theme-picker legend {
+  grid-column: 1 / -1;
+  padding: 0;
+  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--fg);
+}
+.theme-picker-hint {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.theme-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 84px;
+  padding: 1rem 0.75rem;
+  background: var(--bg);
+  border: 2px solid var(--rule);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  color: var(--fg);
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+.theme-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.theme-card:hover { border-color: var(--rule-strong); background: var(--bg-soft); }
+.theme-card-selected {
+  border-color: var(--accent);
+  background: var(--bg-soft);
+}
+.theme-card-name { font-weight: 600; font-size: 0.95rem; }
+.theme-card-add {
+  flex-direction: column;
+  gap: 0.25rem;
+  border-style: dashed;
+  color: var(--muted);
+}
+.theme-card-add:hover { color: var(--fg); border-color: var(--accent); background: var(--bg); }
+.theme-card-icon { font-size: 1.25rem; line-height: 1; font-weight: 400; }
+
 @media (max-width: 800px) {
   .settings-section {
     grid-template-columns: 1fr;
