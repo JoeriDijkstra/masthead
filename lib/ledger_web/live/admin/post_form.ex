@@ -372,11 +372,18 @@ defmodule LedgerWeb.AdminLive.PostForm do
       <button type="button" phx-click="back" class="btn">&larr; Back</button>
       <div class="wizard-actions">
         <%= if @editing do %>
-          <button type="submit" form="content-form" class="btn btn-primary">
+          <button type="submit" form="content-form" class="btn btn-primary" data-shortcut="save">
             Save changes
           </button>
         <% else %>
-          <button type="submit" form="content-form" name="action" value="draft" class="btn">
+          <button
+            type="submit"
+            form="content-form"
+            name="action"
+            value="draft"
+            class="btn"
+            data-shortcut="save"
+          >
             Save as draft
           </button>
           <button
@@ -385,6 +392,7 @@ defmodule LedgerWeb.AdminLive.PostForm do
             name="action"
             value="publish"
             class="btn btn-primary"
+            data-shortcut="publish"
           >
             Save &amp; publish
           </button>

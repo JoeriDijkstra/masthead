@@ -73,6 +73,38 @@ function wirePasswordConfirm(form) {
 }
 document.querySelectorAll("form[data-confirm-password]").forEach(wirePasswordConfirm)
 
+// Keyboard shortcuts. Pages opt in by adding data-shortcut="save",
+// "publish", or "new" to the relevant button/link.
+//   - Cmd/Ctrl+S        → save
+//   - Cmd/Ctrl+Shift+S  → publish (falls back to save if absent)
+//   - c (no modifier)   → new (ignored while typing in an input)
+function isEditableTarget(el) {
+  if (!el) return false
+  const tag = el.tagName
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable
+}
+
+window.addEventListener("keydown", e => {
+  const mod = e.metaKey || e.ctrlKey
+
+  if (mod && (e.key === "s" || e.key === "S")) {
+    const target =
+      (e.shiftKey && document.querySelector("[data-shortcut='publish']")) ||
+      document.querySelector("[data-shortcut='save']")
+    if (!target) return
+    e.preventDefault()
+    target.click()
+    return
+  }
+
+  if (!mod && !e.altKey && (e.key === "c" || e.key === "C") && !isEditableTarget(e.target)) {
+    const target = document.querySelector("[data-shortcut='new']")
+    if (!target) return
+    e.preventDefault()
+    target.click()
+  }
+})
+
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 

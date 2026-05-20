@@ -94,7 +94,14 @@ defmodule LedgerWeb.AdminLive.UploadIndex do
     ~H"""
     <.shell title="Uploads" site={@site} current_user={@current_user} flash={@flash} active={:uploads}>
       <:actions>
-        <button type="button" phx-click="open_modal" class="btn btn-primary">+ New upload</button>
+        <button
+          type="button"
+          phx-click="open_modal"
+          class="btn btn-primary"
+          data-shortcut="new"
+        >
+          + New upload
+        </button>
       </:actions>
 
       <div :if={@uploads_list == []} class="empty-state empty-state-illustrated">
