@@ -21,8 +21,11 @@ ARG RUNNER_IMAGE="docker.io/debian:${DEBIAN_VERSION}"
 FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies
+# nodejs + npm are required to install the JS deps (CodeMirror) before
+# esbuild bundles them. esbuild itself ships as a precompiled binary via
+# the `esbuild` Hex package, so Node isn't needed at runtime.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential git \
+  && apt-get install -y --no-install-recommends build-essential git nodejs npm \
   && rm -rf /var/lib/apt/lists/*
 
 # prepare build dir
@@ -56,6 +59,10 @@ COPY lib lib
 RUN mix compile
 
 COPY assets assets
+
+# install JS deps (CodeMirror etc.) into assets/node_modules so esbuild
+# can resolve them during `mix assets.deploy`
+RUN cd assets && npm ci --no-audit --no-fund --prefer-offline
 
 # compile assets
 RUN mix assets.deploy
