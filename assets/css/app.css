@@ -1042,24 +1042,6 @@ button.danger:hover { filter: brightness(0.92); }
 
 /* Short editor variant (used by blog page description) */
 .editor.editor-short .markdown-editor { min-height: 180px; flex: 1; }
-.editor.editor-short .preview { min-height: 180px; flex: 1; }
-
-/* Preview pane for blog page: show description + divider noting post list */
-.blog-preview .blog-preview-divider {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px dashed var(--rule);
-  text-align: center;
-  font-size: 0.82rem;
-  color: var(--muted);
-}
-.blog-preview .blog-preview-divider code {
-  font-family: ui-monospace, Menlo, monospace;
-  background: var(--bg-soft);
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.95em;
-}
 
 .form-row { display: flex; gap: 1rem; }
 .form-row > label { flex: 1; }
@@ -1108,6 +1090,79 @@ button.danger:hover { filter: brightness(0.92); }
   margin: 0 0.15rem;
 }
 
+/* Theme picker — card grid for the public-site theme selection. */
+.theme-picker {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+.theme-picker legend {
+  grid-column: 1 / -1;
+  padding: 0;
+  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--fg);
+}
+.theme-picker-hint {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.theme-picker-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 84px;
+  padding: 1rem 0.75rem;
+  background: var(--bg);
+  border: 2px solid var(--rule);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  color: var(--fg);
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+.theme-picker-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.theme-picker-card:hover { border-color: var(--rule-strong); background: var(--bg-soft); }
+.theme-picker-card-selected {
+  border-color: var(--accent);
+  background: var(--bg-soft);
+}
+.theme-picker-card-name { font-weight: 600; font-size: 0.95rem; }
+.theme-picker-card-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.theme-picker-card-add {
+  flex-direction: column;
+  gap: 0.25rem;
+  border-style: dashed;
+  color: var(--muted);
+}
+.theme-picker-card-add:hover { color: var(--fg); border-color: var(--accent); background: var(--bg); }
+.theme-picker-card-icon { font-size: 1.25rem; line-height: 1; font-weight: 400; }
+
 @media (max-width: 800px) {
   .settings-section {
     grid-template-columns: 1fr;
@@ -1122,9 +1177,8 @@ button.danger:hover { filter: brightness(0.92); }
 
 /* Post / page editor */
 .editor {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
+  display: flex;
+  flex-direction: column;
   background: var(--card);
   border: 1px solid var(--rule);
   border-radius: 12px;
@@ -1138,17 +1192,39 @@ button.danger:hover { filter: brightness(0.92); }
   font-family: ui-monospace, Menlo, monospace;
   resize: vertical;
 }
-.preview {
+/* Syntax-highlighted editor (CodeMirror 6) — wraps the textarea, which is
+   hidden via inline style by the CodeEditor hook. */
+.code-editor {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
   background: var(--bg);
   border: 1px solid var(--rule);
   border-radius: 8px;
-  padding: 1.25rem 1.5rem;
-  min-height: 560px;
-  overflow: auto;
+  overflow: hidden;
 }
-/* Prose — preview pane in the post/page editor. Tailwind preflight resets
-   default heading/paragraph styles to inherit, so we restore the typical
+.code-editor .cm-editor {
+  flex: 1;
+  min-height: 560px;
+  font-size: 0.9rem;
+}
+.code-editor .cm-editor.cm-focused { outline: none; }
+.code-editor .cm-scroller {
+  font-family: ui-monospace, Menlo, monospace;
+  line-height: 1.5;
+}
+.code-editor .cm-gutters {
+  background: var(--card);
+  border-right: 1px solid var(--rule);
+  color: var(--muted);
+}
+.code-editor-short, .code-editor-short .cm-editor { min-height: 180px; }
+.editor.editor-short .code-editor, .editor.editor-short .code-editor .cm-editor {
+  min-height: 180px;
+}
+/* Prose — rendered post/page body. Tailwind preflight resets default
+   heading/paragraph styles to inherit, so we restore the typical
    "rendered Markdown" look explicitly here. */
 .prose { font-size: 0.95rem; line-height: 1.6; color: var(--fg); }
 .prose > *:first-child { margin-top: 0; }
@@ -1209,7 +1285,6 @@ button.danger:hover { filter: brightness(0.92); }
 .prose th { background: var(--bg-soft); font-weight: 600; text-align: left; }
 
 @media (max-width: 800px) {
-  .editor { grid-template-columns: 1fr; }
   .admin-header { flex-wrap: wrap; gap: 1rem; }
 }
 

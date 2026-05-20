@@ -27,7 +27,6 @@ defmodule LedgerWeb.AdminLive.PostForm do
        step: step,
        draft: draft,
        page_title: page_title,
-       preview_html: render_preview(draft),
        slug_touched: post != nil,
        show_errors: false
      )
@@ -89,11 +88,10 @@ defmodule LedgerWeb.AdminLive.PostForm do
       end
 
     draft = Map.merge(socket.assigns.draft, params)
-    preview_html = render_preview(draft)
 
     {:noreply,
      socket
-     |> assign(draft: draft, preview_html: preview_html, slug_touched: slug_touched)
+     |> assign(draft: draft, slug_touched: slug_touched)
      |> assign_changeset(draft, validate: true)}
   end
 
@@ -200,11 +198,6 @@ defmodule LedgerWeb.AdminLive.PostForm do
     assign(socket, form: to_form(changeset, as: :post), changeset: changeset)
   end
 
-  defp render_preview(%{"body" => body, "format" => fmt}) when is_binary(body),
-    do: Content.render_body(body, fmt || "markdown")
-
-  defp render_preview(_), do: ""
-
   # ---- Render ----
 
   @impl true
@@ -251,7 +244,6 @@ defmodule LedgerWeb.AdminLive.PostForm do
               form={@form}
               changeset={@changeset}
               format={@draft["format"]}
-              preview_html={@preview_html}
               editing={@post != nil}
               site_slug={@site.slug}
               show_errors={@show_errors}
@@ -357,7 +349,6 @@ defmodule LedgerWeb.AdminLive.PostForm do
   attr :form, :map, required: true
   attr :changeset, :map, required: true
   attr :format, :string, required: true
-  attr :preview_html, :string, required: true
   attr :editing, :boolean, default: false
   attr :site_slug, :string, required: true
   attr :show_errors, :boolean, default: false
@@ -374,7 +365,7 @@ defmodule LedgerWeb.AdminLive.PostForm do
       <input type="hidden" name="post[excerpt]" value={@form[:excerpt].value} />
       <input type="hidden" name="post[format]" value={@format} />
 
-      <.body_editor form={@form} format={@format} preview_html={@preview_html} />
+      <.body_editor form={@form} format={@format} />
     </form>
 
     <div class="wizard-footer">
@@ -405,24 +396,27 @@ defmodule LedgerWeb.AdminLive.PostForm do
 
   attr :form, :map, required: true
   attr :format, :string, required: true
-  attr :preview_html, :string, required: true
 
   defp body_editor(assigns) do
     ~H"""
     <div class="editor">
       <div class="editor-pane">
         <label for="post-body-textarea" class="editor-label">Body ({format_label(@format)})</label>
-        <textarea
-          id="post-body-textarea"
-          name="post[body]"
-          rows="20"
-          phx-debounce="200"
-          class="markdown-editor"
-        >{@form[:body].value}</textarea>
-      </div>
-      <div class="editor-pane">
-        <div class="editor-label">Preview</div>
-        <div class="preview prose">{Phoenix.HTML.raw(@preview_html)}</div>
+        <div
+          id={"post-body-editor-" <> @format}
+          class="code-editor"
+          phx-hook="CodeEditor"
+          phx-update="ignore"
+          data-language={@format}
+        >
+          <textarea
+            id="post-body-textarea"
+            name="post[body]"
+            rows="20"
+            phx-debounce="200"
+            class="markdown-editor"
+          >{@form[:body].value}</textarea>
+        </div>
       </div>
     </div>
     """

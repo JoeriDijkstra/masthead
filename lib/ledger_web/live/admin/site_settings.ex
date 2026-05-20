@@ -167,38 +167,52 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
             </header>
 
             <div class="settings-fields">
-              <div class="form-row">
-                <label class="flex-1">
-                  Homepage
-                  <select name="site[homepage_page_id]">
-                    <option value="" selected={is_nil(homepage_value(@form))}>
-                      Default — list of posts
-                    </option>
-                    <option
-                      :for={page <- @published_pages}
-                      value={page.id}
-                      selected={to_string(page.id) == to_string(homepage_value(@form))}
-                    >
-                      {page.title} ({page.format})
-                    </option>
-                  </select>
-                  <small>Pick a page to override the default post list.</small>
-                </label>
+              <label>
+                Homepage
+                <select name="site[homepage_page_id]">
+                  <option value="" selected={is_nil(homepage_value(@form))}>
+                    Default — list of posts
+                  </option>
+                  <option
+                    :for={page <- @published_pages}
+                    value={page.id}
+                    selected={to_string(page.id) == to_string(homepage_value(@form))}
+                  >
+                    {page.title} ({page.format})
+                  </option>
+                </select>
+                <small>Pick a page to override the default post list.</small>
+              </label>
 
-                <label class="flex-1">
-                  Theme
-                  <select name="site[theme_id]">
-                    <option
-                      :for={t <- @themes}
-                      value={t.id}
-                      selected={t.id == (@selected_theme && @selected_theme.id)}
-                    >
-                      {t.name}{if t.source == "uploaded", do: " (uploaded)", else: ""}
-                    </option>
-                  </select>
-                  <small>Rendering style applied to the public site.</small>
+              <fieldset class="theme-picker">
+                <legend>Theme</legend>
+                <label
+                  :for={t <- @themes}
+                  class={"theme-picker-card" <> if(@selected_theme && t.id == @selected_theme.id, do: " theme-picker-card-selected", else: "")}
+                >
+                  <input
+                    type="radio"
+                    name="site[theme_id]"
+                    value={t.id}
+                    checked={@selected_theme && t.id == @selected_theme.id}
+                  />
+                  <span class="theme-picker-card-name">
+                    {t.name}<span :if={t.source == "uploaded"} class="theme-picker-card-tag">uploaded</span>
+                  </span>
                 </label>
-              </div>
+                <a
+                  href="https://github.com/JoeriDijkstra/ledger-template"
+                  target="_blank"
+                  rel="noopener"
+                  class="theme-picker-card theme-picker-card-add"
+                >
+                  <span class="theme-picker-card-icon" aria-hidden="true">+</span>
+                  <span class="theme-picker-card-name">Add a custom theme</span>
+                </a>
+                <small class="theme-picker-hint">
+                  Rendering style applied to the public site.
+                </small>
+              </fieldset>
             </div>
           </div>
 
