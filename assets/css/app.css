@@ -903,24 +903,6 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 
 /* Short editor variant (used by blog page description) */
 .editor.editor-short .markdown-editor { min-height: 180px; flex: 1; }
-.editor.editor-short .preview { min-height: 180px; flex: 1; }
-
-/* Preview pane for blog page: show description + divider noting post list */
-.blog-preview .blog-preview-divider {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px dashed var(--rule);
-  text-align: center;
-  font-size: 0.82rem;
-  color: var(--muted);
-}
-.blog-preview .blog-preview-divider code {
-  font-family: ui-monospace, Menlo, monospace;
-  background: var(--bg-soft);
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.95em;
-}
 
 .form-row { display: flex; gap: 1rem; }
 .form-row > label { flex: 1; }
@@ -983,9 +965,8 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 
 /* Post / page editor */
 .editor {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
+  display: flex;
+  flex-direction: column;
   background: var(--card);
   border: 1px solid var(--rule);
   border-radius: 12px;
@@ -999,17 +980,39 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   font-family: ui-monospace, Menlo, monospace;
   resize: vertical;
 }
-.preview {
+/* Syntax-highlighted editor (CodeMirror 6) — wraps the textarea, which is
+   hidden via inline style by the CodeEditor hook. */
+.code-editor {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
   background: var(--bg);
   border: 1px solid var(--rule);
   border-radius: 8px;
-  padding: 1.25rem 1.5rem;
-  min-height: 560px;
-  overflow: auto;
+  overflow: hidden;
 }
-/* Prose — preview pane in the post/page editor. Tailwind preflight resets
-   default heading/paragraph styles to inherit, so we restore the typical
+.code-editor .cm-editor {
+  flex: 1;
+  min-height: 560px;
+  font-size: 0.9rem;
+}
+.code-editor .cm-editor.cm-focused { outline: none; }
+.code-editor .cm-scroller {
+  font-family: ui-monospace, Menlo, monospace;
+  line-height: 1.5;
+}
+.code-editor .cm-gutters {
+  background: var(--card);
+  border-right: 1px solid var(--rule);
+  color: var(--muted);
+}
+.code-editor-short, .code-editor-short .cm-editor { min-height: 180px; }
+.editor.editor-short .code-editor, .editor.editor-short .code-editor .cm-editor {
+  min-height: 180px;
+}
+/* Prose — rendered post/page body. Tailwind preflight resets default
+   heading/paragraph styles to inherit, so we restore the typical
    "rendered Markdown" look explicitly here. */
 .prose { font-size: 0.95rem; line-height: 1.6; color: var(--fg); }
 .prose > *:first-child { margin-top: 0; }
@@ -1070,7 +1073,6 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 .prose th { background: var(--bg-soft); font-weight: 600; text-align: left; }
 
 @media (max-width: 800px) {
-  .editor { grid-template-columns: 1fr; }
   .admin-header { flex-wrap: wrap; gap: 1rem; }
 }
 

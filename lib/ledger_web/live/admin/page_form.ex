@@ -25,7 +25,6 @@ defmodule LedgerWeb.AdminLive.PageForm do
        step: step,
        draft: draft,
        page_title: page_title,
-       preview_html: render_preview(draft),
        slug_touched: page != nil,
        show_errors: false
      )
@@ -33,7 +32,8 @@ defmodule LedgerWeb.AdminLive.PageForm do
   end
 
   @impl true
-  def handle_event("choose_format", %{"format" => fmt}, socket) when fmt in ~w(markdown html blog) do
+  def handle_event("choose_format", %{"format" => fmt}, socket)
+      when fmt in ~w(markdown html blog) do
     if socket.assigns.page do
       {:noreply, socket}
     else
@@ -81,17 +81,12 @@ defmodule LedgerWeb.AdminLive.PageForm do
       end
 
     draft = Map.merge(socket.assigns.draft, params)
-    preview_html = render_preview(draft)
 
     {:noreply,
      socket
-     |> assign(draft: draft, preview_html: preview_html, slug_touched: slug_touched)
+     |> assign(draft: draft, slug_touched: slug_touched)
      |> assign_changeset(draft, validate: true)}
   end
-
-  defp update_slug_touched(_prev, "slug", %{"slug" => slug}) when slug != "", do: true
-  defp update_slug_touched(_prev, "slug", _params), do: false
-  defp update_slug_touched(prev, _target, _params), do: prev || false
 
   def handle_event("save", %{"page" => page_params} = params, socket) do
     publish? =
@@ -159,6 +154,10 @@ defmodule LedgerWeb.AdminLive.PageForm do
     end
   end
 
+  defp update_slug_touched(_prev, "slug", %{"slug" => slug}) when slug != "", do: true
+  defp update_slug_touched(_prev, "slug", _params), do: false
+  defp update_slug_touched(prev, _target, _params), do: prev || false
+
   defp page_to_draft(page) do
     %{
       "title" => page.title,
@@ -185,17 +184,23 @@ defmodule LedgerWeb.AdminLive.PageForm do
     assign(socket, form: to_form(changeset, as: :page), changeset: changeset)
   end
 
-  defp render_preview(%{"body" => body, "format" => fmt}) when is_binary(body),
-    do: Content.render_body(body, fmt || "markdown")
-
-  defp render_preview(_), do: ""
-
   @impl true
   def render(assigns) do
     ~H"""
-    <.shell title={@page_title} site={@site} current_user={@current_user} flash={@flash} active={:pages}>
+    <.shell
+      title={@page_title}
+      site={@site}
+      current_user={@current_user}
+      flash={@flash}
+      active={:pages}
+    >
       <:actions>
-        <button :if={@page} type="button" phx-click="toggle_publish" class={publish_button_class(@page.published)}>
+        <button
+          :if={@page}
+          type="button"
+          phx-click="toggle_publish"
+          class={publish_button_class(@page.published)}
+        >
           {if @page && @page.published, do: "Unpublish", else: "Publish"}
         </button>
       </:actions>
@@ -207,7 +212,8 @@ defmodule LedgerWeb.AdminLive.PageForm do
               locked={@page != nil}
               format={@draft["format"]}
               editing={@page != nil}
-              site_slug={@site.slug} />
+              site_slug={@site.slug}
+            />
           <% 2 -> %>
             <.meta_step
               form={@form}
@@ -215,16 +221,17 @@ defmodule LedgerWeb.AdminLive.PageForm do
               format={@draft["format"]}
               editing={@page != nil}
               site_slug={@site.slug}
-              show_errors={@show_errors} />
+              show_errors={@show_errors}
+            />
           <% 3 -> %>
             <.content_step
               form={@form}
               changeset={@changeset}
               format={@draft["format"]}
-              preview_html={@preview_html}
               editing={@page != nil}
               site_slug={@site.slug}
-              show_errors={@show_errors} />
+              show_errors={@show_errors}
+            />
         <% end %>
       </div>
     </.shell>
@@ -232,6 +239,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
   end
 
   attr :step, :integer, default: 1
+
   defp stepper(assigns) do
     ~H"""
     <ol class="stepper">
@@ -255,6 +263,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
   attr :format, :string, default: nil
   attr :editing, :boolean, default: false
   attr :site_slug, :string, required: true
+
   defp format_step(assigns) do
     ~H"""
     <.stepper step={1} />
@@ -279,6 +288,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
   attr :editing, :boolean, default: false
   attr :site_slug, :string, required: true
   attr :show_errors, :boolean, default: false
+
   defp meta_step(assigns) do
     ~H"""
     <.stepper step={2} />
@@ -287,8 +297,7 @@ defmodule LedgerWeb.AdminLive.PageForm do
       <.error_list changeset={@changeset} show={@show_errors} />
 
       <label>
-        Title
-        <input type="text" name="page[title]" value={@form[:title].value} required autofocus />
+        Title <input type="text" name="page[title]" value={@form[:title].value} required autofocus />
       </label>
 
       <label>
@@ -311,10 +320,10 @@ defmodule LedgerWeb.AdminLive.PageForm do
   attr :form, :map, required: true
   attr :changeset, :map, required: true
   attr :format, :string, required: true
-  attr :preview_html, :string, required: true
   attr :editing, :boolean, default: false
   attr :site_slug, :string, required: true
   attr :show_errors, :boolean, default: false
+
   defp content_step(assigns) do
     ~H"""
     <.stepper step={3} />
@@ -327,9 +336,9 @@ defmodule LedgerWeb.AdminLive.PageForm do
       <input type="hidden" name="page[format]" value={@format} />
 
       <%= if @format == "blog" do %>
-        <.blog_description_editor form={@form} preview_html={@preview_html} slug={Ecto.Changeset.get_field(@changeset, :slug)} />
+        <.blog_description_editor form={@form} slug={Ecto.Changeset.get_field(@changeset, :slug)} />
       <% else %>
-        <.body_editor form={@form} format={@format} preview_html={@preview_html} />
+        <.body_editor form={@form} format={@format} />
       <% end %>
     </form>
 
@@ -344,7 +353,13 @@ defmodule LedgerWeb.AdminLive.PageForm do
           <button type="submit" form="content-form" name="action" value="draft" class="btn">
             Save as draft
           </button>
-          <button type="submit" form="content-form" name="action" value="publish" class="btn btn-primary">
+          <button
+            type="submit"
+            form="content-form"
+            name="action"
+            value="publish"
+            class="btn btn-primary"
+          >
             Save &amp; publish
           </button>
         <% end %>
@@ -355,46 +370,61 @@ defmodule LedgerWeb.AdminLive.PageForm do
 
   attr :form, :map, required: true
   attr :format, :string, required: true
-  attr :preview_html, :string, required: true
+
   defp body_editor(assigns) do
     ~H"""
     <div class="editor">
       <div class="editor-pane">
         <label for="page-body-textarea" class="editor-label">Body ({format_label(@format)})</label>
-        <textarea id="page-body-textarea" name="page[body]" rows="20" phx-debounce="200" class="markdown-editor">{@form[:body].value}</textarea>
-      </div>
-      <div class="editor-pane">
-        <div class="editor-label">Preview</div>
-        <div class="preview prose">{Phoenix.HTML.raw(@preview_html)}</div>
+        <div
+          id={"page-body-editor-" <> @format}
+          class="code-editor"
+          phx-hook="CodeEditor"
+          phx-update="ignore"
+          data-language={@format}
+        >
+          <textarea
+            id="page-body-textarea"
+            name="page[body]"
+            rows="20"
+            phx-debounce="200"
+            class="markdown-editor"
+          >{@form[:body].value}</textarea>
+        </div>
       </div>
     </div>
     """
   end
 
   attr :form, :map, required: true
-  attr :preview_html, :string, required: true
   attr :slug, :string, default: nil
+
   defp blog_description_editor(assigns) do
     ~H"""
     <div class="editor editor-short">
       <div class="editor-pane">
-        <label for="page-description-textarea" class="editor-label">Description (Markdown, optional)</label>
-        <textarea id="page-description-textarea" name="page[body]" rows="6" phx-debounce="200" class="markdown-editor">{@form[:body].value}</textarea>
+        <label for="page-description-textarea" class="editor-label">
+          Description (Markdown, optional)
+        </label>
+        <div
+          id="page-description-editor"
+          class="code-editor code-editor-short"
+          phx-hook="CodeEditor"
+          phx-update="ignore"
+          data-language="markdown"
+        >
+          <textarea
+            id="page-description-textarea"
+            name="page[body]"
+            rows="6"
+            phx-debounce="200"
+            class="markdown-editor"
+          >{@form[:body].value}</textarea>
+        </div>
         <small class="muted">
           Short intro shown above the post list. Leave empty to render just the list.
+          Posts list appears at <code>/{@slug || "your-slug"}</code>.
         </small>
-      </div>
-      <div class="editor-pane">
-        <div class="editor-label">Preview</div>
-        <div class="preview prose blog-preview">
-          <div :if={@preview_html != ""}>{Phoenix.HTML.raw(@preview_html)}</div>
-          <p :if={@preview_html == ""} class="muted">
-            (no description — the post list will appear directly below the title)
-          </p>
-          <div class="blog-preview-divider">
-            <span>Posts list appears here at <code>/{@slug || "your-slug"}</code></span>
-          </div>
-        </div>
       </div>
     </div>
     """
