@@ -40,6 +40,21 @@ defmodule Ledger.Actions do
   end
 
   @doc """
+  Onboarding milestone — called once a site gains its first post or page.
+  Staggers in the "set description" nudge (unless a description is already
+  set) so a brand-new, empty site isn't overwhelmed with it up front.
+  Idempotent. Accepts a `%Site{}` or a bare site id.
+  """
+  def reached_first_content(%Site{} = site) do
+    if blank?(site.description), do: create_action(site, "set_description")
+    :ok
+  end
+
+  def reached_first_content(site_id) when is_integer(site_id) do
+    site_id |> Ledger.Sites.get_site!() |> reached_first_content()
+  end
+
+  @doc """
   Marks the `(site, key)` action completed. Accepts a `%Site{}` or a bare
   site id. Idempotent: returns `:ok` whether the action was pending, already
   completed, or absent.
@@ -89,6 +104,41 @@ defmodule Ledger.Actions do
     site_id |> pending_query() |> limit(1) |> Repo.one()
   end
 
+  @doc """
+  Reminder-eligible actions: still pending, of a remindable type, created more
+  than `older_than_days` ago, never reminded, on an active site whose owner is
+  confirmed, active, and hasn't opted out. Returns actions with `:site` and the
+  site's `:owner` preloaded.
+  """
+  def due_reminders(older_than_days \\ 7) do
+    cutoff =
+      DateTime.utc_now()
+      |> DateTime.add(-older_than_days * 24 * 60 * 60, :second)
+      |> DateTime.truncate(:second)
+
+    keys = Definitions.remindable_keys()
+
+    Repo.all(
+      from a in Action,
+        join: s in assoc(a, :site),
+        join: u in assoc(s, :owner),
+        where:
+          a.status == "pending" and a.key in ^keys and
+            a.inserted_at < ^cutoff and is_nil(a.reminded_at) and
+            is_nil(s.disabled_at) and not is_nil(u.confirmed_at) and
+            is_nil(u.disabled_at) and u.wants_onboarding_emails == true,
+        preload: [site: {s, owner: u}]
+    )
+  end
+
+  @doc "Records that a reminder email was sent for `action` (so it never repeats)."
+  def mark_reminded(%Action{id: id}) do
+    from(a in Action, where: a.id == ^id)
+    |> Repo.update_all(set: [reminded_at: now(), updated_at: now()])
+
+    :ok
+  end
+
   @doc "Render-time title for an action."
   def title(%Action{key: key}), do: Definitions.title(key)
 
@@ -98,8 +148,13 @@ defmodule Ledger.Actions do
   defp pending_query(site_id) do
     from a in Action,
       where: a.site_id == ^site_id and a.status == "pending",
-      order_by: [desc: a.priority, asc: a.inserted_at]
+      # `id` is the final tiebreak so equal-priority actions created in the
+      # same second still have a stable, creation-order ranking.
+      order_by: [desc: a.priority, asc: a.inserted_at, asc: a.id]
   end
 
   defp now, do: DateTime.utc_now() |> DateTime.truncate(:second)
+
+  defp blank?(nil), do: true
+  defp blank?(str) when is_binary(str), do: String.trim(str) == ""
 end

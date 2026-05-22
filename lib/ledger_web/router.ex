@@ -28,6 +28,8 @@ defmodule LedgerWeb.Router do
     get "/confirm/:token", ConfirmationController, :confirm
     post "/confirm", ConfirmationController, :create
 
+    get "/unsubscribe/onboarding/:token", UnsubscribeController, :onboarding
+
     get "/reset-password", ResetPasswordController, :new
     post "/reset-password", ResetPasswordController, :create
     get "/reset-password/:token", ResetPasswordController, :edit

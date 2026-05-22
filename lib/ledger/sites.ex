@@ -85,13 +85,12 @@ defmodule Ledger.Sites do
     end
   end
 
-  # Seed the onboarding checklist for a freshly created site. A new site has
-  # no posts or pages, so always nudge those; only nudge the description when
-  # it wasn't provided (the create form no longer asks for one).
+  # Seed the onboarding checklist for a freshly created site with the content
+  # actions only. The "set description" nudge is staggered — it's added later,
+  # once the site has its first post or page (see `Ledger.Actions`).
   defp maybe_create_onboarding_actions(%Site{} = site) do
     Ledger.Actions.create_action(site, "create_first_post")
     Ledger.Actions.create_action(site, "create_first_page")
-    if blank?(site.description), do: Ledger.Actions.create_action(site, "set_description")
   end
 
   defp blank?(nil), do: true
