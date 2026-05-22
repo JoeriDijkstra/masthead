@@ -32,8 +32,8 @@
 
   <section class="landing-hero">
     <div class="hero-inner">
-      <span class="hero-eyebrow">Open-source publishing platform</span>
-      <h1>Publishing for teams that want to ship, not configure.</h1>
+      <span class="hero-eyebrow">Open-source platform</span>
+      <h1>Simple websites without the complexity of traditional CMS platforms.</h1>
       <p class="hero-lede">
         Ledger is a hosted platform for blogs and small business sites. Each
         site runs on its own subdomain, content is written in Markdown or
@@ -245,6 +245,14 @@
       <span class="brand-mark">●</span>
       <strong>Ledger</strong>
       <span class="landing-version">v{Application.spec(:ledger, :vsn)}</span>
+    </div>
+    <div class="landing-footer-links">
+      <%= if assigns[:current_user] do %>
+        <.link navigate={~p"/sites"}>Dashboard</.link>
+      <% else %>
+        <.link navigate={~p"/login"}>Log in</.link>
+        <.link navigate={~p"/signup"}>Sign up</.link>
+      <% end %>
     </div>
     <a
       href="https://github.com/JoeriDijkstra/ledger"

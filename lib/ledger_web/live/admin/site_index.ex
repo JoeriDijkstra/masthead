@@ -16,7 +16,8 @@ defmodule LedgerWeb.AdminLive.SiteIndex do
        page_title: "Your sites",
        host: site_host(),
        modal_open?: false,
-       show_errors: false
+       show_errors: false,
+       slug_edited?: false
      )
      |> assign_form(changeset)}
   end
@@ -25,7 +26,7 @@ defmodule LedgerWeb.AdminLive.SiteIndex do
   def handle_event("open_modal", _params, socket) do
     {:noreply,
      socket
-     |> assign(modal_open?: true, show_errors: false)
+     |> assign(modal_open?: true, show_errors: false, slug_edited?: false)
      |> assign_form(Sites.change_site(%Site{}))}
   end
 
@@ -34,16 +35,35 @@ defmodule LedgerWeb.AdminLive.SiteIndex do
   end
 
   def handle_event("validate", %{"site" => params}, socket) do
+    # Auto-derive the slug from the name until the user edits the slug field
+    # directly, after which we leave their value alone.
+    prev_slug = socket.assigns.form[:slug].value || ""
+    incoming_slug = params["slug"] || ""
+
+    slug_edited? =
+      socket.assigns.slug_edited? or (incoming_slug != "" and incoming_slug != prev_slug)
+
+    params =
+      if slug_edited?,
+        do: params,
+        else: Map.put(params, "slug", slugify(params["name"] || ""))
+
     changeset =
       %Site{}
       |> Sites.change_site(params)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign_form(socket, changeset)}
+    {:noreply,
+     socket
+     |> assign(slug_edited?: slug_edited?)
+     |> assign_form(changeset)}
   end
 
   def handle_event("save", %{"site" => params}, socket) do
-    params = Map.put(params, "owner_id", socket.assigns.current_user.id)
+    params =
+      params
+      |> Map.put("owner_id", socket.assigns.current_user.id)
+      |> Map.put("title", params["name"])
 
     case Sites.create_site(params) do
       {:ok, site} ->
@@ -59,6 +79,17 @@ defmodule LedgerWeb.AdminLive.SiteIndex do
 
   defp assign_form(socket, changeset) do
     assign(socket, form: to_form(changeset, as: :site), changeset: changeset)
+  end
+
+  # Turn a free-form name into a valid slug: lowercase, non-alphanumeric runs
+  # collapsed to hyphens, trimmed, capped at the schema's 32-char limit.
+  defp slugify(name) do
+    name
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9]+/, "-")
+    |> String.trim("-")
+    |> String.slice(0, 32)
+    |> String.trim("-")
   end
 
   defp site_host do
@@ -145,16 +176,8 @@ defmodule LedgerWeb.AdminLive.SiteIndex do
               Slug (subdomain)
               <input type="text" name="site[slug]" value={@form[:slug].value} required />
               <small>
-                Public URL: <code>{(@form[:slug].value || "your-slug") <> "." <> @host}</code>. Lowercase letters, numbers, hyphens only.
+                Public URL: <code>{(@form[:slug].value || "your-slug") <> "." <> @host}</code>. Auto-filled from the name; edit to customize. Lowercase letters, numbers, hyphens only.
               </small>
-            </label>
-
-            <label>
-              Title <input type="text" name="site[title]" value={@form[:title].value} />
-            </label>
-
-            <label>
-              Description <textarea name="site[description]" rows="3">{@form[:description].value}</textarea>
             </label>
 
             <footer class="dialog-footer">
