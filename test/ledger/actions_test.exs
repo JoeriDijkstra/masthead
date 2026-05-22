@@ -52,7 +52,7 @@ defmodule Ledger.ActionsTest do
       assert {:ok, %Action{} = action} = Actions.create_action(site, "set_description")
       assert action.key == "set_description"
       assert action.status == "pending"
-      assert action.priority == 120
+      assert action.priority == 100
       assert action.path == "/#{site.slug}/settings"
       assert is_binary(action.message)
     end
@@ -161,29 +161,42 @@ defmodule Ledger.ActionsTest do
   end
 
   describe "site lifecycle hooks" do
-    test "a new site is seeded with all onboarding actions", %{user: user} do
+    test "a new site is seeded with only the content actions", %{user: user} do
       site = new_site(user)
-
-      assert Enum.sort(pending_keys(site)) ==
-               ["create_first_page", "create_first_post", "set_description"]
+      assert Enum.sort(pending_keys(site)) == ["create_first_page", "create_first_post"]
     end
 
-    test "top_action reflects the configured priorities", %{user: user} do
+    test "top_action for a new site is to create the first post", %{user: user} do
       site = new_site(user)
-      # set_description has the highest configured priority
-      assert %Action{key: "set_description"} = Actions.top_action(site)
+      assert %Action{key: "create_first_post"} = Actions.top_action(site)
     end
 
-    test "creating a site with a description skips only set_description", %{user: user} do
+    test "set_description is staggered in once the site gets its first post", %{user: user} do
+      site = new_site(user)
+      refute pending?(site, "set_description")
+
+      {:ok, _post} = Content.create_post(site.id, %{"title" => "Hello", "slug" => "hello"})
+      assert pending?(site, "set_description")
+    end
+
+    test "creating the first page also unlocks set_description", %{user: user} do
+      site = new_site(user)
+      refute pending?(site, "set_description")
+
+      {:ok, _page} = Content.create_page(site.id, %{"title" => "About", "slug" => "about"})
+      assert pending?(site, "set_description")
+    end
+
+    test "the description nudge is skipped when one is already set", %{user: user} do
       site = new_site(user, %{"description" => "Already described"})
 
+      {:ok, _post} = Content.create_post(site.id, %{"title" => "Hello", "slug" => "hello"})
       refute pending?(site, "set_description")
-      assert pending?(site, "create_first_post")
-      assert pending?(site, "create_first_page")
     end
 
-    test "saving a description completes set_description", %{user: user} do
+    test "saving a description completes the unlocked set_description action", %{user: user} do
       site = new_site(user)
+      {:ok, _post} = Content.create_post(site.id, %{"title" => "Hello", "slug" => "hello"})
       assert pending?(site, "set_description")
 
       {:ok, site} = Sites.update_settings(site, %{"description" => "Now described"})

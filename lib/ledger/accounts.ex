@@ -200,6 +200,17 @@ defmodule Ledger.Accounts do
   end
 
   @doc """
+  Opts the user out of onboarding/nudge emails (one-click unsubscribe).
+  Idempotent; returns `:ok` whether or not the user exists.
+  """
+  def unsubscribe_onboarding_emails(user_id) do
+    case Repo.get(User, user_id) do
+      nil -> :ok
+      user -> user |> User.onboarding_emails_changeset(false) |> Repo.update() && :ok
+    end
+  end
+
+  @doc """
   Disables accounts that never confirmed their email within
   `older_than_days` (default 7) of signing up. Skips already-disabled
   accounts. Returns the number disabled. Driven by

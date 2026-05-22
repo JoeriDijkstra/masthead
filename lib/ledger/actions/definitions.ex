@@ -17,21 +17,23 @@ defmodule Ledger.Actions.Definitions do
     "create_first_post" => %{
       title: "Create your first post",
       message: "Publish your first post to start sharing updates with your readers.",
-      priority: 110,
+      priority: 100,
       cta: "Create post",
+      remindable: true,
       path: &__MODULE__.new_post_path/1
     },
     "create_first_page" => %{
       title: "Create your first page",
       message: "Add a page like About or Contact to give your site some structure.",
-      priority: 110,
+      priority: 100,
       cta: "Create page",
+      remindable: true,
       path: &__MODULE__.new_page_path/1
     },
     "set_description" => %{
       title: "Set the description",
       message: "Add a description so visitors and search engines know what your site is about.",
-      priority: 120,
+      priority: 100,
       cta: "Set description",
       path: &__MODULE__.settings_path/1
     }
@@ -39,6 +41,11 @@ defmodule Ledger.Actions.Definitions do
 
   @doc "Returns the definition map for `key`, or `nil` if unknown."
   def get(key), do: Map.get(@definitions, key)
+
+  @doc "Keys of action types that may trigger a one-off reminder email."
+  def remindable_keys do
+    for {key, %{remindable: true}} <- @definitions, do: key
+  end
 
   @doc "Human-readable title for an action `key`, falling back to a humanized key."
   def title(key) do

@@ -41,6 +41,7 @@ defmodule Ledger.Content do
            |> Post.changeset(Map.put(attrs, "site_id", site_id))
            |> Repo.insert() do
       Ledger.Actions.complete_action(site_id, "create_first_post")
+      Ledger.Actions.reached_first_content(site_id)
       {:ok, post}
     end
   end
@@ -99,6 +100,7 @@ defmodule Ledger.Content do
            |> Page.changeset(Map.put(attrs, "site_id", site_id))
            |> Repo.insert() do
       Ledger.Actions.complete_action(site_id, "create_first_page")
+      Ledger.Actions.reached_first_content(site_id)
       {:ok, page}
     end
   end

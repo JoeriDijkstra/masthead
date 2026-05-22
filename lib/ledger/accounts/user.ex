@@ -8,6 +8,7 @@ defmodule Ledger.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
     field :disabled_at, :utc_datetime
+    field :wants_onboarding_emails, :boolean, default: true
 
     has_many :tokens, Ledger.Accounts.UserToken
 
@@ -23,6 +24,11 @@ defmodule Ledger.Accounts.User do
   @doc "Marks the email confirmed (no-op effect if already confirmed)."
   def confirm_changeset(user) do
     change(user, confirmed_at: now())
+  end
+
+  @doc "Toggle the onboarding/nudge email opt-in (used by one-click unsubscribe)."
+  def onboarding_emails_changeset(user, enabled?) when is_boolean(enabled?) do
+    change(user, wants_onboarding_emails: enabled?)
   end
 
   @doc "Soft-disables the account."

@@ -107,7 +107,9 @@ config :ledger, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        # Daily 03:00 UTC: disable accounts unconfirmed for 7+ days.
-       {"0 3 * * *", Ledger.Workers.DisableUnconfirmed}
+       {"0 3 * * *", Ledger.Workers.DisableUnconfirmed},
+       # Daily 04:00 UTC: remind owners of onboarding actions open for 7+ days.
+       {"0 4 * * *", Ledger.Workers.OnboardingReminder}
      ]}
   ]
 

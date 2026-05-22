@@ -11,6 +11,7 @@ defmodule Ledger.Actions.Action do
     * `message`  — the message shown to the user
     * `priority` — higher numbers surface first
     * `path`     — optional admin path the action's button links to
+    * `reminded_at` — set when a one-off reminder email was sent (never re-sent)
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -23,6 +24,7 @@ defmodule Ledger.Actions.Action do
     field :message, :string
     field :priority, :integer, default: 0
     field :path, :string
+    field :reminded_at, :utc_datetime
 
     belongs_to :site, Ledger.Sites.Site
 
