@@ -3,7 +3,7 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
   on_mount {LedgerWeb.AdminLive.Hooks, :load_site}
 
   import LedgerWeb.AdminLive.Components
-  alias Ledger.{Sites, Themes, Content}
+  alias Ledger.{Actions, Sites, Themes, Content}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -17,6 +17,7 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
        page_title: "Settings — #{site.name}",
        themes: themes,
        published_pages: Content.list_published_pages(site.id),
+       action_count: Actions.count_pending(site),
        show_errors: false,
        selected_theme: pick_theme(themes, current_theme_id(changeset, site))
      )
@@ -46,6 +47,7 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
          |> assign(
            site: site,
            published_pages: Content.list_published_pages(site.id),
+           action_count: Actions.count_pending(site),
            selected_theme: pick_theme(socket.assigns.themes, site.theme_id)
          )
          |> put_flash(:info, "Settings saved.")
@@ -124,6 +126,7 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
       current_user={@current_user}
       flash={@flash}
       active={:settings}
+      action_count={@action_count}
     >
       <div class="wizard">
         <.form

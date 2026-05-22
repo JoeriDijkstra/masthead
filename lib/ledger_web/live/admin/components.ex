@@ -4,6 +4,7 @@ defmodule LedgerWeb.AdminLive.Components do
   use LedgerWeb, :verified_routes
 
   alias Ledger.Accounts.User
+  alias Ledger.Actions
 
   attr :title, :string, default: nil
   attr :site, :map, default: nil
@@ -12,7 +13,14 @@ defmodule LedgerWeb.AdminLive.Components do
 
   attr :active, :atom,
     default: nil,
-    doc: ":overview | :posts | :pages | :uploads | :settings | :sites | :themes"
+    doc: ":overview | :posts | :pages | :uploads | :settings | :checklist | :sites | :themes"
+
+  attr :action_count, :integer,
+    default: nil,
+    doc:
+      "Pending-action count for the checklist badge. Pass a tracked assign from " <>
+        "LiveViews that mutate actions in-page (so the badge stays live); otherwise " <>
+        "it is computed from the site."
 
   slot :inner_block, required: true
   slot :actions
@@ -34,6 +42,14 @@ defmodule LedgerWeb.AdminLive.Components do
           <%= if @site do %>
             <.nav_link href={~p"/#{@site.slug}"} label="Overview" active={@active == :overview}>
               <.icon_home />
+            </.nav_link>
+            <.nav_link
+              href={~p"/#{@site.slug}/checklist"}
+              label="Checklist"
+              active={@active == :checklist}
+              badge={@action_count || Actions.count_pending(@site)}
+            >
+              <.icon_check />
             </.nav_link>
             <.nav_link href={~p"/#{@site.slug}/posts"} label="Posts" active={@active == :posts}>
               <.icon_doc />
@@ -128,6 +144,7 @@ defmodule LedgerWeb.AdminLive.Components do
   attr :href, :string, required: true
   attr :label, :string, required: true
   attr :active, :boolean, default: false
+  attr :badge, :integer, default: nil
   slot :inner_block, required: true
 
   defp nav_link(assigns) do
@@ -135,7 +152,42 @@ defmodule LedgerWeb.AdminLive.Components do
     <.link navigate={@href} class={"nav-item" <> if(@active, do: " active", else: "")}>
       {render_slot(@inner_block)}
       <span>{@label}</span>
+      <span :if={@badge && @badge > 0} class="nav-badge">{@badge}</span>
     </.link>
+    """
+  end
+
+  attr :action, :map, required: true
+  attr :dismissible, :boolean, default: true
+
+  @doc """
+  Renders a single action as a light-yellow card: an optional dismiss cross
+  on the left, the title (from the action registry) and message, and a button
+  linking to its path when set. When `dismissible` is true the enclosing
+  LiveView must handle the `"dismiss_action"` event (carrying `phx-value-key`).
+  """
+  def action_card(assigns) do
+    ~H"""
+    <div class="action-card">
+      <button
+        :if={@dismissible}
+        type="button"
+        class="action-card-dismiss"
+        phx-click="dismiss_action"
+        phx-value-key={@action.key}
+        aria-label="Dismiss this action"
+        title="Dismiss this action"
+      >
+        &times;
+      </button>
+      <div class="action-card-body">
+        <h3 class="action-card-title">{Actions.title(@action)}</h3>
+        <p class="action-card-message">{@action.message}</p>
+      </div>
+      <.link :if={@action.path} navigate={@action.path} class="btn btn-primary btn-sm">
+        {Actions.cta(@action) || "Open"}
+      </.link>
+    </div>
     """
   end
 
@@ -468,6 +520,25 @@ defmodule LedgerWeb.AdminLive.Components do
         stroke-linecap="round"
         stroke-linejoin="round"
         d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"
+      />
+    </svg>
+    """
+  end
+
+  defp icon_check(assigns) do
+    ~H"""
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="icon"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
       />
     </svg>
     """
