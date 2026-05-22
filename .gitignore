@@ -31,6 +31,12 @@ ledger-*.tar
 # Ignore digested assets cache.
 /priv/static/cache_manifest.json
 
+# Ignore `mix phx.digest` output for committed static files (images,
+# favicon, robots): content-hashed copies and gzipped versions.
+# Regenerated at deploy time; the source files stay tracked.
+/priv/static/**/*.gz
+/priv/static/**/*-????????????????????????????????.*
+
 # Local-disk Storage adapter target. Source themes live in /priv/themes/.
 /priv/uploads/
 

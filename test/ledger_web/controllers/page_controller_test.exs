@@ -3,6 +3,8 @@ defmodule LedgerWeb.PageControllerTest do
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Publishing for teams that want to ship"
+
+    assert html_response(conn, 200) =~
+             "Simple websites without the complexity of traditional CMS platforms."
   end
 end

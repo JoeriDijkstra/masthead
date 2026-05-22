@@ -574,28 +574,11 @@ button.danger:hover { filter: brightness(0.92); }
   border-radius: 14px;
   padding: 1.25rem 1.4rem;
   box-shadow: var(--shadow-sm);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   display: flex;
   align-items: center;
   gap: 1rem;
   position: relative;
   overflow: hidden;
-}
-.stat::after {
-  content: "";
-  position: absolute;
-  right: -25px;
-  top: -25px;
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.06), transparent 70%);
-  pointer-events: none;
-}
-.stat:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--rule-strong);
 }
 .stat .stat-icon {
   width: 44px;
@@ -1459,16 +1442,19 @@ button.danger:hover { filter: brightness(0.92); }
   font-size: 0.9rem;
   font-weight: 500;
 }
-.dialog-form input[type="text"] {
+.dialog-form input[type="text"],
+.dialog-form textarea {
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--rule);
   border-radius: 6px;
   font-size: 0.95rem;
   font-family: inherit;
+  resize: none;
   background: var(--card);
   color: var(--fg);
 }
-.dialog-form input[type="text"]:focus {
+.dialog-form input[type="text"]:focus,
+.dialog-form textarea:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
   border-color: var(--accent);
@@ -1995,6 +1981,18 @@ button.danger:hover { filter: brightness(0.92); }
   letter-spacing: 0.02em;
   font-size: 0.75rem;
 }
+.landing-footer-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+.landing-footer-links a {
+  color: var(--landing-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: color 0.15s ease;
+}
+.landing-footer-links a:hover { color: var(--landing-fg); }
 
 @media (max-width: 800px) {
   .landing-hero {
