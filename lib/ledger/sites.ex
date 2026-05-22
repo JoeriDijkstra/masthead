@@ -76,10 +76,26 @@ defmodule Ledger.Sites do
   end
 
   def create_site(attrs) do
-    %Site{}
-    |> Site.create_changeset(attrs_with_default_theme(attrs))
-    |> Repo.insert()
+    with {:ok, site} <-
+           %Site{}
+           |> Site.create_changeset(attrs_with_default_theme(attrs))
+           |> Repo.insert() do
+      maybe_create_onboarding_actions(site)
+      {:ok, site}
+    end
   end
+
+  # Seed the onboarding checklist for a freshly created site. A new site has
+  # no posts or pages, so always nudge those; only nudge the description when
+  # it wasn't provided (the create form no longer asks for one).
+  defp maybe_create_onboarding_actions(%Site{} = site) do
+    Ledger.Actions.create_action(site, "create_first_post")
+    Ledger.Actions.create_action(site, "create_first_page")
+    if blank?(site.description), do: Ledger.Actions.create_action(site, "set_description")
+  end
+
+  defp blank?(nil), do: true
+  defp blank?(str) when is_binary(str), do: String.trim(str) == ""
 
   # Every site must have a theme_id (NOT NULL). The signup wizard doesn't
   # ask for one — sites start on the built-in "default" theme and can be
@@ -99,9 +115,14 @@ defmodule Ledger.Sites do
   end
 
   def update_settings(%Site{} = site, attrs) do
-    site
-    |> Site.settings_changeset(attrs)
-    |> Repo.update()
+    with {:ok, site} <-
+           site
+           |> Site.settings_changeset(attrs)
+           |> Repo.update() do
+      # Completing is idempotent, so it's safe to call on every save.
+      unless blank?(site.description), do: Ledger.Actions.complete_action(site, "set_description")
+      {:ok, site}
+    end
   end
 
   def change_site(%Site{} = site, attrs \\ %{}) do

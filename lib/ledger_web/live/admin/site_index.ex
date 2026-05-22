@@ -67,10 +67,7 @@ defmodule LedgerWeb.AdminLive.SiteIndex do
 
     case Sites.create_site(params) do
       {:ok, site} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Site #{site.name} created.")
-         |> push_navigate(to: ~p"/#{site.slug}")}
+        {:noreply, push_navigate(socket, to: ~p"/#{site.slug}")}
 
       {:error, changeset} ->
         {:noreply, socket |> assign(show_errors: true) |> assign_form(changeset)}

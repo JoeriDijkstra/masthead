@@ -168,15 +168,27 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   color: var(--muted);
   max-width: 40ch;
 }
-.empty-state-illustrated { padding: 4rem 2rem; }
+/* Top-anchor the stack and pin a min-height so every illustrated empty
+   state is the same height and its button lands in the same place — even
+   the checklist's "all caught up" state, which has no button. */
+.empty-state-illustrated {
+  padding: 4rem 2rem;
+  justify-content: flex-start;
+  min-height: 33rem;
+}
+/* Fixed box + object-fit so drawings of differing aspect ratios all
+   occupy the same vertical space. */
 .empty-illustration {
   width: 100%;
   max-width: 320px;
-  height: auto;
+  height: 220px;
+  object-fit: contain;
   margin-bottom: 1.75rem;
   user-select: none;
   pointer-events: none;
 }
+/* Reserve ~2 lines so a one- vs two-line message doesn't shift the button. */
+.empty-state-illustrated p { min-height: 2.6em; }
 
 .btn {
   display: inline-flex;
@@ -328,6 +340,18 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   height: 18px;
   flex-shrink: 0;
   stroke-width: 1.6;
+}
+.sidebar-nav .nav-item .nav-badge {
+  margin-left: auto;
+  min-width: 1.3rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
 }
 .sidebar-divider {
   height: 1px;
@@ -562,6 +586,53 @@ button.danger:hover { filter: brightness(0.92); }
 .page-head .actions { display: flex; gap: 0.5rem; }
 
 /* Stats / cards */
+.action-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: var(--amber-soft);
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+.action-card-body { flex: 1; min-width: 0; }
+.action-card-title {
+  margin: 0 0 0.05rem;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #92400e;
+}
+.action-card-message {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #78350f;
+}
+.action-card-dismiss {
+  flex-shrink: 0;
+  background: transparent;
+  border: 0;
+  color: #92400e;
+  opacity: 0.55;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.1rem;
+  border-radius: 6px;
+}
+.action-card-dismiss:hover {
+  opacity: 1;
+}
+.action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.action-list .action-card { margin-bottom: 0; }
+
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

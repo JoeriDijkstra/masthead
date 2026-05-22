@@ -36,9 +36,13 @@ defmodule Ledger.Content do
   end
 
   def create_post(site_id, attrs) do
-    %Post{site_id: site_id}
-    |> Post.changeset(Map.put(attrs, "site_id", site_id))
-    |> Repo.insert()
+    with {:ok, post} <-
+           %Post{site_id: site_id}
+           |> Post.changeset(Map.put(attrs, "site_id", site_id))
+           |> Repo.insert() do
+      Ledger.Actions.complete_action(site_id, "create_first_post")
+      {:ok, post}
+    end
   end
 
   def update_post(%Post{} = post, attrs) do
@@ -90,9 +94,13 @@ defmodule Ledger.Content do
   end
 
   def create_page(site_id, attrs) do
-    %Page{site_id: site_id}
-    |> Page.changeset(Map.put(attrs, "site_id", site_id))
-    |> Repo.insert()
+    with {:ok, page} <-
+           %Page{site_id: site_id}
+           |> Page.changeset(Map.put(attrs, "site_id", site_id))
+           |> Repo.insert() do
+      Ledger.Actions.complete_action(site_id, "create_first_page")
+      {:ok, page}
+    end
   end
 
   def update_page(%Page{} = page, attrs) do

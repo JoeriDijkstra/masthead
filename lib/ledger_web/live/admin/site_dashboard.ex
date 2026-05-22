@@ -3,7 +3,7 @@ defmodule LedgerWeb.AdminLive.SiteDashboard do
   on_mount {LedgerWeb.AdminLive.Hooks, :load_site}
 
   import LedgerWeb.AdminLive.Components
-  alias Ledger.Content
+  alias Ledger.{Actions, Content}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -15,6 +15,7 @@ defmodule LedgerWeb.AdminLive.SiteDashboard do
      assign(socket,
        posts: posts,
        pages: pages,
+       top_action: Actions.top_action(site),
        page_title: site.name
      )}
   end
@@ -32,6 +33,11 @@ defmodule LedgerWeb.AdminLive.SiteDashboard do
       <:actions>
         <.link navigate={~p"/#{@site.slug}/posts/new"} class="btn btn-primary">+ New post</.link>
       </:actions>
+
+      <h2 :if={@top_action} class="section-heading">Pending</h2>
+      <.action_card :if={@top_action} action={@top_action} dismissible={false} />
+
+      <h2 class="section-heading">Statistics</h2>
 
       <section class="stats">
         <div class="stat"><span class="num">{length(@posts)}</span> posts</div>
