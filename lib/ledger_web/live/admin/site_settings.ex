@@ -199,19 +199,11 @@ defmodule LedgerWeb.AdminLive.SiteSettings do
                     value={t.id}
                     checked={@selected_theme && t.id == @selected_theme.id}
                   />
-                  <span class="theme-picker-card-name">
-                    {t.name}<span :if={t.source == "uploaded"} class="theme-picker-card-tag">uploaded</span>
-                  </span>
+                  <span class="theme-picker-card-name">{t.name}</span>
                 </label>
-                <a
-                  href="https://github.com/JoeriDijkstra/ledger-template"
-                  target="_blank"
-                  rel="noopener"
-                  class="theme-picker-card theme-picker-card-add"
-                >
+                <.link class="theme-picker-card theme-picker-card-add" navigate={~p"/themes"}>
                   <span class="theme-picker-card-icon" aria-hidden="true">+</span>
-                  <span class="theme-picker-card-name">Add a custom theme</span>
-                </a>
+                </.link>
                 <small class="theme-picker-hint">
                   Rendering style applied to the public site.
                 </small>

@@ -1211,10 +1211,11 @@ button.danger:hover { filter: brightness(0.92); }
 .theme-picker-card-add {
   flex-direction: column;
   gap: 0.25rem;
+  background: transparent;
   border-style: dashed;
   color: var(--muted);
 }
-.theme-picker-card-add:hover { color: var(--fg); border-color: var(--accent); background: var(--bg); }
+.theme-picker-card-add:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
 .theme-picker-card-icon { font-size: 1.25rem; line-height: 1; font-weight: 400; }
 
 @media (max-width: 800px) {
@@ -2115,10 +2116,14 @@ button.danger:hover { filter: brightness(0.92); }
 .theme-grid li { display: block; }
 .theme-card {
   position: relative;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   height: 100%;
+  /* Fixed height so every card matches across rows regardless of whether
+     it has a description (the description is clamped to keep this true). */
+  min-height: 9rem;
   background: var(--card);
   border: 1px solid var(--rule);
   border-radius: 12px;
@@ -2132,6 +2137,28 @@ button.danger:hover { filter: brightness(0.92); }
   box-shadow: var(--shadow-md);
   border-color: var(--rule-strong);
 }
+/* Dashed, see-through placeholder card linking to the GitHub template.
+   Defined after .theme-card (and its :hover) so these overrides win. */
+.theme-card-add {
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 1.1rem 1.15rem;
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--rule-strong);
+  text-align: center;
+  color: var(--muted);
+  box-shadow: none;
+}
+.theme-card-add:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: none;
+  text-decoration: none;
+}
+.theme-card-add-icon { font-size: 1.5rem; line-height: 1; font-weight: 400; }
+.theme-card-add-label { font-weight: 600; font-size: 0.95rem; }
 .theme-card-head {
   display: flex;
   align-items: center;
@@ -2155,6 +2182,12 @@ button.danger:hover { filter: brightness(0.92); }
   color: var(--muted);
   font-size: 0.88rem;
   line-height: 1.5;
+  /* Clamp to two lines so a long description can't make one card (and so
+     its whole row) taller than the rest. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 /* Quiet, icon-only delete in the bottom-right of the card. Fades in
    slightly on card hover and turns destructive-red on its own hover.

@@ -271,6 +271,18 @@ defmodule LedgerWeb.AdminLive.ThemeLibrary do
             </button>
           </article>
         </li>
+
+        <li>
+          <a
+            href="https://github.com/JoeriDijkstra/ledger-template"
+            target="_blank"
+            rel="noopener"
+            class="theme-card theme-card-add"
+          >
+            <span class="theme-card-add-icon" aria-hidden="true">+</span>
+            <span class="theme-card-add-label">Create theme</span>
+          </a>
+        </li>
       </ul>
 
       <div
