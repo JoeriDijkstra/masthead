@@ -26,6 +26,19 @@ defmodule Masthead.Themes.ManifestTest do
       assert length(tokens) == 6
     end
 
+    test "tokens preserve an optional category" do
+      json = """
+      {"name":"X","slug":"x","version":"1.0.0","tokens":[
+        {"key":"a","label":"A","type":"color","default":"#fff","category":"Header"},
+        {"key":"b","label":"B","type":"string","default":""}
+      ]}
+      """
+
+      assert {:ok, %Manifest{tokens: [a, b]}} = Manifest.parse(json)
+      assert a.category == "Header"
+      assert b.category == nil
+    end
+
     test "select tokens require a non-empty options list" do
       json =
         ~s({"name":"X","slug":"x","version":"1.0.0",) <>

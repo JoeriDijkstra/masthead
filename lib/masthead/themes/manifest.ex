@@ -53,7 +53,8 @@ defmodule Masthead.Themes.Manifest do
           label: String.t(),
           type: String.t(),
           default: String.t(),
-          options: [String.t()] | nil
+          options: [String.t()] | nil,
+          category: String.t() | nil
         }
 
   @type metadata_field :: %{
@@ -313,7 +314,10 @@ defmodule Masthead.Themes.Manifest do
         label: tok["label"],
         type: tok["type"],
         default: tok["default"],
-        options: tok["options"]
+        options: tok["options"],
+        # Optional grouping label; tokens with a category render in an
+        # accordion in the settings UI (uncategorized → "General").
+        category: tok["category"]
       }
     end)
   end

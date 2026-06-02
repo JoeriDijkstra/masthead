@@ -32,6 +32,28 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
     %{conn: conn, site: site}
   end
 
+  test "a theme without token categories renders the tokens flat", %{conn: conn, site: site} do
+    # The default theme's only token (accent) has no category → no accordion.
+    {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/settings")
+    refute html =~ "token-group"
+  end
+
+  test "a theme with token categories renders accordions, uncategorized under General", %{
+    conn: conn,
+    site: site
+  } do
+    tailwind = Themes.get_built_in_by_slug("tailwind")
+    {:ok, site} = Sites.update_settings(site, %{"theme_id" => tailwind.id})
+
+    {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/settings")
+
+    assert html =~ "token-group-summary"
+    assert html =~ "Header</summary>"
+    assert html =~ "Footer</summary>"
+    # logo/favicon/accent/cta have no category → grouped under General.
+    assert html =~ "General</summary>"
+  end
+
   test "a file token renders a picker that lists the site's uploads in a modal", %{
     conn: conn,
     site: site

@@ -1,9 +1,9 @@
 {
   "name": "Tailwind",
   "slug": "tailwind",
-  "version": "1.1.0",
+  "version": "1.3.0",
   "author": "Masthead",
-  "description": "A clean, website-first theme styled with Tailwind CSS: a full navbar with an uploadable logo, a hero, and a card grid. Tailwind is loaded from its CDN so you can use any utility class — including arbitrary values — directly in your pages.",
+  "description": "A customizable, website-first theme styled with Tailwind CSS: full navbar with an uploadable logo, brand colors for the header/footer/buttons, light or dark header/footer text, a hero, and a card grid. Loaded from the Tailwind CDN so you can use any utility class in your pages.",
   "tokens": [
     {
       "key": "logo",
@@ -18,6 +18,42 @@
       "default": ""
     },
     {
+      "key": "header_text",
+      "label": "Header text (next to logo)",
+      "type": "string",
+      "default": "",
+      "category": "Header"
+    },
+    {
+      "key": "header_color",
+      "label": "Header background",
+      "type": "color",
+      "default": "#ffffff",
+      "category": "Header"
+    },
+    {
+      "key": "header_style",
+      "label": "Header text color",
+      "type": "select",
+      "options": ["dark", "light"],
+      "default": "dark",
+      "category": "Header"
+    },
+    {
+      "key": "header_width",
+      "label": "Header & footer width",
+      "type": "select",
+      "options": ["contained", "full"],
+      "default": "contained",
+      "category": "Header"
+    },
+    {
+      "key": "accent",
+      "label": "Accent color (buttons)",
+      "type": "color",
+      "default": "#4f46e5"
+    },
+    {
       "key": "cta_label",
       "label": "Nav button label",
       "type": "string",
@@ -30,11 +66,19 @@
       "default": ""
     },
     {
-      "key": "header_width",
-      "label": "Header & footer width",
+      "key": "footer_color",
+      "label": "Footer background",
+      "type": "color",
+      "default": "#f9fafb",
+      "category": "Footer"
+    },
+    {
+      "key": "footer_style",
+      "label": "Footer text color",
       "type": "select",
-      "options": ["contained", "full"],
-      "default": "contained"
+      "options": ["dark", "light"],
+      "default": "dark",
+      "category": "Footer"
     }
   ],
   "metadata": [
