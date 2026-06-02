@@ -4,7 +4,37 @@ defmodule Masthead.Uploads do
   alias Masthead.Uploads.Upload
   alias Masthead.Storage
 
-  @allowed_image_types ~w(image/png image/jpeg image/gif image/webp image/svg+xml)
+  @allowed_upload_types ~w(
+    image/png image/jpeg image/gif image/webp image/svg+xml
+    image/x-icon image/vnd.microsoft.icon application/pdf
+  )
+
+  # Browsers send inconsistent (or empty) MIME types for .ico, so we also
+  # accept by extension as a fallback and infer the MIME from it.
+  @ext_content_types %{
+    ".png" => "image/png",
+    ".jpg" => "image/jpeg",
+    ".jpeg" => "image/jpeg",
+    ".gif" => "image/gif",
+    ".webp" => "image/webp",
+    ".svg" => "image/svg+xml",
+    ".ico" => "image/x-icon",
+    ".pdf" => "application/pdf"
+  }
+  @allowed_extensions Map.keys(@ext_content_types)
+
+  # Content types that render directly in an <img>. Everything else (PDF)
+  # gets a filename/extension placeholder in the UI instead of a broken
+  # thumbnail. (.ico renders fine in browsers, so it counts as an image.)
+  @image_content_types ~w(
+    image/png image/jpeg image/gif image/webp image/svg+xml
+    image/x-icon image/vnd.microsoft.icon
+  )
+
+  @doc "True when the upload renders directly in an `<img>` tag."
+  def image?(%Upload{content_type: content_type}), do: image?(content_type)
+  def image?(content_type) when is_binary(content_type), do: content_type in @image_content_types
+  def image?(_), do: false
 
   def list_uploads(site_id) do
     Repo.all(from u in Upload, where: u.site_id == ^site_id, order_by: [desc: u.inserted_at])
@@ -15,13 +45,25 @@ defmodule Masthead.Uploads do
   end
 
   @doc """
+  Site-scoped fetch that returns `nil` instead of raising when the upload
+  is missing. Used by the theme renderer to resolve `file` token ids,
+  where a dangling reference (deleted upload) must degrade to "no file"
+  rather than crash the public page.
+  """
+  def get_upload(site_id, id) do
+    Repo.one(from u in Upload, where: u.site_id == ^site_id and u.id == ^id)
+  end
+
+  @doc """
   Stores an upload tied to a site. `source` must be a path to a file on disk
   (which is what Phoenix.LiveView `consume_uploaded_entries` and
   Plug.Upload both give you).
   """
   def store_image(site, %{filename: filename, content_type: content_type, path: path}) do
+    content_type = normalize_content_type(content_type, filename)
+
     cond do
-      content_type not in @allowed_image_types ->
+      not allowed_upload?(content_type, filename) ->
         {:error, :unsupported_type}
 
       true ->
@@ -57,6 +99,22 @@ defmodule Masthead.Uploads do
   end
 
   def url(%Upload{path: path}), do: Storage.url(path)
+
+  defp allowed_upload?(content_type, filename) do
+    content_type in @allowed_upload_types or
+      String.downcase(Path.extname(filename)) in @allowed_extensions
+  end
+
+  # When the browser omits or genericises the MIME (common for .ico), infer
+  # it from the extension so a known file type still stores with a real
+  # content type rather than a blank one.
+  defp normalize_content_type(content_type, filename)
+       when content_type in [nil, "", "application/octet-stream"] do
+    ext = String.downcase(Path.extname(filename))
+    Map.get(@ext_content_types, ext) || content_type
+  end
+
+  defp normalize_content_type(content_type, _filename), do: content_type
 
   @doc """
   Renames the file on disk to `new_filename` (which should include the

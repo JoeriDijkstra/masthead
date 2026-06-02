@@ -1,0 +1,57 @@
+{
+  "name": "Tailwind",
+  "slug": "tailwind",
+  "version": "1.1.0",
+  "author": "Masthead",
+  "description": "A clean, website-first theme styled with Tailwind CSS: a full navbar with an uploadable logo, a hero, and a card grid. Tailwind is loaded from its CDN so you can use any utility class — including arbitrary values — directly in your pages.",
+  "tokens": [
+    {
+      "key": "logo",
+      "label": "Logo",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "key": "favicon",
+      "label": "Favicon",
+      "type": "file",
+      "default": ""
+    },
+    {
+      "key": "cta_label",
+      "label": "Nav button label",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "cta_url",
+      "label": "Nav button link",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "header_width",
+      "label": "Header & footer width",
+      "type": "select",
+      "options": ["contained", "full"],
+      "default": "contained"
+    }
+  ],
+  "metadata": [
+    {
+      "key": "layout",
+      "label": "Page layout",
+      "type": "select",
+      "options": ["contained", "wide"],
+      "default": "contained",
+      "description": "Use 'wide' for full-width pages like a landing page; 'contained' centers a readable column."
+    },
+    {
+      "key": "show_navigation",
+      "label": "Show site navigation",
+      "type": "boolean",
+      "default": true,
+      "description": "Untick to hide the navbar and footer on this page only — useful for a standalone splash page."
+    }
+  ]
+}

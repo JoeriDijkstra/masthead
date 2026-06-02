@@ -20,7 +20,7 @@ defmodule Masthead.Themes.Theme do
   import Ecto.Changeset
 
   @sources ~w(built_in uploaded)
-  @reserved_slugs ~w(default studio blank)
+  @reserved_slugs ~w(default studio tailwind)
 
   schema "themes" do
     field :slug, :string

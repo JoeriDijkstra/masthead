@@ -22,9 +22,16 @@ defmodule Masthead.Themes.Manifest do
     * `string` — free-text input (e.g. font stack)
     * `length` — CSS length string (`880px`, `60ch`, `4rem`)
     * `number` — numeric input, stored as a string for CSS embedding
+    * `file`   — a picker over the site's existing uploads; the stored
+      value is the chosen upload's **id**, resolved to a public URL at
+      render time (see `Masthead.Themes.Renderer`). Useful for favicons,
+      header images, logos, etc. Default should be `""` (no file).
+    * `select` — a `<select>` over a fixed `options` list (required);
+      value is the chosen option string. Use for layout switches like
+      contained vs. full-width.
   """
 
-  @valid_token_types ~w(color string length number)
+  @valid_token_types ~w(color string length number file select)
   @valid_metadata_types ~w(string text boolean color url select number)
 
   @slug_re ~r/^[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?$/
@@ -45,7 +52,8 @@ defmodule Masthead.Themes.Manifest do
           key: String.t(),
           label: String.t(),
           type: String.t(),
-          default: String.t()
+          default: String.t(),
+          options: [String.t()] | nil
         }
 
   @type metadata_field :: %{
@@ -272,13 +280,21 @@ defmodule Masthead.Themes.Manifest do
         _ -> ["#{prefix}.label: is required and must be a non-empty string" | errors]
       end
 
-    errors =
-      case Map.get(tok, "type") do
-        t when t in @valid_token_types ->
-          errors
+    type = Map.get(tok, "type")
 
-        _ ->
+    errors =
+      cond do
+        type not in @valid_token_types ->
           ["#{prefix}.type: must be one of #{Enum.join(@valid_token_types, ", ")}" | errors]
+
+        type == "select" and not is_list(Map.get(tok, "options")) ->
+          ["#{prefix}.options: select tokens require a non-empty options list" | errors]
+
+        type == "select" and Map.get(tok, "options") == [] ->
+          ["#{prefix}.options: select tokens require a non-empty options list" | errors]
+
+        true ->
+          errors
       end
 
     case Map.get(tok, "default") do
@@ -296,7 +312,8 @@ defmodule Masthead.Themes.Manifest do
         key: tok["key"],
         label: tok["label"],
         type: tok["type"],
-        default: tok["default"]
+        default: tok["default"],
+        options: tok["options"]
       }
     end)
   end

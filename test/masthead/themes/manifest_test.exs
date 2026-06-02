@@ -16,12 +16,23 @@ defmodule Masthead.Themes.ManifestTest do
         {"key":"a","label":"A","type":"color","default":"#fff"},
         {"key":"b","label":"B","type":"string","default":"Inter"},
         {"key":"c","label":"C","type":"length","default":"4rem"},
-        {"key":"d","label":"D","type":"number","default":"4"}
+        {"key":"d","label":"D","type":"number","default":"4"},
+        {"key":"e","label":"E","type":"file","default":""},
+        {"key":"f","label":"F","type":"select","options":["a","b"],"default":"a"}
       ]}
       """
 
       assert {:ok, %Manifest{tokens: tokens}} = Manifest.parse(json)
-      assert length(tokens) == 4
+      assert length(tokens) == 6
+    end
+
+    test "select tokens require a non-empty options list" do
+      json =
+        ~s({"name":"X","slug":"x","version":"1.0.0",) <>
+          ~s("tokens":[{"key":"k","label":"K","type":"select","default":"a"}]})
+
+      assert {:error, errors} = Manifest.parse(json)
+      assert Enum.any?(errors, &String.contains?(&1, "tokens[0].options"))
     end
 
     test "rejects invalid JSON" do

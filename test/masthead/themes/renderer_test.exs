@@ -7,7 +7,7 @@ defmodule Masthead.Themes.RendererTest do
   """
   use Masthead.DataCase
 
-  alias Masthead.{Accounts, Sites, Content, Themes}
+  alias Masthead.{Accounts, Sites, Content, Themes, Uploads}
   alias Masthead.Themes.Renderer
 
   setup do
@@ -145,6 +145,120 @@ defmodule Masthead.Themes.RendererTest do
     end
   end
 
+  describe "file tokens" do
+    test "a selected favicon resolves to a <link rel=icon> and a url() var", %{site: site} do
+      upload = create_upload(site, "fav.png")
+
+      {:ok, site} =
+        Sites.update_settings(site, %{"theme_tokens" => %{"favicon" => to_string(upload.id)}})
+
+      site = Sites.get_site!(site.id)
+      pages = Content.list_published_pages(site.id)
+      out = Renderer.render_index(%{site: site, posts: [], pages: pages})
+
+      url = Uploads.url(upload)
+      assert out =~ ~s(<link rel="icon" href="#{url}")
+      assert out =~ "--favicon: url(#{url});"
+    end
+
+    test "no favicon selected emits neither an icon link nor a favicon var", %{site: site} do
+      pages = Content.list_published_pages(site.id)
+      out = Renderer.render_index(%{site: site, posts: [], pages: pages})
+
+      refute out =~ ~s(rel="icon")
+      refute out =~ "--favicon"
+    end
+
+    test "a dangling id (deleted upload) degrades to no favicon", %{site: site} do
+      upload = create_upload(site, "gone.png")
+
+      {:ok, site} =
+        Sites.update_settings(site, %{"theme_tokens" => %{"favicon" => to_string(upload.id)}})
+
+      {:ok, _} = Uploads.delete_upload(upload)
+
+      site = Sites.get_site!(site.id)
+      pages = Content.list_published_pages(site.id)
+      out = Renderer.render_index(%{site: site, posts: [], pages: pages})
+
+      refute out =~ ~s(rel="icon")
+      refute out =~ "--favicon"
+    end
+  end
+
+  describe "tailwind theme" do
+    setup %{user: user} do
+      tailwind = Themes.get_built_in_by_slug("tailwind")
+
+      {:ok, site} =
+        Sites.create_site(%{
+          "slug" => "tw#{System.unique_integer([:positive])}",
+          "name" => "Acme Inc",
+          "title" => "Build better websites",
+          "description" => "The all-in-one platform.",
+          "owner_id" => user.id,
+          "theme_id" => tailwind.id
+        })
+
+      {:ok, site: Sites.get_site!(site.id)}
+    end
+
+    test "loads Tailwind from the CDN and renders a navbar + hero", %{site: site} do
+      out = Renderer.render_index(%{site: site, posts: [], pages: []})
+
+      # Tailwind is loaded at runtime so authors can use any utility class.
+      assert out =~ "cdn.tailwindcss.com"
+      # Hero title and navbar brand (no logo → site name text).
+      assert out =~ "Build better websites"
+      assert out =~ "<header"
+      assert out =~ "Acme Inc"
+    end
+
+    test "an uploaded logo appears in the navbar", %{site: site} do
+      logo = create_upload(site, "logo.png")
+
+      {:ok, site} =
+        Sites.update_settings(site, %{"theme_tokens" => %{"logo" => to_string(logo.id)}})
+
+      site = Sites.get_site!(site.id)
+
+      out = Renderer.render_index(%{site: site, posts: [], pages: []})
+
+      assert out =~ ~s(<img src="#{Uploads.url(logo)}")
+      assert out =~ "h-8 w-auto"
+    end
+
+    test "a nav CTA renders when cta_label is set", %{site: site} do
+      {:ok, site} =
+        Sites.update_settings(site, %{
+          "theme_tokens" => %{"cta_label" => "Get started", "cta_url" => "/signup"}
+        })
+
+      site = Sites.get_site!(site.id)
+      out = Renderer.render_index(%{site: site, posts: [], pages: []})
+
+      assert out =~ "Get started"
+      assert out =~ ~s(href="/signup")
+    end
+
+    test "header_width token toggles the navbar/footer between contained and full", %{site: site} do
+      # Default is contained → header/footer bars use a centered max-width.
+      contained = Renderer.render_index(%{site: site, posts: [], pages: []})
+      assert contained =~ "max-w-6xl"
+      refute contained =~ "w-full"
+
+      {:ok, site} =
+        Sites.update_settings(site, %{"theme_tokens" => %{"header_width" => "full"}})
+
+      site = Sites.get_site!(site.id)
+      full = Renderer.render_index(%{site: site, posts: [], pages: []})
+
+      # Full → the bars span the viewport; no centered max-width on them.
+      assert full =~ "w-full"
+      refute full =~ "max-w-6xl"
+    end
+  end
+
   describe "page metadata" do
     setup %{user: user, site: site} do
       # Install a tiny theme that declares a metadata schema and uses it
@@ -222,6 +336,23 @@ defmodule Masthead.Themes.RendererTest do
 
       assert page.metadata["from_old_theme"] == "still here"
     end
+  end
+
+  # Helper: store an upload for the site via the real Uploads pipeline so
+  # the resolved URL matches what the renderer produces in this env.
+  defp create_upload(site, filename) do
+    tmp = Path.join(System.tmp_dir!(), "up-#{System.unique_integer([:positive])}.png")
+    File.write!(tmp, "not-a-real-png-but-bytes")
+
+    {:ok, upload} =
+      Uploads.store_image(site, %{
+        filename: filename,
+        content_type: "image/png",
+        path: tmp
+      })
+
+    File.rm(tmp)
+    upload
   end
 
   # Helper: write a minimal zipped theme that surfaces page.metadata.layout

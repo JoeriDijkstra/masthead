@@ -425,6 +425,12 @@ defmodule MastheadWeb.AdminLive.PageForm do
       </label>
 
       <div class="settings-checkbox">
+        <label for="page-show-in-nav" class="settings-checkbox-text">
+          <span>Show in top navigation</span>
+          <small>
+            Untick to keep this page out of the nav bar (e.g. a privacy policy or landing page). It stays reachable by its URL.
+          </small>
+        </label>
         <input type="hidden" name="page[show_in_nav]" value="false" />
         <input
           type="checkbox"
@@ -433,12 +439,6 @@ defmodule MastheadWeb.AdminLive.PageForm do
           value="true"
           checked={@form[:show_in_nav].value not in [false, "false"]}
         />
-        <label for="page-show-in-nav" class="settings-checkbox-text">
-          <span>Show in top navigation</span>
-          <small>
-            Untick to keep this page out of the nav bar (e.g. a privacy policy or landing page). It stays reachable by its URL.
-          </small>
-        </label>
       </div>
 
       <input type="hidden" name="page[format]" value={@format} />
@@ -612,6 +612,10 @@ defmodule MastheadWeb.AdminLive.PageForm do
 
     ~H"""
     <div class="settings-checkbox">
+      <label for={"meta-" <> @field.key} class="settings-checkbox-text">
+        <span>{@field.label}</span>
+        <small :if={@field.description}>{@field.description}</small>
+      </label>
       <input type="hidden" name={"page[metadata][" <> @field.key <> "]"} value="false" />
       <input
         type="checkbox"
@@ -620,10 +624,6 @@ defmodule MastheadWeb.AdminLive.PageForm do
         value="true"
         checked={@checked?}
       />
-      <label for={"meta-" <> @field.key} class="settings-checkbox-text">
-        <span>{@field.label}</span>
-        <small :if={@field.description}>{@field.description}</small>
-      </label>
     </div>
     """
   end
@@ -661,18 +661,30 @@ defmodule MastheadWeb.AdminLive.PageForm do
   end
 
   defp metadata_field(assigns) do
+    assigns =
+      assign(assigns, :display_value, metadata_display_value(assigns.value, assigns.field))
+
     ~H"""
     <label>
       {@field.label}
       <input
         type={metadata_input_type(@field.type)}
         name={"page[metadata][" <> @field.key <> "]"}
-        value={@value}
-        placeholder={to_string(@field.default || "")}
+        value={@display_value}
       />
       <small :if={@field.description}>{@field.description}</small>
     </label>
     """
+  end
+
+  # Show the page override if set, else the manifest default — matches the
+  # select field's behaviour so every settings input reflects its effective
+  # value (the color input has no placeholder to fall back on).
+  defp metadata_display_value(value, field) do
+    case value do
+      v when v in [nil, ""] -> to_string(field.default || "")
+      v -> to_string(v)
+    end
   end
 
   defp metadata_input_type("color"), do: "color"
@@ -683,7 +695,9 @@ defmodule MastheadWeb.AdminLive.PageForm do
   defp truthy?(value, default) do
     case value do
       v when v in [true, "true", "on", "1", 1] -> true
-      v when v in [false, "false", "0", 0, nil, ""] -> false
+      v when v in [false, "false", "0", 0] -> false
+      # Unset (nil / "") → fall back to the manifest default so a field
+      # declared `"default": true` starts checked.
       _ -> truthy?(default, false)
     end
   end

@@ -14,6 +14,7 @@ defmodule Masthead.Themes.Renderer do
 
   alias Masthead.Themes
   alias Masthead.Themes.{CssSanitizer, Loader, Manifest, Presenter, Sandbox}
+  alias Masthead.Uploads
 
   @doc "Render the site homepage (post list)."
   def render_index(%{site: site, posts: posts, pages: pages}) do
@@ -75,7 +76,13 @@ defmodule Masthead.Themes.Renderer do
   defp render(site, target, target_assigns) do
     theme = resolve_theme(site)
     entry = Loader.fetch!(theme)
-    tokens = Manifest.effective_tokens(entry.manifest, site.theme_tokens || %{})
+
+    file_keys = file_token_keys(entry.manifest)
+
+    tokens =
+      entry.manifest
+      |> Manifest.effective_tokens(site.theme_tokens || %{})
+      |> resolve_file_tokens(file_keys, site)
 
     base_context = %{
       "site" => Presenter.site(site),
@@ -85,7 +92,7 @@ defmodule Masthead.Themes.Renderer do
         "version" => entry.theme.version,
         "asset_base" => entry.asset_base,
         "tokens" => tokens,
-        "css" => composed_css(entry.css, tokens)
+        "css" => composed_css(entry.css, tokens, file_keys)
       }
     }
 
@@ -130,17 +137,64 @@ defmodule Masthead.Themes.Renderer do
       raise "no default theme seeded — run Masthead.Themes.Seed.run/0"
   end
 
-  # Token overrides go AFTER the theme's CSS so they win in the cascade.
-  defp composed_css(theme_css, tokens) when map_size(tokens) == 0, do: theme_css
+  # The set of token keys declared as `file` in the manifest. These hold an
+  # upload id (or "") rather than a literal CSS value, so they're resolved
+  # to a URL and emitted as `url(...)` in the cascade.
+  defp file_token_keys(%Manifest{tokens: tokens}) do
+    for %{key: key, type: "file"} <- tokens, into: MapSet.new(), do: key
+  end
 
-  defp composed_css(theme_css, tokens) do
+  # Replace each `file` token's stored upload id with the upload's public
+  # URL. A blank value or a dangling reference (deleted / wrong-site upload)
+  # resolves to "" so the template and CSS both fall back to "no file"
+  # instead of crashing the public page.
+  defp resolve_file_tokens(tokens, file_keys, site) do
+    Enum.reduce(file_keys, tokens, fn key, acc ->
+      Map.put(acc, key, resolve_upload_url(Map.get(acc, key), site))
+    end)
+  end
+
+  defp resolve_upload_url(id, site) when is_binary(id) and id != "" do
+    case Integer.parse(id) do
+      {int_id, ""} ->
+        case Uploads.get_upload(site.id, int_id) do
+          nil -> ""
+          upload -> Uploads.url(upload)
+        end
+
+      _ ->
+        ""
+    end
+  end
+
+  defp resolve_upload_url(_id, _site), do: ""
+
+  # Token overrides go AFTER the theme's CSS so they win in the cascade.
+  defp composed_css(theme_css, tokens, _file_keys) when map_size(tokens) == 0, do: theme_css
+
+  defp composed_css(theme_css, tokens, file_keys) do
     declarations =
       tokens
-      |> Enum.map_join(" ", fn {k, v} ->
-        "--#{kebab(k)}: #{CssSanitizer.sanitize_token_value(v)};"
-      end)
+      |> Enum.map_join(" ", fn {k, v} -> declaration(k, v, file_keys) end)
+      |> String.trim()
 
     theme_css <> "\n:root { " <> declarations <> " }\n"
+  end
+
+  # File tokens carry a resolved URL — wrap it as `url(...)` so themes can
+  # write `background: var(--header-image)`. Skip empty file tokens entirely
+  # so we never emit a useless `--key: url();`. The URL is sanitized first;
+  # we leave it unquoted because the sanitizer strips quotes, and storage
+  # keys/slugs never contain spaces or parens.
+  defp declaration(key, value, file_keys) do
+    if MapSet.member?(file_keys, key) do
+      case CssSanitizer.sanitize_token_value(value) do
+        "" -> ""
+        url -> "--#{kebab(key)}: url(#{url});"
+      end
+    else
+      "--#{kebab(key)}: #{CssSanitizer.sanitize_token_value(value)};"
+    end
   end
 
   defp kebab(key), do: String.replace(key, "_", "-")
