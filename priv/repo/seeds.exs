@@ -2,19 +2,21 @@ alias Masthead.Accounts
 alias Masthead.Sites
 alias Masthead.Content
 
-# Demo user
+# Demo user (a platform admin, so the admin overview is reachable in dev)
 {:ok, user} =
   case Accounts.get_user_by_email("admin@example.com") do
     nil -> Accounts.register_user(%{"email" => "admin@example.com", "password" => "password1234"})
     existing -> {:ok, existing}
   end
 
-# Demo site
+{:ok, user} = Accounts.set_admin(user, true)
+
+# Demo site ("admin" is a reserved slug now — it routes to the admin overview)
 {:ok, site} =
-  case Sites.get_site_by_slug("admin") do
+  case Sites.get_site_by_slug("demo") do
     nil ->
       Sites.create_site(%{
-        "slug" => "admin",
+        "slug" => "demo",
         "name" => "Example Site",
         "title" => "Example Site",
         "description" =>
@@ -118,7 +120,7 @@ end
 IO.puts("""
 
 Seeded:
-  user:  admin@example.com / password1234
-  site:  http://admin.lvh.me:4000
-  admin: http://localhost:4000/sites
+  user:  admin@example.com / password1234 (platform admin)
+  site:  http://demo.lvh.me:4000
+  admin: http://localhost:4000/admin
 """)

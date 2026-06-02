@@ -49,6 +49,36 @@ defmodule MastheadWeb.UserAuth do
     end
   end
 
+  def require_admin_user(conn, _opts) do
+    user = conn.assigns[:current_user]
+
+    if user && user.admin do
+      conn
+    else
+      conn
+      |> Phoenix.Controller.put_flash(:error, "You don't have access to that page.")
+      |> redirect(to: "/")
+      |> halt()
+    end
+  end
+
+  def on_mount(:require_admin, _params, session, socket) do
+    user =
+      case session["user_id"] do
+        nil -> nil
+        id -> safe_get_user(id)
+      end
+
+    if user && user.admin do
+      {:cont, Phoenix.Component.assign(socket, :current_user, user)}
+    else
+      {:halt,
+       socket
+       |> Phoenix.LiveView.put_flash(:error, "You don't have access to that page.")
+       |> Phoenix.LiveView.redirect(to: "/")}
+    end
+  end
+
   def on_mount(:current_user, _params, session, socket) do
     user =
       case session["user_id"] do

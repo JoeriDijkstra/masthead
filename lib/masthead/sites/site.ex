@@ -2,7 +2,7 @@ defmodule Masthead.Sites.Site do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @reserved_slugs ~w(www api app dashboard login signup logout auth public assets static help docs sites new themes)
+  @reserved_slugs ~w(www api app admin dashboard login signup logout auth public assets static help docs sites new themes)
 
   schema "sites" do
     field :slug, :string
@@ -21,6 +21,9 @@ defmodule Masthead.Sites.Site do
     # (Masthead.Accounts.disable_user/1). Non-null => the site does not
     # resolve publicly (Subdomain plug 404s).
     field :disabled_at, :utc_datetime
+    # Admin soft-delete (distinct from `disabled_at`): hides the site from
+    # its owner and the public, but the row is retained for recovery.
+    field :deleted_at, :utc_datetime
     belongs_to :owner, Masthead.Accounts.User
     belongs_to :theme_ref, Masthead.Themes.Theme, foreign_key: :theme_id
     belongs_to :homepage_page, Masthead.Content.Page, foreign_key: :homepage_page_id

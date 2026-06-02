@@ -21,6 +21,9 @@ defmodule Masthead.Actions.Action do
   schema "actions" do
     field :key, :string
     field :status, :string, default: "pending"
+    # Custom (admin-authored) actions store their own title; predefined ones
+    # leave this nil and derive the title from `key`.
+    field :title, :string
     field :message, :string
     field :priority, :integer, default: 0
     field :path, :string
@@ -33,7 +36,7 @@ defmodule Masthead.Actions.Action do
 
   def changeset(action, attrs) do
     action
-    |> cast(attrs, [:key, :status, :message, :priority, :path, :site_id])
+    |> cast(attrs, [:key, :status, :title, :message, :priority, :path, :site_id])
     |> validate_required([:key, :status, :site_id])
     |> validate_inclusion(:status, @statuses)
     |> assoc_constraint(:site)

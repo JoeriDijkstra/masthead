@@ -9,6 +9,7 @@ defmodule Masthead.Accounts.User do
     field :confirmed_at, :utc_datetime
     field :disabled_at, :utc_datetime
     field :wants_onboarding_emails, :boolean, default: true
+    field :admin, :boolean, default: false
 
     has_many :tokens, Masthead.Accounts.UserToken
 
@@ -20,6 +21,14 @@ defmodule Masthead.Accounts.User do
 
   @doc "Account is disabled (self-serve or auto-disabled)."
   def disabled?(%__MODULE__{disabled_at: at}), do: not is_nil(at)
+
+  @doc "Platform admin (can manage all users/sites/themes)."
+  def admin?(%__MODULE__{admin: admin}), do: admin == true
+
+  @doc "Grants or revokes platform-admin access."
+  def admin_changeset(user, admin?) when is_boolean(admin?) do
+    change(user, admin: admin?)
+  end
 
   @doc "Marks the email confirmed (no-op effect if already confirmed)."
   def confirm_changeset(user) do

@@ -42,6 +42,9 @@ defmodule Masthead.Actions.Definitions do
   @doc "Returns the definition map for `key`, or `nil` if unknown."
   def get(key), do: Map.get(@definitions, key)
 
+  @doc "All defined action keys."
+  def keys, do: Map.keys(@definitions)
+
   @doc "Keys of action types that may trigger a one-off reminder email."
   def remindable_keys do
     for {key, %{remindable: true}} <- @definitions, do: key

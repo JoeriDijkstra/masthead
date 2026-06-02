@@ -12,7 +12,12 @@ defmodule Masthead.Themes do
 
   import Ecto.Query
   alias Masthead.Repo
+  alias Masthead.Storage
   alias Masthead.Themes.Theme
+
+  # The canonical files that make up a theme directory.
+  @theme_files ["manifest.json", "theme.css"] ++
+                 Enum.map(~w(layout index post page blog not_found), &"templates/#{&1}.liquid")
 
   @doc """
   List every theme visible to the given user:
@@ -92,4 +97,37 @@ defmodule Masthead.Themes do
 
   def delete_theme(%Theme{source: "uploaded"} = theme), do: Repo.delete(theme)
   def delete_theme(%Theme{source: "built_in"}), do: {:error, :built_in_protected}
+
+  # ---- admin ----
+
+  @doc "Every theme, with owner preloaded. Admin overview."
+  def list_all_themes do
+    Repo.all(from t in Theme, order_by: ^theme_order(), preload: [:owner])
+  end
+
+  @doc """
+  Reconstruct an uploaded theme's source files into an in-memory `.zip`.
+  Returns `{:ok, filename, zip_binary}` or `{:error, reason}`. Built-in
+  themes aren't downloadable (they live in the repo already).
+  """
+  def package_theme(%Theme{source: "built_in"}), do: {:error, :built_in_not_downloadable}
+
+  def package_theme(%Theme{source: "uploaded", storage_path: path} = theme) do
+    entries =
+      Enum.reduce_while(@theme_files, [], fn rel, acc ->
+        case Storage.read(Path.join(path, rel)) do
+          {:ok, bin} -> {:cont, [{String.to_charlist(rel), bin} | acc]}
+          {:error, reason} -> {:halt, {:error, {rel, reason}}}
+        end
+      end)
+
+    with entries when is_list(entries) <- entries,
+         filename = "#{theme.slug}-#{theme.version}.zip",
+         {:ok, {_name, zip}} <-
+           :zip.create(String.to_charlist(filename), Enum.reverse(entries), [:memory]) do
+      {:ok, filename, zip}
+    else
+      {:error, _} = err -> err
+    end
+  end
 end

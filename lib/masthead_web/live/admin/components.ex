@@ -86,6 +86,15 @@ defmodule MastheadWeb.AdminLive.Components do
             <.nav_link href={~p"/themes"} label="Themes" active={@active == :themes}>
               <.icon_palette />
             </.nav_link>
+
+            <.nav_link
+              :if={@current_user && @current_user.admin}
+              href={~p"/admin"}
+              label="Admin"
+              active={@active == :admin}
+            >
+              <.icon_shield />
+            </.nav_link>
           <% end %>
         </nav>
 
@@ -520,6 +529,25 @@ defmodule MastheadWeb.AdminLive.Components do
         stroke-linecap="round"
         stroke-linejoin="round"
         d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"
+      />
+    </svg>
+    """
+  end
+
+  defp icon_shield(assigns) do
+    ~H"""
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="icon"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"
       />
     </svg>
     """

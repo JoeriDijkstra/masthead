@@ -822,6 +822,42 @@ button.danger:hover { filter: brightness(0.92); }
 }
 .pill-live { background: var(--good-soft); color: #166534; }
 .pill-draft { background: var(--amber-soft); color: #92400e; }
+.pill-ok { background: var(--good-soft); color: #166534; }
+.pill-warn { background: var(--amber-soft); color: #92400e; }
+.pill-danger { background: #fef2f2; color: #991b1b; }
+
+/* Admin overview (users / sites / themes tables) */
+.admin-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+.admin-tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.6rem 1rem;
+  margin-bottom: -1px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+}
+.admin-tab:hover { color: var(--fg); }
+.admin-tab.is-active { color: var(--accent); border-bottom-color: var(--accent); }
+/* Admin tables reuse the platform `.table` style; this just allows the
+   wider tables to scroll on narrow viewports and lays out the row's
+   action buttons in a right-aligned cluster. */
+.admin-table-wrap { overflow-x: auto; }
+.admin-row-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
 
 /* Format tags (Markdown / HTML / Blog) */
 .format-tag {

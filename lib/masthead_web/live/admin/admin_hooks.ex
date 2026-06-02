@@ -12,9 +12,14 @@ defmodule MastheadWeb.AdminLive.Hooks do
   def on_mount(:load_site, %{"site_slug" => slug}, _session, socket) do
     user = socket.assigns.current_user
 
-    case Sites.get_user_site_by_slug!(user.id, slug) do
-      site -> {:cont, assign(socket, :site, site)}
-    end
+    # Admins can enter any site at owner level; everyone else is scoped to
+    # the sites they own.
+    site =
+      if user.admin,
+        do: Sites.get_site_for_admin_by_slug!(slug),
+        else: Sites.get_user_site_by_slug!(user.id, slug)
+
+    {:cont, assign(socket, :site, site)}
   rescue
     Ecto.NoResultsError ->
       {:halt,
