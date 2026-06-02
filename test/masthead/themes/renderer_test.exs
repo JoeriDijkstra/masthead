@@ -257,6 +257,54 @@ defmodule Masthead.Themes.RendererTest do
       assert full =~ "w-full"
       refute full =~ "max-w-6xl"
     end
+
+    test "color tokens are injected as CSS vars the templates reference", %{site: site} do
+      {:ok, site} =
+        Sites.update_settings(site, %{
+          "theme_tokens" => %{
+            "accent" => "#ff0000",
+            "header_color" => "#101010",
+            "footer_color" => "#202020",
+            "cta_label" => "Go"
+          }
+        })
+
+      site = Sites.get_site!(site.id)
+      out = Renderer.render_index(%{site: site, posts: [], pages: []})
+
+      assert out =~ "--accent: #ff0000"
+      assert out =~ "--header-color: #101010"
+      assert out =~ "--footer-color: #202020"
+      # Header background + accent button consume the vars.
+      assert out =~ "bg-[var(--header-color)]"
+      assert out =~ "bg-[var(--accent)]"
+    end
+
+    test "header/footer style tokens switch the text colour to light", %{site: site} do
+      # Default (dark text, no CTA/posts) renders nothing white.
+      default = Renderer.render_index(%{site: site, posts: [], pages: []})
+      refute default =~ "text-white"
+
+      {:ok, site} =
+        Sites.update_settings(site, %{
+          "theme_tokens" => %{"header_style" => "light", "footer_style" => "light"}
+        })
+
+      site = Sites.get_site!(site.id)
+      light = Renderer.render_index(%{site: site, posts: [], pages: []})
+
+      assert light =~ "text-white"
+    end
+
+    test "header_text renders next to the brand", %{site: site} do
+      {:ok, site} =
+        Sites.update_settings(site, %{"theme_tokens" => %{"header_text" => "Est. 2026"}})
+
+      site = Sites.get_site!(site.id)
+      out = Renderer.render_index(%{site: site, posts: [], pages: []})
+
+      assert out =~ "Est. 2026"
+    end
   end
 
   describe "page metadata" do

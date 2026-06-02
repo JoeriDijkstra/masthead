@@ -1172,6 +1172,46 @@ button.danger:hover { filter: brightness(0.92); }
   margin: 0 0.15rem;
 }
 
+/* Token category accordions (themes that group tokens by category). */
+.token-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.token-group {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--card);
+}
+.token-group-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.token-group-summary::-webkit-details-marker { display: none; }
+.token-group-summary::after {
+  content: "▸";
+  color: var(--muted);
+  font-size: 0.8rem;
+  transition: transform 0.15s ease;
+}
+.token-group[open] > .token-group-summary { border-bottom: 1px solid var(--rule); }
+.token-group[open] > .token-group-summary::after { transform: rotate(90deg); }
+.token-group > .settings-fields { padding: 1rem; }
+/* Quick fade/slide when a section opens, just to smooth the reveal. */
+.token-group[open] > .settings-fields { animation: token-group-reveal 0.15s ease-out; }
+@keyframes token-group-reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Theme picker — card grid for the public-site theme selection. */
 .theme-picker {
   border: 0;

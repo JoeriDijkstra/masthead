@@ -175,13 +175,47 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
             label: t["label"] || t[:label],
             type: t["type"] || t[:type],
             default: t["default"] || t[:default],
-            options: t["options"] || t[:options] || []
+            options: t["options"] || t[:options] || [],
+            category: t["category"] || t[:category]
           }
         end)
 
       _ ->
         []
     end
+  end
+
+  # Decide how to lay out the token fields:
+  #   * `{:flat, tokens}`    — no token declares a category; render as a
+  #     single list (unchanged behaviour).
+  #   * `{:grouped, groups}` — at least one token has a category; render one
+  #     accordion per category, in first-appearance order, with uncategorized
+  #     tokens collected under "General".
+  defp token_groups(theme) do
+    tokens = token_definitions(theme)
+
+    if Enum.any?(tokens, &categorized?/1) do
+      {:grouped, group_tokens(tokens)}
+    else
+      {:flat, tokens}
+    end
+  end
+
+  defp categorized?(%{category: c}) when is_binary(c), do: String.trim(c) != ""
+  defp categorized?(_), do: false
+
+  defp token_category(tok),
+    do: if(categorized?(tok), do: String.trim(tok.category), else: "General")
+
+  defp group_tokens(tokens) do
+    Enum.reduce(tokens, [], fn tok, acc ->
+      cat = token_category(tok)
+
+      case List.keyfind(acc, cat, 0) do
+        nil -> acc ++ [{cat, [tok]}]
+        {^cat, list} -> List.keyreplace(acc, cat, 0, {cat, list ++ [tok]})
+      end
+    end)
   end
 
   defp token_value(form, key) do
@@ -198,6 +232,22 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
     case token_value(form, tok.key) do
       "" -> to_string(tok.default || "")
       value -> value
+    end
+  end
+
+  # Value for a token <input>. Color has no placeholder, so it's pre-filled
+  # with the effective value (override-or-default) to avoid showing black.
+  # Every other input is left at the override only, so the manifest default
+  # surfaces as the placeholder instead.
+  defp token_input_value(form, %{type: "color"} = tok), do: token_display_value(form, tok)
+  defp token_input_value(form, tok), do: token_value(form, tok.key)
+
+  # Always give text inputs a placeholder: the manifest default, or the
+  # token's label when there's no default.
+  defp token_placeholder(tok) do
+    case to_string(tok.default || "") do
+      "" -> to_string(tok.label || "")
+      default -> default
     end
   end
 
@@ -377,15 +427,33 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
               <p>Override the {@selected_theme.name} theme's design tokens.</p>
             </header>
 
-            <div class="settings-fields">
-              <.token_field
-                :for={tok <- token_definitions(@selected_theme)}
-                tok={tok}
-                form={@form}
-                site={@site}
-                site_uploads={@site_uploads}
-              />
-            </div>
+            <%= case token_groups(@selected_theme) do %>
+              <% {:flat, tokens} -> %>
+                <div class="settings-fields">
+                  <.token_field
+                    :for={tok <- tokens}
+                    tok={tok}
+                    form={@form}
+                    site={@site}
+                    site_uploads={@site_uploads}
+                  />
+                </div>
+              <% {:grouped, groups} -> %>
+                <div class="token-groups">
+                  <details :for={{category, tokens} <- groups} class="token-group">
+                    <summary class="token-group-summary">{category}</summary>
+                    <div class="settings-fields">
+                      <.token_field
+                        :for={tok <- tokens}
+                        tok={tok}
+                        form={@form}
+                        site={@site}
+                        site_uploads={@site_uploads}
+                      />
+                    </div>
+                  </details>
+                </div>
+            <% end %>
           </div>
 
           <div :if={@selected_theme} class="settings-section">
@@ -635,9 +703,12 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
         :if={@tok.type != "file" and @tok.type != "select"}
         type={html_input_type(@tok.type)}
         name={"site[theme_tokens][" <> @tok.key <> "]"}
-        value={token_display_value(@form, @tok)}
+        value={token_input_value(@form, @tok)}
+        placeholder={token_placeholder(@tok)}
       />
-      <small :if={@tok.type != "file"}>Default: <code>{@tok.default}</code></small>
+      <small :if={@tok.type == "color" and @tok.default != ""}>
+        Default: <code>{@tok.default}</code>
+      </small>
     </label>
     """
   end
