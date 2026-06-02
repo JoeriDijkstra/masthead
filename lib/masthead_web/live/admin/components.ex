@@ -31,7 +31,7 @@ defmodule MastheadWeb.AdminLive.Components do
       <aside class="admin-sidebar">
         <div class="sidebar-brand">
           <.link navigate={~p"/sites"} class="brand">
-            <span class="brand-mark">●</span>
+            <img src={~p"/images/logo.png"} alt="Masthead" class="brand-logo" />
             <span class="brand-name">Masthead</span>
           </.link>
           <p class="sidebar-version">v{Application.spec(:masthead, :vsn)}</p>
