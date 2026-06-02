@@ -1,10 +1,10 @@
-defmodule Ledger.MixProject do
+defmodule Masthead.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :ledger,
-      version: "1.11.2",
+      app: :masthead,
+      version: "2.0.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -20,7 +20,7 @@ defmodule Ledger.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {Ledger.Application, []},
+      mod: {Masthead.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -94,10 +94,10 @@ defmodule Ledger.MixProject do
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind ledger", "esbuild ledger"],
+      "assets.build": ["compile", "tailwind masthead", "esbuild masthead"],
       "assets.deploy": [
-        "tailwind ledger --minify",
-        "esbuild ledger --minify",
+        "tailwind masthead --minify",
+        "esbuild masthead --minify",
         "phx.digest"
       ],
       precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]

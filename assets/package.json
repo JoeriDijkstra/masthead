@@ -1,8 +1,8 @@
 {
-  "name": "ledger-assets",
+  "name": "masthead-assets",
   "version": "1.0.0",
   "private": true,
-  "description": "Frontend dependencies for the Ledger Phoenix app",
+  "description": "Frontend dependencies for the Masthead Phoenix app",
   "dependencies": {
     "@codemirror/commands": "^6.6.0",
     "@codemirror/lang-html": "^6.4.9",

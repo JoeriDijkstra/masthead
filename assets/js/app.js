@@ -22,7 +22,7 @@ import "phoenix_html"
 // Establish Phoenix Socket and LiveView configuration.
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
-import {hooks as colocatedHooks} from "phoenix-colocated/ledger"
+import {hooks as colocatedHooks} from "phoenix-colocated/masthead"
 import topbar from "../vendor/topbar"
 import {CodeEditor} from "./hooks/code_editor"
 
@@ -39,9 +39,9 @@ window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // Global clipboard handler — buttons can do
-// phx-click={JS.dispatch("ledger:copy", detail: %{text: "..."})}
+// phx-click={JS.dispatch("masthead:copy", detail: %{text: "..."})}
 // and the button label briefly flips to "Copied!".
-window.addEventListener("ledger:copy", e => {
+window.addEventListener("masthead:copy", e => {
   const text = e.detail && e.detail.text
   if (!text) return
   navigator.clipboard.writeText(text).then(() => {

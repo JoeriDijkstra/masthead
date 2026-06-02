@@ -1,11 +1,11 @@
 import Config
 
 # Configure your database
-config :ledger, Ledger.Repo,
+config :masthead, Masthead.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "ledger_dev",
+  database: "masthead_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
@@ -16,7 +16,7 @@ config :ledger, Ledger.Repo,
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
-config :ledger, LedgerWeb.Endpoint,
+config :masthead, MastheadWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}],
@@ -25,8 +25,8 @@ config :ledger, LedgerWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "ZeGrSpZvGL+K/ktNOU3QjA+R4xDe6gQBwJ5Y/l9XNL9CQ9AuwMumVtRCH7Cl60hs",
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:ledger, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:ledger, ~w(--watch)]}
+    esbuild: {Esbuild, :install_and_run, [:masthead, ~w(--sourcemap=inline --watch)]},
+    tailwind: {Tailwind, :install_and_run, [:masthead, ~w(--watch)]}
   ]
 
 # ## SSL Support
@@ -53,7 +53,7 @@ config :ledger, LedgerWeb.Endpoint,
 # different ports.
 
 # Reload browser tabs when matching files change.
-config :ledger, LedgerWeb.Endpoint,
+config :masthead, MastheadWeb.Endpoint,
   live_reload: [
     web_console_logger: true,
     patterns: [
@@ -62,19 +62,19 @@ config :ledger, LedgerWeb.Endpoint,
       # Gettext translations
       ~r"priv/gettext/.*\.po$",
       # Router, Controllers, LiveViews and LiveComponents
-      ~r"lib/ledger_web/router\.ex$",
-      ~r"lib/ledger_web/(controllers|live|components)/.*\.(ex|heex)$"
+      ~r"lib/masthead_web/router\.ex$",
+      ~r"lib/masthead_web/(controllers|live|components)/.*\.(ex|heex)$"
     ]
   ]
 
 # Enable dev routes for dashboard and mailbox
-config :ledger, dev_routes: true
+config :masthead, dev_routes: true
 
 # Custom domains use stub adapters in dev (no real DNS / Fly token).
 # To exercise the happy path locally, set `:dns_stub` / `:fly_stub`
-# entries (see Ledger.CustomDomains.DnsResolver.Stub for the shape).
-config :ledger, :dns_resolver, Ledger.CustomDomains.DnsResolver.Stub
-config :ledger, :fly_client, Ledger.CustomDomains.FlyClient.Stub
+# entries (see Masthead.CustomDomains.DnsResolver.Stub for the shape).
+config :masthead, :dns_resolver, Masthead.CustomDomains.DnsResolver.Stub
+config :masthead, :fly_client, Masthead.CustomDomains.FlyClient.Stub
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

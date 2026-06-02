@@ -1,4 +1,4 @@
-defmodule Ledger.Repo.Migrations.AddCustomDomainToSites do
+defmodule Masthead.Repo.Migrations.AddCustomDomainToSites do
   use Ecto.Migration
 
   def change do

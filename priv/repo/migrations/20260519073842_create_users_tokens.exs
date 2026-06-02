@@ -1,4 +1,4 @@
-defmodule Ledger.Repo.Migrations.CreateUsersTokens do
+defmodule Masthead.Repo.Migrations.CreateUsersTokens do
   use Ecto.Migration
 
   def change do

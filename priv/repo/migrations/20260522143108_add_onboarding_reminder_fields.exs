@@ -1,4 +1,4 @@
-defmodule Ledger.Repo.Migrations.AddOnboardingReminderFields do
+defmodule Masthead.Repo.Migrations.AddOnboardingReminderFields do
   use Ecto.Migration
 
   def change do

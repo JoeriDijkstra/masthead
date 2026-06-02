@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for dijkstra-ledger on 2026-05-13T22:04:20+02:00
+# fly.toml app configuration file generated for dijkstra-masthead on 2026-05-13T22:04:20+02:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'dijkstra-ledger'
+app = 'dijkstra-masthead'
 primary_region = 'ams'
 kill_signal = 'SIGTERM'
 
@@ -13,17 +13,17 @@ kill_signal = 'SIGTERM'
   release_command = '/app/bin/migrate'
 
 [env]
-  PHX_HOST = 'ledger-cloud.com'
-  APP_HOSTS = 'ledger-cloud.com'
+  PHX_HOST = 'masthead.site'
+  APP_HOSTS = 'masthead.site'
   PHX_SERVER = 'true'
   PORT = '8080'
   # Used by the custom-domains feature to manage Fly TLS certs and to
   # derive the CNAME target. FLY_API_TOKEN is set via `fly secrets`.
-  FLY_APP_NAME = 'dijkstra-ledger'
+  FLY_APP_NAME = 'dijkstra-masthead'
   # Transactional email sender (account confirmation / password reset).
   # Must be on the Resend-verified sending domain. RESEND_API_KEY is set
   # via `fly secrets`.
-  MAIL_FROM = 'noreply@ledger-cloud.com'
+  MAIL_FROM = 'noreply@masthead.site'
 
 [http_service]
   internal_port = 8080

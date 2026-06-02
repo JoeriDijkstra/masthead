@@ -12,15 +12,15 @@ import Config
 # If you use `mix release`, you need to explicitly enable the server
 # by passing the PHX_SERVER=true when you start it:
 #
-#     PHX_SERVER=true bin/ledger start
+#     PHX_SERVER=true bin/masthead start
 #
 # Alternatively, you can use `mix phx.gen.release` to generate a `bin/server`
 # script that automatically sets the env var above.
 if System.get_env("PHX_SERVER") do
-  config :ledger, LedgerWeb.Endpoint, server: true
+  config :masthead, MastheadWeb.Endpoint, server: true
 end
 
-config :ledger, LedgerWeb.Endpoint,
+config :masthead, MastheadWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 # Social sign-in credentials. Read in every environment so the flow can
@@ -49,7 +49,7 @@ if config_env() == :prod do
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
-  config :ledger, Ledger.Repo,
+  config :masthead, Masthead.Repo,
     # ssl: true,
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
@@ -71,7 +71,7 @@ if config_env() == :prod do
 
   host = System.get_env("PHX_HOST") || "example.com"
 
-  config :ledger, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
+  config :masthead, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   # Hosts treated as the bare app surface (no subdomain). Everything that
   # ends in ".<one of these>" is treated as a site subdomain.
@@ -81,10 +81,10 @@ if config_env() == :prod do
       raw -> raw |> String.split(",", trim: true) |> Enum.map(&String.trim/1)
     end
 
-  config :ledger, :app_hosts, app_hosts
+  config :masthead, :app_hosts, app_hosts
 
   # Used by the admin "View site" link to build a site's public URL.
-  config :ledger, :site_url,
+  config :masthead, :site_url,
     scheme: "https",
     host: List.first(app_hosts),
     port: nil
@@ -92,14 +92,14 @@ if config_env() == :prod do
   # Custom domains: users CNAME their domain at the Fly app's edge.
   # Derive the target from FLY_APP_NAME so it tracks the deployed app.
   if fly_app = System.get_env("FLY_APP_NAME") do
-    config :ledger, :custom_domain,
+    config :masthead, :custom_domain,
       cname_target: "#{fly_app}.fly.dev",
-      txt_prefix: "_ledger-verify"
+      txt_prefix: "_masthead-verify"
   end
 
-  config :ledger, LedgerWeb.Endpoint,
+  config :masthead, MastheadWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
-    check_origin: {LedgerWeb.CheckOrigin, :allowed?, [%{host: host, app_hosts: app_hosts}]},
+    check_origin: {MastheadWeb.CheckOrigin, :allowed?, [%{host: host, app_hosts: app_hosts}]},
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
@@ -117,7 +117,7 @@ if config_env() == :prod do
     s3_host = URI.parse(s3_endpoint).host
     s3_region = System.get_env("AWS_REGION") || "auto"
 
-    config :ledger, Ledger.Storage, adapter: Ledger.Storage.S3
+    config :masthead, Masthead.Storage, adapter: Masthead.Storage.S3
 
     config :ex_aws,
       access_key_id: System.fetch_env!("AWS_ACCESS_KEY_ID"),
@@ -133,7 +133,7 @@ if config_env() == :prod do
   # Transactional email via Resend. Account confirmation and password
   # reset depend on this, so a missing key is a hard boot failure (same
   # posture as DATABASE_URL above) rather than silently dropping mail.
-  config :ledger, Ledger.Mailer,
+  config :masthead, Masthead.Mailer,
     adapter: Swoosh.Adapters.Resend,
     api_key:
       System.get_env("RESEND_API_KEY") ||
@@ -142,14 +142,14 @@ if config_env() == :prod do
         Create a Resend API key and set it as a Fly secret.
         """)
 
-  config :ledger,
+  config :masthead,
          :mail_from,
-         {System.get_env("MAIL_FROM_NAME") || "Ledger",
+         {System.get_env("MAIL_FROM_NAME") || "Masthead",
           System.get_env("MAIL_FROM") ||
             raise("""
             environment variable MAIL_FROM is missing.
             Set it to an address on your Resend-verified sending domain,
-            e.g. noreply@ledger-cloud.com
+            e.g. noreply@masthead.site
             """)}
 
   # ## SSL Support
@@ -157,7 +157,7 @@ if config_env() == :prod do
   # To get SSL working, you will need to add the `https` key
   # to your endpoint configuration:
   #
-  #     config :ledger, LedgerWeb.Endpoint,
+  #     config :masthead, MastheadWeb.Endpoint,
   #       https: [
   #         ...,
   #         port: 443,
@@ -179,7 +179,7 @@ if config_env() == :prod do
   # We also recommend setting `force_ssl` in your config/prod.exs,
   # ensuring no data is ever sent via http, always redirecting to https:
   #
-  #     config :ledger, LedgerWeb.Endpoint,
+  #     config :masthead, MastheadWeb.Endpoint,
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
