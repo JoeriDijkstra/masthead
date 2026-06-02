@@ -21,6 +21,13 @@
         </svg>
         <span>GitHub</span>
       </a>
+      <.link
+        :if={assigns[:current_user] && @current_user.admin}
+        navigate={~p"/admin"}
+        class="nav-link"
+      >
+        Admin
+      </.link>
       <%= if assigns[:current_user] do %>
         <.link navigate={~p"/sites"} class="btn btn-primary btn-sm">Open dashboard &rarr;</.link>
       <% else %>

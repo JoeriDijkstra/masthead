@@ -48,10 +48,34 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
     {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/settings")
 
     assert html =~ "token-group-summary"
-    assert html =~ "Header</summary>"
-    assert html =~ "Footer</summary>"
+    assert html =~ ~s(phx-value-group="Header")
+    assert html =~ ~s(phx-value-group="Footer")
     # logo/favicon/accent/cta have no category → grouped under General.
-    assert html =~ "General</summary>"
+    assert html =~ ~s(phx-value-group="General")
+  end
+
+  test "an opened category stays open across a form change, and only one opens at a time", %{
+    conn: conn,
+    site: site
+  } do
+    tailwind = Themes.get_built_in_by_slug("tailwind")
+    {:ok, site} = Sites.update_settings(site, %{"theme_id" => tailwind.id})
+    {:ok, lv, _} = live(conn, ~p"/#{site.slug}/settings")
+
+    open_header = ~r/<details[^>]*\bopen\b[^>]*>\s*<summary[^>]*phx-value-group="Header"/
+
+    # Open the Header group.
+    html = lv |> element(~s(summary[phx-value-group="Header"])) |> render_click()
+    assert html =~ open_header
+
+    # A form change (what previously closed it) keeps it open.
+    html = lv |> form("#site-settings-form", site: %{name: "Renamed"}) |> render_change()
+    assert html =~ open_header
+
+    # Opening Footer closes Header (single-open accordion).
+    html = lv |> element(~s(summary[phx-value-group="Footer"])) |> render_click()
+    refute html =~ open_header
+    assert html =~ ~r/<details[^>]*\bopen\b[^>]*>\s*<summary[^>]*phx-value-group="Footer"/
   end
 
   test "a file token renders a picker that lists the site's uploads in a modal", %{

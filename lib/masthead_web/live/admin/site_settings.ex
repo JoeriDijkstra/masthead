@@ -23,6 +23,7 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
        picker_open?: false,
        picker_view: :grid,
        picker_token: nil,
+       open_token_group: nil,
        selected_theme: pick_theme(themes, current_theme_id(changeset, site))
      )
      |> allow_upload(:picker_image,
@@ -34,6 +35,14 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
   end
 
   @impl true
+  # Track the single open token-category accordion server-side, so a form
+  # re-render (phx-change while typing) doesn't reset the native `<details>`
+  # state. Only one category is open at a time; clicking the open one closes it.
+  def handle_event("toggle_token_group", %{"group" => group}, socket) do
+    open = if socket.assigns.open_token_group == group, do: nil, else: group
+    {:noreply, assign(socket, open_token_group: open)}
+  end
+
   def handle_event("validate", %{"site" => params}, socket) do
     changeset =
       socket.assigns.site
@@ -440,8 +449,18 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
                 </div>
               <% {:grouped, groups} -> %>
                 <div class="token-groups">
-                  <details :for={{category, tokens} <- groups} class="token-group">
-                    <summary class="token-group-summary">{category}</summary>
+                  <details
+                    :for={{category, tokens} <- groups}
+                    class="token-group"
+                    open={@open_token_group == category}
+                  >
+                    <summary
+                      class="token-group-summary"
+                      phx-click="toggle_token_group"
+                      phx-value-group={category}
+                    >
+                      {category}
+                    </summary>
                     <div class="settings-fields">
                       <.token_field
                         :for={tok <- tokens}

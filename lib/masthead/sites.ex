@@ -4,25 +4,33 @@ defmodule Masthead.Sites do
   alias Masthead.Sites.Site
 
   def list_sites_for_user(user_id) do
-    Repo.all(from s in Site, where: s.owner_id == ^user_id, order_by: s.name)
+    Repo.all(
+      from s in Site, where: s.owner_id == ^user_id and is_nil(s.deleted_at), order_by: s.name
+    )
   end
 
   def get_site!(id), do: Repo.get!(Site, id)
 
   def get_user_site!(user_id, id) do
-    Repo.one!(from s in Site, where: s.id == ^id and s.owner_id == ^user_id)
+    Repo.one!(
+      from s in Site, where: s.id == ^id and s.owner_id == ^user_id and is_nil(s.deleted_at)
+    )
   end
 
   def get_user_site_by_slug!(user_id, slug) do
-    Repo.one!(from s in Site, where: s.slug == ^slug and s.owner_id == ^user_id)
+    Repo.one!(
+      from s in Site, where: s.slug == ^slug and s.owner_id == ^user_id and is_nil(s.deleted_at)
+    )
   end
 
   @doc """
-  Public resolver used by the Subdomain plug. Disabled sites (the owning
-  account was disabled) resolve to `nil` so the request 404s.
+  Public resolver used by the Subdomain plug. Disabled or soft-deleted
+  sites resolve to `nil` so the request 404s.
   """
   def get_site_by_slug(slug) when is_binary(slug) do
-    Repo.one(from s in Site, where: s.slug == ^slug and is_nil(s.disabled_at))
+    Repo.one(
+      from s in Site, where: s.slug == ^slug and is_nil(s.disabled_at) and is_nil(s.deleted_at)
+    )
   end
 
   @doc """
@@ -38,7 +46,8 @@ defmodule Masthead.Sites do
         where:
           s.custom_domain == ^host and
             s.custom_domain_status == "active" and
-            is_nil(s.disabled_at)
+            is_nil(s.disabled_at) and
+            is_nil(s.deleted_at)
     )
   end
 
@@ -52,10 +61,41 @@ defmodule Masthead.Sites do
         where:
           s.custom_domain_status == "active" and
             not is_nil(s.custom_domain) and
-            is_nil(s.disabled_at),
+            is_nil(s.disabled_at) and
+            is_nil(s.deleted_at),
         select: s.custom_domain
     )
   end
+
+  # ---- admin ----
+
+  @doc "Every site (incl. disabled/soft-deleted), with owner preloaded."
+  def list_all_sites do
+    Repo.all(from s in Site, order_by: [asc: s.name], preload: [:owner])
+  end
+
+  @doc "Load any site by slug for an admin entering it. Excludes soft-deleted."
+  def get_site_for_admin_by_slug!(slug) when is_binary(slug) do
+    Repo.one!(from s in Site, where: s.slug == ^slug and is_nil(s.deleted_at))
+  end
+
+  defp set_site_timestamp(%Site{} = site, field, value) do
+    site |> Ecto.Changeset.change(%{field => value}) |> Repo.update()
+  end
+
+  @doc "Pauses a site (stops resolving). Reversible via `enable_site/1`."
+  def disable_site(%Site{} = site), do: set_site_timestamp(site, :disabled_at, truncated_now())
+
+  @doc "Un-pauses a site."
+  def enable_site(%Site{} = site), do: set_site_timestamp(site, :disabled_at, nil)
+
+  @doc "Soft-deletes a site (hidden from owner + public; retained for recovery)."
+  def soft_delete_site(%Site{} = site), do: set_site_timestamp(site, :deleted_at, truncated_now())
+
+  @doc "Restores a soft-deleted site."
+  def restore_site(%Site{} = site), do: set_site_timestamp(site, :deleted_at, nil)
+
+  defp truncated_now, do: DateTime.utc_now() |> DateTime.truncate(:second)
 
   @doc "Soft-disables every site owned by `user_id` (account-disable cascade)."
   def disable_sites_for_user(user_id) do

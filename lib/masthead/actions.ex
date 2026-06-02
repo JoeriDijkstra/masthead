@@ -40,6 +40,25 @@ defmodule Masthead.Actions do
   end
 
   @doc """
+  Creates a custom, admin-authored action on `site` from free-text
+  `title` + `message`. Gets a unique generated key so it never collides
+  with the predefined types. Returns `{:ok, action}` or `{:error, changeset}`.
+  """
+  def create_custom_action(%Site{} = site, %{} = attrs) do
+    %Action{}
+    |> Action.changeset(%{
+      "key" => "custom_#{System.unique_integer([:positive])}",
+      "site_id" => site.id,
+      "status" => "pending",
+      "title" => attrs["title"],
+      "message" => attrs["message"],
+      "priority" => 100
+    })
+    |> Ecto.Changeset.validate_required([:title])
+    |> Repo.insert()
+  end
+
+  @doc """
   Onboarding milestone — called once a site gains its first post or page.
   Staggers in the "set description" nudge (unless a description is already
   set) so a brand-new, empty site isn't overwhelmed with it up front.
@@ -140,6 +159,7 @@ defmodule Masthead.Actions do
   end
 
   @doc "Render-time title for an action."
+  def title(%Action{title: title}) when is_binary(title) and title != "", do: title
   def title(%Action{key: key}), do: Definitions.title(key)
 
   @doc "Render-time button label for an action, or `nil`."

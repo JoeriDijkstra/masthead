@@ -1,7 +1,8 @@
 defmodule MastheadWeb.Router do
   use MastheadWeb, :router
 
-  import MastheadWeb.UserAuth, only: [fetch_current_user: 2, require_authenticated_user: 2]
+  import MastheadWeb.UserAuth,
+    only: [fetch_current_user: 2, require_authenticated_user: 2, require_admin_user: 2]
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -11,6 +12,10 @@ defmodule MastheadWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :fetch_current_user
+  end
+
+  pipeline :require_admin do
+    plug :require_admin_user
   end
 
   scope "/", MastheadWeb do
@@ -44,12 +49,26 @@ defmodule MastheadWeb.Router do
     post "/:provider/callback", AuthController, :callback
   end
 
+  # Admin controller routes (platform admins only).
+  scope "/admin", MastheadWeb do
+    pipe_through [:browser, :require_authenticated_user, :require_admin]
+
+    get "/themes/:id/download", AdminController, :download_theme
+  end
+
   scope "/", MastheadWeb do
     pipe_through [:browser, :require_authenticated_user]
 
     get "/account", AccountController, :show
     post "/account/password", AccountController, :update_password
     post "/account/disable", AccountController, :disable
+
+    # Admin overview — defined before the `/:site_slug` catch-all so "admin"
+    # isn't resolved as a site slug.
+    live_session :admin,
+      on_mount: [{MastheadWeb.UserAuth, :require_admin}] do
+      live "/admin", AdminLive.Console, :index
+    end
 
     live_session :authenticated,
       on_mount: [{MastheadWeb.UserAuth, :require_authenticated}] do

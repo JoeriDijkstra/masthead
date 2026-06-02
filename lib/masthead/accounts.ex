@@ -324,4 +324,19 @@ defmodule Masthead.Accounts do
       {:error, _, reason, _} -> {:error, reason}
     end
   end
+
+  # ---- admin ----
+
+  @doc "Every user, newest first. Admin overview."
+  def list_all_users do
+    Repo.all(from u in User, order_by: [desc: u.inserted_at])
+  end
+
+  @doc "Marks a user's email confirmed without a token (admin verify)."
+  def verify_user(%User{} = user), do: user |> User.confirm_changeset() |> Repo.update()
+
+  @doc "Grants or revokes platform-admin access (console / admin use)."
+  def set_admin(%User{} = user, admin?) when is_boolean(admin?) do
+    user |> User.admin_changeset(admin?) |> Repo.update()
+  end
 end
