@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ site.title | default: site.name | escape }}</title>
+    {% if site.description != "" %}<meta name="description" content="{{ site.description | escape }}" />{% endif %}
+    {% if theme.tokens.favicon != "" %}<link rel="icon" href="{{ theme.tokens.favicon }}" />{% endif %}
+    <!-- Tailwind Play CDN: JITs utilities against the live page, so authors
+         can use any Tailwind class (incl. arbitrary values) in page/post
+         content. The typography plugin powers the `prose` bodies. -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <style>
+      {{ theme.css }}
+      {{ site.css_overrides }}
+    </style>
+  </head>
+  <body class="flex min-h-full flex-col bg-white text-gray-900 antialiased">
+    {% assign bar = "mx-auto max-w-6xl" %}
+    {% if theme.tokens.header_width == "full" %}{% assign bar = "w-full" %}{% endif %}
+    {% unless page.metadata.show_navigation == false %}
+      <header class="sticky top-0 z-20 border-b border-gray-200 bg-white/80 backdrop-blur">
+        <div class="{{ bar }} flex items-center gap-6 px-6 py-4">
+          <a href="/" class="flex items-center gap-2 font-semibold tracking-tight text-gray-900">
+            {% if theme.tokens.logo != "" %}
+              <img src="{{ theme.tokens.logo }}" alt="{{ site.name | escape }}" class="h-8 w-auto" />
+            {% else %}
+              <span>{{ site.name | escape }}</span>
+            {% endif %}
+          </a>
+          {% if pages != empty %}
+            <nav class="ml-auto hidden items-center gap-6 sm:flex">
+              {% for p in pages %}<a href="{{ p.url }}" class="text-sm font-medium text-gray-600 hover:text-gray-900">{{ p.title | escape }}</a>{% endfor %}
+            </nav>
+          {% endif %}
+          {% if theme.tokens.cta_label != "" %}
+            <a href="{{ theme.tokens.cta_url | default: '/' }}" class="{% if pages == empty %}ml-auto {% endif %}rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">{{ theme.tokens.cta_label | escape }}</a>
+          {% endif %}
+        </div>
+      </header>
+    {% endunless %}
+
+    <main class="flex-1">
+      {{ content }}
+    </main>
+
+    {% unless page.metadata.show_navigation == false %}
+      <footer class="border-t border-gray-200 bg-gray-50">
+        <div class="{{ bar }} flex flex-wrap items-center justify-between gap-4 px-6 py-8 text-sm text-gray-500">
+          <span class="font-semibold text-gray-900">{{ site.name | escape }}</span>
+          <span>&copy; {{ site.name | escape }} &middot; Built with <a href="https://masthead.site" class="text-gray-700 underline" target="_blank" rel="noopener">Masthead</a></span>
+        </div>
+      </footer>
+    {% endunless %}
+  </body>
+</html>

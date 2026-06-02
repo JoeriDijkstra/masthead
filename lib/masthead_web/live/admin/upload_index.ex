@@ -16,7 +16,7 @@ defmodule MastheadWeb.AdminLive.UploadIndex do
      )
      |> assign(uploads_list: Uploads.list_uploads(socket.assigns.site.id))
      |> allow_upload(:image,
-       accept: ~w(.png .jpg .jpeg .gif .webp .svg),
+       accept: ~w(.png .jpg .jpeg .gif .webp .svg .ico .pdf),
        max_entries: 8,
        max_file_size: 8_000_000
      )}
@@ -115,7 +115,8 @@ defmodule MastheadWeb.AdminLive.UploadIndex do
         <li :for={u <- @uploads_list}>
           <.link navigate={~p"/#{@site.slug}/uploads/#{u.id}"} class="upload-card">
             <div class="upload-thumb">
-              <img src={Masthead.Uploads.url(u)} alt={u.filename} />
+              <img :if={Uploads.image?(u)} src={Masthead.Uploads.url(u)} alt={u.filename} />
+              <span :if={not Uploads.image?(u)} class="file-badge">{file_ext(u.filename)}</span>
             </div>
             <div class="upload-meta">
               <div class="filename" title={u.filename}>{u.filename}</div>
@@ -165,7 +166,7 @@ defmodule MastheadWeb.AdminLive.UploadIndex do
               </svg>
               <.live_file_input upload={@uploads.image} />
               <p class="dropzone-headline">Drop images here, or click to browse</p>
-              <p class="muted">Up to 8MB each. PNG, JPG, GIF, WebP, SVG.</p>
+              <p class="muted">Up to 8MB each. PNG, JPG, GIF, WebP, SVG, ICO, PDF.</p>
             </label>
 
             <ul :if={@uploads.image.entries != []} class="upload-entries">
@@ -212,6 +213,10 @@ defmodule MastheadWeb.AdminLive.UploadIndex do
   defp format_bytes(b) when b < 1024, do: "#{b} B"
   defp format_bytes(b) when b < 1024 * 1024, do: "#{Float.round(b / 1024, 1)} KB"
   defp format_bytes(b), do: "#{Float.round(b / 1024 / 1024, 1)} MB"
+
+  defp file_ext(filename) do
+    filename |> Path.extname() |> String.trim_leading(".") |> String.upcase()
+  end
 
   # Apply the user's inline rename if present. Strip slashes, trim, and
   # re-attach the original extension when missing — same safety rules as

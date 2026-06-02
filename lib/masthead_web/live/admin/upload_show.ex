@@ -79,13 +79,18 @@ defmodule MastheadWeb.AdminLive.UploadShow do
   defp humanize_error(other), do: "Couldn't rename: #{inspect(other)}"
 
   defp compute_snippets(socket) do
-    url = Uploads.url(socket.assigns.upload)
+    upload = socket.assigns.upload
+    url = Uploads.url(upload)
 
-    assign(socket,
-      url: url,
-      markdown_snippet: "![](#{url})",
-      html_snippet: ~s|<img src="#{url}" alt="" />|
-    )
+    {markdown, html} =
+      if Uploads.image?(upload) do
+        {"![](#{url})", ~s|<img src="#{url}" alt="" />|}
+      else
+        # Non-image files (PDF) embed as a link, not an <img>.
+        {"[#{upload.filename}](#{url})", ~s|<a href="#{url}">#{upload.filename}</a>|}
+      end
+
+    assign(socket, url: url, markdown_snippet: markdown, html_snippet: html)
   end
 
   @impl true
@@ -104,7 +109,10 @@ defmodule MastheadWeb.AdminLive.UploadShow do
 
       <div class="upload-show">
         <div class="upload-preview">
-          <img src={@url} alt={@upload.filename} />
+          <img :if={Uploads.image?(@upload)} src={@url} alt={@upload.filename} />
+          <span :if={not Uploads.image?(@upload)} class="file-badge file-badge-lg">
+            {file_ext(@upload.filename)}
+          </span>
         </div>
 
         <aside class="upload-side">
@@ -222,4 +230,8 @@ defmodule MastheadWeb.AdminLive.UploadShow do
   defp format_bytes(b) when b < 1024, do: "#{b} B"
   defp format_bytes(b) when b < 1024 * 1024, do: "#{Float.round(b / 1024, 1)} KB"
   defp format_bytes(b), do: "#{Float.round(b / 1024 / 1024, 1)} MB"
+
+  defp file_ext(filename) do
+    filename |> Path.extname() |> String.trim_leading(".") |> String.upcase()
+  end
 end

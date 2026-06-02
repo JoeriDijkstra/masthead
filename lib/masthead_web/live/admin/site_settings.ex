@@ -20,7 +20,15 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
        site_uploads: Uploads.list_uploads(site.id),
        action_count: Actions.count_pending(site),
        show_errors: false,
+       picker_open?: false,
+       picker_view: :grid,
+       picker_token: nil,
        selected_theme: pick_theme(themes, current_theme_id(changeset, site))
+     )
+     |> allow_upload(:picker_image,
+       accept: ~w(.png .jpg .jpeg .gif .webp .svg .ico .pdf),
+       max_entries: 1,
+       max_file_size: 8_000_000
      )
      |> assign_form(changeset)}
   end
@@ -59,6 +67,81 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
     end
   end
 
+  # ---- file-token picker modal ----
+
+  def handle_event("open_picker", %{"token" => key}, socket) do
+    {:noreply, assign(socket, picker_open?: true, picker_view: :grid, picker_token: key)}
+  end
+
+  def handle_event("open_uploader", _params, socket) do
+    {:noreply, assign(socket, picker_view: :upload)}
+  end
+
+  def handle_event("back_to_grid", _params, socket) do
+    {:noreply, socket |> cancel_picker_uploads() |> assign(picker_view: :grid)}
+  end
+
+  def handle_event("close_picker", _params, socket) do
+    {:noreply, socket |> cancel_picker_uploads() |> close_picker()}
+  end
+
+  def handle_event("select_upload", %{"id" => id}, socket) do
+    changeset = set_token(socket, socket.assigns.picker_token, id)
+
+    {:noreply,
+     socket
+     |> cancel_picker_uploads()
+     |> close_picker()
+     |> assign_form(changeset)}
+  end
+
+  def handle_event("clear_token", %{"token" => key}, socket) do
+    {:noreply, assign_form(socket, set_token(socket, key, ""))}
+  end
+
+  def handle_event("validate_picker", _params, socket), do: {:noreply, socket}
+
+  def handle_event("cancel_picker_entry", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :picker_image, ref)}
+  end
+
+  def handle_event("upload_file", _params, socket) do
+    results =
+      consume_uploaded_entries(socket, :picker_image, fn %{path: path}, entry ->
+        attrs = %{
+          filename: entry.client_name,
+          content_type: entry.client_type,
+          path: path
+        }
+
+        case Uploads.store_image(socket.assigns.site, attrs) do
+          {:ok, upload} -> {:ok, upload}
+          {:error, reason} -> {:postpone, reason}
+        end
+      end)
+
+    socket = assign(socket, site_uploads: Uploads.list_uploads(socket.assigns.site.id))
+
+    case results do
+      [%Masthead.Uploads.Upload{} = upload | _] ->
+        # Newly uploaded file is immediately selected for the active token.
+        changeset = set_token(socket, socket.assigns.picker_token, to_string(upload.id))
+
+        {:noreply,
+         socket
+         |> close_picker()
+         |> put_flash(:info, "Uploaded #{upload.filename}.")
+         |> assign_form(changeset)}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  defp close_picker(socket) do
+    assign(socket, picker_open?: false, picker_view: :grid, picker_token: nil)
+  end
+
   defp assign_form(socket, changeset) do
     assign(socket, form: to_form(changeset, as: :site), changeset: changeset)
   end
@@ -91,7 +174,8 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
             key: t["key"] || t[:key],
             label: t["label"] || t[:label],
             type: t["type"] || t[:type],
-            default: t["default"] || t[:default]
+            default: t["default"] || t[:default],
+            options: t["options"] || t[:options] || []
           }
         end)
 
@@ -107,9 +191,81 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
     end
   end
 
+  # The value shown in a token input: the per-site override if set, else the
+  # manifest default — so the field (and especially the color picker, which
+  # has no placeholder) reflects the effective value rather than a blank.
+  defp token_display_value(form, tok) do
+    case token_value(form, tok.key) do
+      "" -> to_string(tok.default || "")
+      value -> value
+    end
+  end
+
   defp html_input_type("color"), do: "color"
   defp html_input_type("number"), do: "number"
   defp html_input_type(_), do: "text"
+
+  # Resolve a file token's stored upload id to the upload struct (for the
+  # selected-file preview), or nil when unset / dangling.
+  defp selected_upload(_uploads, value) when value in [nil, ""], do: nil
+
+  defp selected_upload(uploads, value) do
+    Enum.find(uploads, fn u -> to_string(u.id) == to_string(value) end)
+  end
+
+  defp selected_class(current, value) do
+    if to_string(current) == to_string(value), do: " is-selected", else: ""
+  end
+
+  defp file_ext(filename) do
+    filename |> Path.extname() |> String.trim_leading(".") |> String.upcase()
+  end
+
+  # Capitalize only the first letter for display (keeps the rest as-authored,
+  # unlike String.capitalize/1 which lowercases the tail).
+  defp capitalize_first(opt) do
+    case to_string(opt) do
+      <<first::utf8, rest::binary>> -> String.upcase(<<first::utf8>>) <> rest
+      other -> other
+    end
+  end
+
+  # Rebuild the settings changeset with one theme token set/cleared, while
+  # preserving the user's other in-progress (unsaved) field edits. A blank
+  # value drops the key (mirrors normalize_theme_tokens).
+  defp set_token(socket, key, value) do
+    changeset = socket.assigns.changeset
+    tokens = Ecto.Changeset.get_field(changeset, :theme_tokens) || %{}
+
+    tokens =
+      if value in [nil, ""],
+        do: Map.delete(tokens, to_string(key)),
+        else: Map.put(tokens, to_string(key), to_string(value))
+
+    params = Map.put(editable_params(changeset), "theme_tokens", tokens)
+
+    socket.assigns.site
+    |> Sites.change_settings(params)
+    |> Map.put(:action, :validate)
+  end
+
+  defp editable_params(changeset) do
+    for field <- [:name, :title, :description, :theme_id, :theme_css_overrides, :homepage_page_id],
+        into: %{} do
+      {to_string(field), Ecto.Changeset.get_field(changeset, field)}
+    end
+  end
+
+  defp cancel_picker_uploads(socket) do
+    socket.assigns.uploads.picker_image.entries
+    |> Enum.map(& &1.ref)
+    |> Enum.reduce(socket, fn ref, acc -> cancel_upload(acc, :picker_image, ref) end)
+  end
+
+  defp error_to_string(:too_large), do: "Too large"
+  defp error_to_string(:too_many_files), do: "Too many files"
+  defp error_to_string(:not_accepted), do: "Unsupported file type"
+  defp error_to_string(other), do: inspect(other)
 
   defp domain_status_label("pending_dns"), do: "awaiting DNS"
   defp domain_status_label("verified"), do: "verified"
@@ -222,35 +378,13 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
             </header>
 
             <div class="settings-fields">
-              <label :for={tok <- token_definitions(@selected_theme)}>
-                {tok.label}
-                <select
-                  :if={tok.type == "file"}
-                  name={"site[theme_tokens][" <> tok.key <> "]"}
-                >
-                  <option value="" selected={token_value(@form, tok.key) in ["", nil]}>
-                    — None —
-                  </option>
-                  <option
-                    :for={up <- @site_uploads}
-                    value={up.id}
-                    selected={to_string(up.id) == to_string(token_value(@form, tok.key))}
-                  >
-                    {up.filename}
-                  </option>
-                </select>
-                <input
-                  :if={tok.type != "file"}
-                  type={html_input_type(tok.type)}
-                  name={"site[theme_tokens][" <> tok.key <> "]"}
-                  value={token_value(@form, tok.key)}
-                  placeholder={tok.default}
-                />
-                <small :if={tok.type == "file"}>
-                  Pick from your <.link navigate={~p"/#{@site.slug}/uploads"}>uploaded files</.link>.
-                </small>
-                <small :if={tok.type != "file"}>Default: <code>{tok.default}</code></small>
-              </label>
+              <.token_field
+                :for={tok <- token_definitions(@selected_theme)}
+                tok={tok}
+                form={@form}
+                site={@site}
+                site_uploads={@site_uploads}
+              />
             </div>
           </div>
 
@@ -306,7 +440,205 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
           </div>
         </.form>
       </div>
+
+      <div
+        :if={@picker_open?}
+        class="dialog-backdrop"
+        phx-window-keydown="close_picker"
+        phx-key="Escape"
+      >
+        <button
+          type="button"
+          phx-click="close_picker"
+          class="dialog-close-overlay"
+          aria-label="Close"
+          tabindex="-1"
+        >
+        </button>
+        <div class="dialog">
+          <header class="dialog-header">
+            <h2>{if @picker_view == :upload, do: "Upload a file", else: "Choose a file"}</h2>
+            <button type="button" phx-click="close_picker" class="dialog-close" aria-label="Close">
+              &times;
+            </button>
+          </header>
+
+          <div :if={@picker_view == :grid} class="dialog-body">
+            <ul class="picker-grid">
+              <li>
+                <button
+                  type="button"
+                  class={"picker-card" <> selected_class(token_value(@form, @picker_token), "")}
+                  phx-click="select_upload"
+                  phx-value-id=""
+                >
+                  <span class="picker-thumb">
+                    <span class="picker-none-icon" aria-hidden="true">⊘</span>
+                  </span>
+                  <span class="picker-name">No file</span>
+                </button>
+              </li>
+              <li :for={u <- @site_uploads}>
+                <button
+                  type="button"
+                  class={"picker-card" <> selected_class(token_value(@form, @picker_token), to_string(u.id))}
+                  phx-click="select_upload"
+                  phx-value-id={u.id}
+                >
+                  <span class="picker-thumb">
+                    <img :if={Uploads.image?(u)} src={Uploads.url(u)} alt={u.filename} />
+                    <span :if={not Uploads.image?(u)} class="file-badge">{file_ext(u.filename)}</span>
+                  </span>
+                  <span class="picker-name" title={u.filename}>{u.filename}</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="picker-card picker-card-add" phx-click="open_uploader">
+                  <span class="picker-thumb">
+                    <span class="picker-add-icon" aria-hidden="true">+</span>
+                  </span>
+                  <span class="picker-name">Upload new</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <form
+            :if={@picker_view == :upload}
+            id="token-upload-form"
+            phx-submit="upload_file"
+            phx-change="validate_picker"
+            class="dialog-body"
+          >
+            <label class="dropzone" phx-drop-target={@uploads.picker_image.ref}>
+              <svg
+                class="dropzone-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 7.5m0 0L7.5 12m4.5-4.5v12"
+                />
+              </svg>
+              <.live_file_input upload={@uploads.picker_image} />
+              <p class="dropzone-headline">Drop an image here, or click to browse</p>
+              <p class="muted">Up to 8MB. PNG, JPG, GIF, WebP, SVG, ICO, PDF.</p>
+            </label>
+
+            <ul :if={@uploads.picker_image.entries != []} class="upload-entries">
+              <li :for={entry <- @uploads.picker_image.entries}>
+                <span class="filename">{entry.client_name}</span>
+                <span class="muted entry-progress">{entry.progress}%</span>
+                <button
+                  type="button"
+                  phx-click="cancel_picker_entry"
+                  phx-value-ref={entry.ref}
+                  class="btn btn-sm"
+                >
+                  Remove
+                </button>
+                <p
+                  :for={err <- upload_errors(@uploads.picker_image, entry)}
+                  class="error entry-error"
+                >
+                  {error_to_string(err)}
+                </p>
+              </li>
+            </ul>
+
+            <p :for={err <- upload_errors(@uploads.picker_image)} class="error">
+              {error_to_string(err)}
+            </p>
+
+            <div class="dialog-footer">
+              <button type="button" phx-click="back_to_grid" class="btn">Back</button>
+              <button
+                type="submit"
+                class="btn btn-primary"
+                disabled={@uploads.picker_image.entries == []}
+              >
+                Upload &amp; use
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </.shell>
+    """
+  end
+
+  attr :tok, :map, required: true
+  attr :form, :any, required: true
+  attr :site, :map, required: true
+  attr :site_uploads, :list, required: true
+
+  defp token_field(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :selected,
+        selected_upload(assigns.site_uploads, token_value(assigns.form, assigns.tok.key))
+      )
+
+    ~H"""
+    <label>
+      {@tok.label}
+      <div :if={@tok.type == "file"} class="token-file">
+        <input
+          type="hidden"
+          name={"site[theme_tokens][" <> @tok.key <> "]"}
+          value={token_value(@form, @tok.key)}
+        />
+        <span :if={@selected} class="token-file-thumb">
+          <img :if={Uploads.image?(@selected)} src={Uploads.url(@selected)} alt="" />
+          <span :if={not Uploads.image?(@selected)} class="file-badge file-badge-sm">
+            {file_ext(@selected.filename)}
+          </span>
+        </span>
+        <span :if={@selected} class="token-file-name">{@selected.filename}</span>
+        <span :if={is_nil(@selected)} class="token-file-empty">No file selected</span>
+        <div class="token-file-actions">
+          <button
+            type="button"
+            class="btn btn-sm"
+            phx-click="open_picker"
+            phx-value-token={@tok.key}
+          >
+            {if @selected, do: "Change", else: "Choose file"}
+          </button>
+          <button
+            :if={@selected}
+            type="button"
+            class="btn btn-sm"
+            phx-click="clear_token"
+            phx-value-token={@tok.key}
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+      <select :if={@tok.type == "select"} name={"site[theme_tokens][" <> @tok.key <> "]"}>
+        <option
+          :for={opt <- @tok.options}
+          value={opt}
+          selected={to_string(opt) == to_string(token_display_value(@form, @tok))}
+        >
+          {capitalize_first(opt)}
+        </option>
+      </select>
+      <input
+        :if={@tok.type != "file" and @tok.type != "select"}
+        type={html_input_type(@tok.type)}
+        name={"site[theme_tokens][" <> @tok.key <> "]"}
+        value={token_display_value(@form, @tok)}
+      />
+      <small :if={@tok.type != "file"}>Default: <code>{@tok.default}</code></small>
+    </label>
     """
   end
 end

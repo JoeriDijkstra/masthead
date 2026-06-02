@@ -253,7 +253,7 @@ defmodule Masthead.Themes.Package do
   #   {:error, ...}              — reserved slug, not-newer version, or a
   #                                version that isn't valid semver
   defp resolve_target(%Manifest{slug: slug}, _owner_id)
-       when slug in ~w(default studio blank) do
+       when slug in ~w(default studio tailwind) do
     {:error, {:slug_reserved, slug}}
   end
 

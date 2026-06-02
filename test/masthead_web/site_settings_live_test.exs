@@ -32,30 +32,107 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
     %{conn: conn, site: site}
   end
 
-  test "a file token renders as a picker over the site's uploads", %{conn: conn, site: site} do
+  test "a file token renders a picker that lists the site's uploads in a modal", %{
+    conn: conn,
+    site: site
+  } do
     upload = create_upload(site, "brand.png")
 
-    {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/settings")
+    {:ok, lv, html} = live(conn, ~p"/#{site.slug}/settings")
 
-    # The favicon file token renders a <select>, not a free-text input, and
-    # lists the site's existing uploads as options.
+    # The field carries a hidden value input and a "Choose file" trigger —
+    # no inline <select>. The picker (and its options) is closed initially.
     assert html =~ ~s(name="site[theme_tokens][favicon]")
-    assert html =~ "— None —"
-    assert html =~ ~s(value="#{upload.id}")
+    assert html =~ "Choose file"
+    refute html =~ "Upload new"
+
+    # Opening the picker reveals the upload as a card, a "No file" option, and
+    # an "Upload new" add-card.
+    html =
+      lv
+      |> element(~s(button[phx-click="open_picker"][phx-value-token="favicon"]))
+      |> render_click()
+
+    assert html =~ "No file"
     assert html =~ "brand.png"
+    assert html =~ ~s(phx-value-id="#{upload.id}")
+    assert html =~ "Upload new"
   end
 
-  test "selecting an upload persists its id as the token value", %{conn: conn, site: site} do
+  test "selecting an upload and saving persists its id as the token value", %{
+    conn: conn,
+    site: site
+  } do
     upload = create_upload(site, "icon.png")
 
     {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/settings")
 
     lv
-    |> form("#site-settings-form", site: %{theme_tokens: %{favicon: to_string(upload.id)}})
-    |> render_submit()
+    |> element(~s(button[phx-click="open_picker"][phx-value-token="favicon"]))
+    |> render_click()
+
+    # Clicking a card selects it (and closes the modal); the field now shows
+    # the chosen filename.
+    html =
+      lv
+      |> element(~s(button[phx-click="select_upload"][phx-value-id="#{upload.id}"]))
+      |> render_click()
+
+    assert html =~ "icon.png"
+
+    # Selection is part of the settings form; Save persists it.
+    lv |> form("#site-settings-form") |> render_submit()
 
     site = Sites.get_site!(site.id)
     assert site.theme_tokens["favicon"] == to_string(upload.id)
+  end
+
+  test "uploading a new file in the picker stores it and selects it", %{conn: conn, site: site} do
+    {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/settings")
+
+    lv
+    |> element(~s(button[phx-click="open_picker"][phx-value-token="favicon"]))
+    |> render_click()
+
+    # The uploader lives behind the "Upload new" add-card.
+    lv |> element(~s(button[phx-click="open_uploader"])) |> render_click()
+
+    file =
+      file_input(lv, "#token-upload-form", :picker_image, [
+        %{name: "fresh.png", content: "imgbytes", type: "image/png"}
+      ])
+
+    render_upload(file, "fresh.png")
+    html = lv |> element("#token-upload-form") |> render_submit()
+
+    # Stored and immediately selected for the active token.
+    assert html =~ "fresh.png"
+    fresh = Enum.find(Uploads.list_uploads(site.id), &(&1.filename == "fresh.png"))
+    assert fresh
+
+    lv |> form("#site-settings-form") |> render_submit()
+    site = Sites.get_site!(site.id)
+    assert site.theme_tokens["favicon"] == to_string(fresh.id)
+  end
+
+  test "token inputs are pre-filled with the manifest default when unset", %{
+    conn: conn,
+    site: site
+  } do
+    {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/settings")
+
+    # The default theme's accent token defaults to #0066cc — the (color)
+    # input must carry that as its value, not render blank/black.
+    assert html =~ ~s(value="#0066cc")
+  end
+
+  test "a saved override is shown instead of the default", %{conn: conn, site: site} do
+    {:ok, site} = Sites.update_settings(site, %{"theme_tokens" => %{"accent" => "#ff0000"}})
+
+    {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/settings")
+
+    assert html =~ ~s(value="#ff0000")
+    refute html =~ ~s(value="#0066cc")
   end
 
   defp create_upload(site, filename) do
