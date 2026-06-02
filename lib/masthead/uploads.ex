@@ -15,6 +15,16 @@ defmodule Masthead.Uploads do
   end
 
   @doc """
+  Site-scoped fetch that returns `nil` instead of raising when the upload
+  is missing. Used by the theme renderer to resolve `file` token ids,
+  where a dangling reference (deleted upload) must degrade to "no file"
+  rather than crash the public page.
+  """
+  def get_upload(site_id, id) do
+    Repo.one(from u in Upload, where: u.site_id == ^site_id and u.id == ^id)
+  end
+
+  @doc """
   Stores an upload tied to a site. `source` must be a path to a file on disk
   (which is what Phoenix.LiveView `consume_uploaded_entries` and
   Plug.Upload both give you).

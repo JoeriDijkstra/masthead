@@ -16,12 +16,13 @@ defmodule Masthead.Themes.ManifestTest do
         {"key":"a","label":"A","type":"color","default":"#fff"},
         {"key":"b","label":"B","type":"string","default":"Inter"},
         {"key":"c","label":"C","type":"length","default":"4rem"},
-        {"key":"d","label":"D","type":"number","default":"4"}
+        {"key":"d","label":"D","type":"number","default":"4"},
+        {"key":"e","label":"E","type":"file","default":""}
       ]}
       """
 
       assert {:ok, %Manifest{tokens: tokens}} = Manifest.parse(json)
-      assert length(tokens) == 4
+      assert length(tokens) == 5
     end
 
     test "rejects invalid JSON" do

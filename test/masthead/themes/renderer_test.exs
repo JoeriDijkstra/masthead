@@ -7,7 +7,7 @@ defmodule Masthead.Themes.RendererTest do
   """
   use Masthead.DataCase
 
-  alias Masthead.{Accounts, Sites, Content, Themes}
+  alias Masthead.{Accounts, Sites, Content, Themes, Uploads}
   alias Masthead.Themes.Renderer
 
   setup do
@@ -145,6 +145,47 @@ defmodule Masthead.Themes.RendererTest do
     end
   end
 
+  describe "file tokens" do
+    test "a selected favicon resolves to a <link rel=icon> and a url() var", %{site: site} do
+      upload = create_upload(site, "fav.png")
+
+      {:ok, site} =
+        Sites.update_settings(site, %{"theme_tokens" => %{"favicon" => to_string(upload.id)}})
+
+      site = Sites.get_site!(site.id)
+      pages = Content.list_published_pages(site.id)
+      out = Renderer.render_index(%{site: site, posts: [], pages: pages})
+
+      url = Uploads.url(upload)
+      assert out =~ ~s(<link rel="icon" href="#{url}")
+      assert out =~ "--favicon: url(#{url});"
+    end
+
+    test "no favicon selected emits neither an icon link nor a favicon var", %{site: site} do
+      pages = Content.list_published_pages(site.id)
+      out = Renderer.render_index(%{site: site, posts: [], pages: pages})
+
+      refute out =~ ~s(rel="icon")
+      refute out =~ "--favicon"
+    end
+
+    test "a dangling id (deleted upload) degrades to no favicon", %{site: site} do
+      upload = create_upload(site, "gone.png")
+
+      {:ok, site} =
+        Sites.update_settings(site, %{"theme_tokens" => %{"favicon" => to_string(upload.id)}})
+
+      {:ok, _} = Uploads.delete_upload(upload)
+
+      site = Sites.get_site!(site.id)
+      pages = Content.list_published_pages(site.id)
+      out = Renderer.render_index(%{site: site, posts: [], pages: pages})
+
+      refute out =~ ~s(rel="icon")
+      refute out =~ "--favicon"
+    end
+  end
+
   describe "page metadata" do
     setup %{user: user, site: site} do
       # Install a tiny theme that declares a metadata schema and uses it
@@ -222,6 +263,23 @@ defmodule Masthead.Themes.RendererTest do
 
       assert page.metadata["from_old_theme"] == "still here"
     end
+  end
+
+  # Helper: store an upload for the site via the real Uploads pipeline so
+  # the resolved URL matches what the renderer produces in this env.
+  defp create_upload(site, filename) do
+    tmp = Path.join(System.tmp_dir!(), "up-#{System.unique_integer([:positive])}.png")
+    File.write!(tmp, "not-a-real-png-but-bytes")
+
+    {:ok, upload} =
+      Uploads.store_image(site, %{
+        filename: filename,
+        content_type: "image/png",
+        path: tmp
+      })
+
+    File.rm(tmp)
+    upload
   end
 
   # Helper: write a minimal zipped theme that surfaces page.metadata.layout

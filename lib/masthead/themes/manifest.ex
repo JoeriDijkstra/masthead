@@ -22,9 +22,13 @@ defmodule Masthead.Themes.Manifest do
     * `string` — free-text input (e.g. font stack)
     * `length` — CSS length string (`880px`, `60ch`, `4rem`)
     * `number` — numeric input, stored as a string for CSS embedding
+    * `file`   — a picker over the site's existing uploads; the stored
+      value is the chosen upload's **id**, resolved to a public URL at
+      render time (see `Masthead.Themes.Renderer`). Useful for favicons,
+      header images, logos, etc. Default should be `""` (no file).
   """
 
-  @valid_token_types ~w(color string length number)
+  @valid_token_types ~w(color string length number file)
   @valid_metadata_types ~w(string text boolean color url select number)
 
   @slug_re ~r/^[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?$/

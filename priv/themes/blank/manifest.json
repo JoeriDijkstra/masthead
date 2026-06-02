@@ -1,10 +1,17 @@
 {
   "name": "Blank",
   "slug": "blank",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Masthead",
   "description": "Zero chrome — your HTML defines the entire layout.",
-  "tokens": [],
+  "tokens": [
+    {
+      "key": "favicon",
+      "label": "Favicon",
+      "type": "file",
+      "default": ""
+    }
+  ],
   "metadata": [
     {
       "key": "layout",

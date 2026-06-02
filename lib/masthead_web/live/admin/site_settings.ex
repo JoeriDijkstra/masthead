@@ -3,7 +3,7 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
   on_mount {MastheadWeb.AdminLive.Hooks, :load_site}
 
   import MastheadWeb.AdminLive.Components
-  alias Masthead.{Actions, Sites, Themes, Content}
+  alias Masthead.{Actions, Sites, Themes, Content, Uploads}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -17,6 +17,7 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
        page_title: "Settings — #{site.name}",
        themes: themes,
        published_pages: Content.list_published_pages(site.id),
+       site_uploads: Uploads.list_uploads(site.id),
        action_count: Actions.count_pending(site),
        show_errors: false,
        selected_theme: pick_theme(themes, current_theme_id(changeset, site))
@@ -223,13 +224,32 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
             <div class="settings-fields">
               <label :for={tok <- token_definitions(@selected_theme)}>
                 {tok.label}
+                <select
+                  :if={tok.type == "file"}
+                  name={"site[theme_tokens][" <> tok.key <> "]"}
+                >
+                  <option value="" selected={token_value(@form, tok.key) in ["", nil]}>
+                    — None —
+                  </option>
+                  <option
+                    :for={up <- @site_uploads}
+                    value={up.id}
+                    selected={to_string(up.id) == to_string(token_value(@form, tok.key))}
+                  >
+                    {up.filename}
+                  </option>
+                </select>
                 <input
+                  :if={tok.type != "file"}
                   type={html_input_type(tok.type)}
                   name={"site[theme_tokens][" <> tok.key <> "]"}
                   value={token_value(@form, tok.key)}
                   placeholder={tok.default}
                 />
-                <small>Default: <code>{tok.default}</code></small>
+                <small :if={tok.type == "file"}>
+                  Pick from your <.link navigate={~p"/#{@site.slug}/uploads"}>uploaded files</.link>.
+                </small>
+                <small :if={tok.type != "file"}>Default: <code>{tok.default}</code></small>
               </label>
             </div>
           </div>
