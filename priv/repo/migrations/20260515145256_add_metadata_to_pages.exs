@@ -1,4 +1,4 @@
-defmodule Ledger.Repo.Migrations.AddMetadataToPages do
+defmodule Masthead.Repo.Migrations.AddMetadataToPages do
   use Ecto.Migration
 
   def change do

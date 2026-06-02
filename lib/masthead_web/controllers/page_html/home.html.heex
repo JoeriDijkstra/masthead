@@ -1,0 +1,274 @@
+<div class="landing">
+  <nav class="landing-nav">
+    <a class="brand" href="/">
+      <span class="brand-mark">●</span>
+      <span class="brand-name">Masthead</span>
+    </a>
+    <div class="nav-cta">
+      <a
+        href="https://github.com/JoeriDijkstra/masthead"
+        target="_blank"
+        rel="noopener"
+        class="github-btn"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M12 .5C5.6.5.5 5.6.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2 1-.3 2-.4 3-.4s2 .1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.9 7.9-10.9C23.5 5.6 18.4.5 12 .5z" />
+        </svg>
+        <span>GitHub</span>
+      </a>
+      <%= if assigns[:current_user] do %>
+        <.link navigate={~p"/sites"} class="btn btn-primary btn-sm">Open dashboard &rarr;</.link>
+      <% else %>
+        <.link navigate={~p"/login"} class="nav-link">Log in</.link>
+        <.link navigate={~p"/signup"} class="btn btn-primary btn-sm">Sign up</.link>
+      <% end %>
+    </div>
+  </nav>
+
+  <section class="landing-hero">
+    <div class="hero-inner">
+      <span class="hero-eyebrow">Open-source platform</span>
+      <h1>Simple websites without the complexity of traditional CMS platforms.</h1>
+      <p class="hero-lede">
+        Masthead is a hosted platform for blogs and small business sites. Each
+        site runs on its own subdomain, content is written in Markdown or
+        HTML, and the whole project is open source.
+      </p>
+      <div class="hero-cta">
+        <%= if assigns[:current_user] do %>
+          <.link navigate={~p"/sites"} class="btn btn-primary btn-lg">
+            Open dashboard &rarr;
+          </.link>
+        <% else %>
+          <.link navigate={~p"/signup"} class="btn btn-primary btn-lg">Create your site</.link>
+          <a
+            href="https://github.com/JoeriDijkstra/masthead"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-ghost btn-lg"
+          >
+            View on GitHub
+          </a>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="hero-mock">
+      <div class="mock-window">
+        <div class="mock-chrome">
+          <span class="dot dot-r"></span>
+          <span class="dot dot-y"></span>
+          <span class="dot dot-g"></span>
+          <span class="mock-url">your-site.masthead.site</span>
+        </div>
+        <div class="mock-body">
+          <span class="mock-eyebrow">Company Updates · Today</span>
+          <h3>Launching our new product line</h3>
+          <p>
+            Bring your team's writing online without the overhead of a traditional content management system.
+          </p>
+          <span class="mock-link">Read &rarr;</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-features">
+    <h2 class="section-title">What's included</h2>
+
+    <ul class="feature-grid">
+      <li class="feature-card">
+        <div class="feature-icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418"
+            />
+          </svg>
+        </div>
+        <h3>Custom domains</h3>
+        <p>
+          Point your own domain at any site — apex or subdomain. Masthead handles TLS automatically and serves over HTTPS the moment DNS resolves.
+        </p>
+      </li>
+
+      <li class="feature-card">
+        <div class="feature-icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z"
+            />
+          </svg>
+        </div>
+        <h3>Unlimited sites</h3>
+        <p>
+          Run as many sites as you need from one account — separate brands, products, or business units, all managed from a single dashboard.
+        </p>
+      </li>
+
+      <li class="feature-card">
+        <div class="feature-icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M16.862 4.487 18.549 2.8a2.121 2.121 0 1 1 3 3L19.862 7.487m-3-3L6.34 15.013a4.5 4.5 0 0 0-1.13 1.897l-.943 3.18 3.18-.943a4.5 4.5 0 0 0 1.897-1.13L19.862 7.487m-3-3 3 3"
+            />
+          </svg>
+        </div>
+        <h3>Markdown and HTML editors</h3>
+        <p>
+          Write in Markdown for speed or HTML for full design control. Both editors come with syntax highlighting so structure is always at a glance.
+        </p>
+      </li>
+
+      <li class="feature-card">
+        <div class="feature-icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z"
+            />
+          </svg>
+        </div>
+        <h3>Built-in blog functionality</h3>
+        <p>
+          Designate any page as a blog and Masthead generates the post list for you. Want it on the homepage? Toggle it in settings.
+        </p>
+      </li>
+
+      <li class="feature-card">
+        <div class="feature-icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+            />
+          </svg>
+        </div>
+        <h3>Image library</h3>
+        <p>
+          Upload once, reuse anywhere. Every image comes with copy-and-paste Markdown and HTML embed snippets ready for any page.
+        </p>
+      </li>
+
+      <li class="feature-card">
+        <div class="feature-icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4.098 19.902a3.75 3.75 0 0 0 5.304 0l6.401-6.402M6.75 21A3.75 3.75 0 0 1 3 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 0 0 3.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88M6.75 17.25h.008v.008H6.75v-.008Z"
+            />
+          </svg>
+        </div>
+        <h3>Custom uploadable themes</h3>
+        <p>
+          Pick from built-in themes or upload your own zip — Liquid templates, CSS, and a manifest. Iterate on design without touching the platform.
+        </p>
+      </li>
+    </ul>
+  </section>
+
+  <section class="landing-cta">
+    <div class="cta-card">
+      <h2>Get started today.</h2>
+      <p>
+        Create an account, set up your first site, and publish in minutes. Or audit the source first.
+      </p>
+      <div class="hero-cta">
+        <%= if assigns[:current_user] do %>
+          <.link navigate={~p"/sites"} class="btn btn-primary btn-lg">Open dashboard</.link>
+        <% else %>
+          <.link navigate={~p"/signup"} class="btn btn-primary btn-lg">Create your site</.link>
+          <a
+            href="https://github.com/JoeriDijkstra/masthead"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-ghost btn-lg"
+          >
+            View on GitHub
+          </a>
+        <% end %>
+      </div>
+    </div>
+  </section>
+
+  <footer class="landing-footer">
+    <div class="landing-footer-brand">
+      <span class="brand-mark">●</span>
+      <strong>Masthead</strong>
+      <span class="landing-version">v{Application.spec(:masthead, :vsn)}</span>
+    </div>
+    <div class="landing-footer-links">
+      <%= if assigns[:current_user] do %>
+        <.link navigate={~p"/sites"}>Dashboard</.link>
+      <% else %>
+        <.link navigate={~p"/login"}>Log in</.link>
+        <.link navigate={~p"/signup"}>Sign up</.link>
+      <% end %>
+    </div>
+    <a
+      href="https://github.com/JoeriDijkstra/masthead"
+      target="_blank"
+      rel="noopener"
+      class="github-btn"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M12 .5C5.6.5.5 5.6.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2 1-.3 2-.4 3-.4s2 .1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.9 7.9-10.9C23.5 5.6 18.4.5 12 .5z" />
+      </svg>
+      <span>GitHub</span>
+    </a>
+  </footer>
+</div>

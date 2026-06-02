@@ -1,4 +1,4 @@
-defmodule Ledger.Repo.Migrations.AddThemeIdToSites do
+defmodule Masthead.Repo.Migrations.AddThemeIdToSites do
   use Ecto.Migration
 
   def change do

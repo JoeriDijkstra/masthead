@@ -6,18 +6,18 @@ not repeat it.
 
 ## What this is
 
-**Ledger** — an open-source, multi-tenant publishing platform for blogs
-and small business sites (hosted at ledger-cloud.com). Each site runs on
+**Masthead** — an open-source, multi-tenant publishing platform for blogs
+and small business sites (hosted at masthead.site). Each site runs on
 its own subdomain; content is Markdown or HTML; the whole thing deploys
 as a single Phoenix/OTP release.
 
 ## Architecture map
 
 - **Multi-tenancy** is resolved at the `Host:` header by
-  `LedgerWeb.Plugs.Subdomain` — the site row is looked up by subdomain
+  `MastheadWeb.Plugs.Subdomain` — the site row is looked up by subdomain
   and assigned to `conn.assigns.current_site`.
-- **Two routers**: `LedgerWeb.PublicRouter` serves site-scoped public
-  URLs (`/`, `/posts/:slug`, `/:slug`); `LedgerWeb.Router` serves the
+- **Two routers**: `MastheadWeb.PublicRouter` serves site-scoped public
+  URLs (`/`, `/posts/:slug`, `/:slug`); `MastheadWeb.Router` serves the
   admin + marketing surface on the bare app host.
 - **Themes** are data, not code. A theme is a row in `themes` plus
   files in object storage (or `priv/themes/` for built-ins). The render
@@ -28,10 +28,10 @@ as a single Phoenix/OTP release.
 - **Per-page theme settings** come from the theme manifest's `metadata`
   schema, rendered as a form step in `AdminLive.PageForm`, stored in
   `pages.metadata` jsonb, merged with manifest defaults at render time.
-- **Object storage** is pluggable via `Ledger.Storage.Adapter`
+- **Object storage** is pluggable via `Masthead.Storage.Adapter`
   (`Local` for dev, `S3` for prod). Call sites are adapter-agnostic.
 - **Content sanitization**: all post/page bodies pass through
-  `Ledger.Content.HTML.Scrubber` (HtmlSanitizeEx). It allows structural
+  `Masthead.Content.HTML.Scrubber` (HtmlSanitizeEx). It allows structural
   tags + `class`/`id` but strips `<script>`, `<style>`, `on*`,
   `javascript:` URLs, and inline `style`. Theme templates are NOT
   sanitized (author-trusted).
@@ -60,7 +60,7 @@ as a single Phoenix/OTP release.
   VM. Theme content changes need `Loader.invalidate/1` (or a restart).
   Page *content* is read fresh per request — no cache, no restart.
 - Theme zip = `manifest.json` + `theme.css` + `templates/`. The
-  `pages/` HTML in a theme repo is pasted into Ledger as page content,
+  `pages/` HTML in a theme repo is pasted into Masthead as page content,
   not part of the zip. Re-uploading a theme updates in place only if
   the manifest `version` is a strictly-newer SemVer.
 

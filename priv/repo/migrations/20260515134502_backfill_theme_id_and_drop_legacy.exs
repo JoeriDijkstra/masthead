@@ -1,4 +1,4 @@
-defmodule Ledger.Repo.Migrations.BackfillThemeIdAndDropLegacy do
+defmodule Masthead.Repo.Migrations.BackfillThemeIdAndDropLegacy do
   use Ecto.Migration
   import Ecto.Query
 
@@ -17,11 +17,13 @@ defmodule Ledger.Repo.Migrations.BackfillThemeIdAndDropLegacy do
 
   def up do
     # 1. Seed built-ins (idempotent — safe to run inside a migration).
-    Ledger.Themes.Seed.run()
+    Masthead.Themes.Seed.run()
 
     # Cache the built-in slug → id lookup once.
     built_ins =
-      Ledger.Repo.all(from(t in "themes", where: t.source == "built_in", select: {t.slug, t.id}))
+      Masthead.Repo.all(
+        from(t in "themes", where: t.source == "built_in", select: {t.slug, t.id})
+      )
       |> Map.new()
 
     default_id =

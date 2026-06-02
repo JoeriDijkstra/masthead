@@ -4,7 +4,7 @@
 @import "tailwindcss" source(none);
 @source "../css";
 @source "../js";
-@source "../../lib/ledger_web";
+@source "../../lib/masthead_web";
 
 /* A Tailwind plugin that makes "hero-#{ICON}" classes available.
    The heroicons installation itself is managed by your mix.exs */
@@ -102,7 +102,7 @@
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
-/* ---- Ledger: admin + auth + marketing ---- */
+/* ---- Masthead: admin + auth + marketing ---- */
 
 :root {
   --fg: #18181b;
@@ -1770,6 +1770,30 @@ button.danger:hover { filter: brightness(0.92); }
 .landing .nav-cta { display: flex; align-items: center; gap: 1rem; }
 .landing .nav-link { color: var(--landing-fg-soft); font-weight: 500; font-size: 0.92rem; }
 .landing .nav-link:hover { color: var(--landing-fg); }
+/* Base GitHub button for admin contexts (e.g. the Themes top bar). The
+   landing page overrides these with its own palette via the more specific
+   `.landing .github-btn` rules below. */
+.github-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  background: var(--card);
+  color: var(--fg);
+  font-weight: 500;
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.github-btn:hover {
+  background: var(--bg);
+  border-color: var(--rule-strong);
+  text-decoration: none;
+}
+.github-btn svg { width: 18px; height: 18px; }
+
 .landing .github-btn {
   display: inline-flex;
   align-items: center;
@@ -2143,12 +2167,15 @@ button.danger:hover { filter: brightness(0.92); }
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
+  width: 100%;
   padding: 1.1rem 1.15rem;
   background: transparent;
   border-style: dashed;
   border-color: var(--rule-strong);
   text-align: center;
   color: var(--muted);
+  font: inherit;
+  cursor: pointer;
   box-shadow: none;
 }
 .theme-card-add:hover {

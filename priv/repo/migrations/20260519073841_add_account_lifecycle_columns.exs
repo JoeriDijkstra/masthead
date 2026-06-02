@@ -1,4 +1,4 @@
-defmodule Ledger.Repo.Migrations.AddAccountLifecycleColumns do
+defmodule Masthead.Repo.Migrations.AddAccountLifecycleColumns do
   use Ecto.Migration
 
   def change do

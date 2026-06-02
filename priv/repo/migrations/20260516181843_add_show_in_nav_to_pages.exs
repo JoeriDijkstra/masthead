@@ -1,4 +1,4 @@
-defmodule Ledger.Repo.Migrations.AddShowInNavToPages do
+defmodule Masthead.Repo.Migrations.AddShowInNavToPages do
   use Ecto.Migration
 
   def change do

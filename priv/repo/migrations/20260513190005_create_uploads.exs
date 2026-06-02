@@ -1,4 +1,4 @@
-defmodule Ledger.Repo.Migrations.CreateUploads do
+defmodule Masthead.Repo.Migrations.CreateUploads do
   use Ecto.Migration
 
   def change do

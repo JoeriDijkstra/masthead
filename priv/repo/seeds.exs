@@ -1,6 +1,6 @@
-alias Ledger.Accounts
-alias Ledger.Sites
-alias Ledger.Content
+alias Masthead.Accounts
+alias Masthead.Sites
+alias Masthead.Content
 
 # Demo user
 {:ok, user} =
@@ -18,7 +18,7 @@ alias Ledger.Content
         "name" => "Example Site",
         "title" => "Example Site",
         "description" =>
-          "A placeholder site seeded with Ledger. Use it to explore the platform — edit, publish, or delete anything.",
+          "A placeholder site seeded with Masthead. Use it to explore the platform — edit, publish, or delete anything.",
         "owner_id" => user.id
       })
 
@@ -32,11 +32,11 @@ case Content.list_posts(site.id) do
     posts = [
       %{
         "title" => "Welcome to your new site",
-        "excerpt" => "A short tour of what Ledger lets you publish and how to get started.",
+        "excerpt" => "A short tour of what Masthead lets you publish and how to get started.",
         "body" => """
         ## Welcome
 
-        This is the first post on your new Ledger site. You can edit it,
+        This is the first post on your new Masthead site. You can edit it,
         unpublish it, or delete it from the admin dashboard.
 
         ### What you can publish
@@ -62,7 +62,7 @@ case Content.list_posts(site.id) do
           "Markdown gives you headings, lists, links, and code without leaving the keyboard.",
         "body" => """
         Markdown is a plain-text shorthand for the common structural
-        elements of writing online. Ledger uses it as the default editor
+        elements of writing online. Masthead uses it as the default editor
         because it gets out of the way.
 
         ### What you get for free
@@ -104,7 +104,7 @@ case Content.list_posts(site.id) do
         ## About this site
 
         This is the placeholder *About* page for the example site seeded
-        with Ledger. Edit the body, change the slug, or delete it — it's
+        with Masthead. Edit the body, change the slug, or delete it — it's
         here to show that a published page appears automatically in the
         site navigation.
         """,

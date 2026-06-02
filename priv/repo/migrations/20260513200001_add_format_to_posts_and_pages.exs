@@ -1,4 +1,4 @@
-defmodule Ledger.Repo.Migrations.AddFormatToPostsAndPages do
+defmodule Masthead.Repo.Migrations.AddFormatToPostsAndPages do
   use Ecto.Migration
 
   def change do

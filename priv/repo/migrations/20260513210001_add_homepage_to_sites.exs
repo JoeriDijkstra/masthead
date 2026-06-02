@@ -1,4 +1,4 @@
-defmodule Ledger.Repo.Migrations.AddHomepageToSites do
+defmodule Masthead.Repo.Migrations.AddHomepageToSites do
   use Ecto.Migration
 
   def change do

@@ -2,7 +2,7 @@
   "name": "Default",
   "slug": "default",
   "version": "1.2.0",
-  "author": "Ledger",
+  "author": "Masthead",
   "description": "Minimal, readable, opinionated about typography.",
   "tokens": [
     {

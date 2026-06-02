@@ -1,11 +1,11 @@
-# Ledger
+# Masthead
 
 Open-source, multi-tenant publishing platform for blogs and small business
 sites. Each site runs on its own subdomain, content is written in Markdown
 or HTML, and the whole project deploys as a single application.
 
-A hosted instance runs at [**ledger-cloud.com**](https://ledger-cloud.com)
-— sign up there to use Ledger without operating it yourself, or follow the
+A hosted instance runs at [**masthead.site**](https://masthead.site)
+— sign up there to use Masthead without operating it yourself, or follow the
 instructions below to self-host.
 
 ## What you get
@@ -28,13 +28,13 @@ instructions below to self-host.
 
 - Phoenix LiveView app, single Postgres database, single OTP release.
 - Multi-tenancy resolved at the `Host:` header by
-  `LedgerWeb.Plugs.Subdomain` — site rows in the `sites` table are looked
+  `MastheadWeb.Plugs.Subdomain` — site rows in the `sites` table are looked
   up by subdomain on every request and assigned to
   `conn.assigns.current_site`.
-- Two routers: `LedgerWeb.PublicRouter` serves site-scoped public URLs
-  (`/`, `/posts/:slug`, `/:slug`); `LedgerWeb.Router` serves the admin
+- Two routers: `MastheadWeb.PublicRouter` serves site-scoped public URLs
+  (`/`, `/posts/:slug`, `/:slug`); `MastheadWeb.Router` serves the admin
   and marketing surface on the bare app host.
-- Object storage is pluggable via `Ledger.Storage.Adapter`. Ships with a
+- Object storage is pluggable via `Masthead.Storage.Adapter`. Ships with a
   local-disk adapter for development and an S3-compatible adapter for
   production (works with any S3-compatible provider).
 
@@ -75,7 +75,7 @@ All prod config is read from environment variables (see
 | `DATABASE_URL` | Postgres connection string |
 | `SECRET_KEY_BASE` | Cookie / LiveView token signing key (`mix phx.gen.secret`) |
 | `PHX_SERVER` | `true` to start the HTTP server |
-| `PHX_HOST` | The canonical hostname (e.g. `ledger-cloud.com`) |
+| `PHX_HOST` | The canonical hostname (e.g. `masthead.site`) |
 | `APP_HOSTS` | Comma-separated hostnames treated as the bare app surface. Subdomains of any of these are routed as sites. Defaults to `PHX_HOST`. |
 
 ### Optional — object storage (S3-compatible)
@@ -115,14 +115,14 @@ since HTTP-01 doesn't support wildcards. Most modern hosting providers
 
 ```
 lib/
-├── ledger/                          # business logic
+├── masthead/                          # business logic
 │   ├── accounts/                    # users + session auth
 │   ├── sites/                       # tenant sites
 │   ├── content/                     # posts, pages, HTML sanitizer
 │   ├── uploads/                     # file metadata
 │   ├── storage/                     # local + S3 adapters
 │   └── themes/                      # default, studio, blank
-└── ledger_web/
+└── masthead_web/
     ├── plugs/subdomain.ex           # host → site resolution
     ├── public_router.ex             # site-scoped routes
     ├── router.ex                    # admin + marketing routes
@@ -133,7 +133,7 @@ lib/
 ## Contributing
 
 Issues and pull requests welcome at
-[github.com/JoeriDijkstra/ledger](https://github.com/JoeriDijkstra/ledger).
+[github.com/JoeriDijkstra/masthead](https://github.com/JoeriDijkstra/masthead).
 
 ## License
 

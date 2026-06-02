@@ -1,1 +1,1 @@
-call "%~dp0\ledger" eval Ledger.Release.migrate
+call "%~dp0\masthead" eval Masthead.Release.migrate

@@ -7,19 +7,19 @@
 # General application configuration
 import Config
 
-config :ledger,
-  ecto_repos: [Ledger.Repo],
+config :masthead,
+  ecto_repos: [Masthead.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # Hosts treated as the bare app surface (no subdomain). Overridden via APP_HOSTS
 # at runtime in prod. Dev defaults to lvh.me so `*.lvh.me:4000` resolves to
 # 127.0.0.1 without any /etc/hosts changes.
-config :ledger, :app_hosts, ~w(lvh.me localhost 127.0.0.1)
+config :masthead, :app_hosts, ~w(lvh.me localhost 127.0.0.1)
 
 # Used by the admin to build the public URL of a site (for "View site" links
 # and the slug helper text in the new-site form). Prod overrides this in
 # runtime.exs with the real domain + https.
-config :ledger, :site_url,
+config :masthead, :site_url,
   scheme: "http",
   host: "lvh.me",
   port: 4000
@@ -28,25 +28,25 @@ config :ledger, :site_url,
 # their domain's CNAME at (the Fly app's edge); `txt_prefix` is the
 # label under which the ownership token is published as a TXT record.
 # Prod overrides `cname_target` from FLY_APP_NAME in runtime.exs.
-config :ledger, :custom_domain,
-  cname_target: "dijkstra-ledger.fly.dev",
-  txt_prefix: "_ledger-verify"
+config :masthead, :custom_domain,
+  cname_target: "dijkstra-masthead.fly.dev",
+  txt_prefix: "_masthead-verify"
 
 # Configure the endpoint
-config :ledger, LedgerWeb.Endpoint,
+config :masthead, MastheadWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [html: LedgerWeb.ErrorHTML, json: LedgerWeb.ErrorJSON],
+    formats: [html: MastheadWeb.ErrorHTML, json: MastheadWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Ledger.PubSub,
+  pubsub_server: Masthead.PubSub,
   live_view: [signing_salt: "MCz9rXle"]
 
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",
-  ledger: [
+  masthead: [
     args:
       ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
     cd: Path.expand("../assets", __DIR__),
@@ -56,7 +56,7 @@ config :esbuild,
 # Configure tailwind (the version is required)
 config :tailwind,
   version: "4.1.12",
-  ledger: [
+  masthead: [
     args: ~w(
       --input=assets/css/app.css
       --output=priv/static/assets/css/app.css
@@ -75,12 +75,12 @@ config :phoenix, :json_library, Jason
 # Transactional email (Swoosh). Adapter is environment-specific: Local in
 # dev, Test in test, Resend in prod (see the respective config files).
 # Hackney is the HTTP API client (already a dependency).
-config :ledger, Ledger.Mailer, adapter: Swoosh.Adapters.Local
+config :masthead, Masthead.Mailer, adapter: Swoosh.Adapters.Local
 config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 
 # Default "from" for account email. Prod overrides this from MAIL_FROM in
 # runtime.exs once a verified sending domain exists.
-config :ledger, :mail_from, {"Ledger", "noreply@ledger-cloud.com"}
+config :masthead, :mail_from, {"Masthead", "noreply@masthead.site"}
 
 # Background jobs (Oban). The maintenance queue runs the unconfirmed-account
 # sweep; mailers runs transactional email with retries. The Cron schedule
@@ -99,17 +99,17 @@ config :ueberauth, Ueberauth,
 # (already a dependency) instead of the bare :httpc default.
 config :tesla, adapter: Tesla.Adapter.Hackney
 
-config :ledger, Oban,
-  repo: Ledger.Repo,
+config :masthead, Oban,
+  repo: Masthead.Repo,
   queues: [mailers: 10, maintenance: 5],
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
     {Oban.Plugins.Cron,
      crontab: [
        # Daily 03:00 UTC: disable accounts unconfirmed for 7+ days.
-       {"0 3 * * *", Ledger.Workers.DisableUnconfirmed},
+       {"0 3 * * *", Masthead.Workers.DisableUnconfirmed},
        # Daily 04:00 UTC: remind owners of onboarding actions open for 7+ days.
-       {"0 4 * * *", Ledger.Workers.OnboardingReminder}
+       {"0 4 * * *", Masthead.Workers.OnboardingReminder}
      ]}
   ]
 

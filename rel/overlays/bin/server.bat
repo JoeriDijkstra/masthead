@@ -1,2 +1,2 @@
 set PHX_SERVER=true
-call "%~dp0\ledger" start
+call "%~dp0\masthead" start
