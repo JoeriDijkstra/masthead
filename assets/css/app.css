@@ -480,6 +480,14 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 .auth-card section h2 { font-size: 1rem; margin-bottom: 0.5rem; }
 .danger-zone { border-top: 1px solid #fecaca; padding-top: 1.25rem; }
 .danger-zone h2 { color: var(--danger); }
+.danger-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.danger-row p { margin: 0.3rem 0 0; max-width: 52ch; font-size: 0.85rem; line-height: 1.55; }
+.danger-row .btn-danger { flex: 0 0 auto; }
 button.danger {
   background: var(--danger);
   color: #fff;
@@ -1646,6 +1654,27 @@ button.danger:hover { filter: brightness(0.92); }
   padding: 1rem 1.5rem;
   background: var(--bg-soft);
 }
+/* Create-site modal: scroll only the fields, keep the footer pinned below
+   the scroll region. With the default .dialog-form the footer lives inside
+   the scroll area, so on a short viewport it scrolls away and the scrollbar
+   runs over the footer and the dialog's rounded bottom corners. The fields
+   go in .dialog-scroll (the only scroller); the footer sits flush beneath
+   it, so no negative-margin bleed is needed. */
+#new-site-form {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  min-height: 0;
+}
+#new-site-form .dialog-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  overflow-y: auto;
+  min-height: 0;
+}
+#new-site-form .dialog-footer { margin: 0; }
 .section-heading { margin-top: 2.5rem; }
 
 .upload-grid {
