@@ -3,7 +3,7 @@ defmodule MastheadWeb.PageFormLiveTest do
 
   import Phoenix.LiveViewTest
 
-  alias Masthead.{Accounts, Sites, Themes}
+  alias Masthead.{Accounts, Content, Sites, Themes}
 
   setup do
     Masthead.Themes.Seed.run()
@@ -48,5 +48,34 @@ defmodule MastheadWeb.PageFormLiveTest do
     # brand-new page must start with the checkbox checked.
     assert html =~ ~s(id="meta-show_navigation")
     assert html =~ ~r/<input[^>]*id="meta-show_navigation"[^>]*checked/
+  end
+
+  test "saving an existing page re-renders in place without navigating", %{
+    conn: conn,
+    site: site
+  } do
+    {:ok, page} =
+      Content.create_page(site.id, %{
+        "title" => "Existing",
+        "slug" => "existing",
+        "format" => "html",
+        "body" => "<p>original</p>",
+        "published" => "true"
+      })
+
+    {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/pages/#{page.id}/edit")
+
+    # Saving must NOT push_navigate — a remount would rebuild the CodeEditor
+    # hook and wipe its undo history, breaking Cmd+Z after every Cmd+S save.
+    # render_submit returns {:error, {:live_redirect, ...}} on navigation,
+    # which would fail the flash assertion below.
+    html =
+      lv
+      |> form("#content-form", page: %{body: "<p>edited</p>"})
+      |> render_submit()
+
+    assert html =~ "Changes saved."
+    refute_redirected(lv, ~p"/#{site.slug}/pages/#{page.id}/edit")
+    assert Content.get_page!(site.id, page.id).body == "<p>edited</p>"
   end
 end

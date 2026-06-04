@@ -191,10 +191,31 @@ defmodule MastheadWeb.AdminLive.PageForm do
             {_, _} -> "Changes saved."
           end
 
-        {:noreply,
-         socket
-         |> put_flash(:info, flash)
-         |> push_navigate(to: ~p"/#{socket.assigns.site.slug}/pages/#{page.id}/edit")}
+        if socket.assigns.page do
+          # Existing page: re-render in place. A push_navigate here would
+          # remount the page (and the CodeEditor hook), rebuilding CodeMirror
+          # from scratch and wiping its undo history — so Cmd+Z stops working
+          # after every Cmd+S save. The editor is phx-update="ignore", so an
+          # in-place update leaves it (and its undo stack) untouched.
+          draft = page_to_draft(page)
+
+          {:noreply,
+           socket
+           |> put_flash(:info, flash)
+           |> assign(
+             page: page,
+             draft: draft,
+             page_title: "Edit: #{page.title}",
+             show_errors: false
+           )
+           |> assign_changeset(draft)}
+        else
+          # New page: the URL must change from /new to /:id/edit, so navigate.
+          {:noreply,
+           socket
+           |> put_flash(:info, flash)
+           |> push_navigate(to: ~p"/#{socket.assigns.site.slug}/pages/#{page.id}/edit")}
+        end
 
       {:error, changeset} ->
         {:noreply,
