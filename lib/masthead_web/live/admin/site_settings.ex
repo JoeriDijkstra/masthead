@@ -531,6 +531,30 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
             </div>
           </div>
 
+          <div class="settings-section danger-zone">
+            <header class="settings-section-head">
+              <h2>Danger zone</h2>
+              <p>Permanently remove this site from your account.</p>
+            </header>
+            <div class="danger-row">
+              <div>
+                <strong>Delete this site</strong>
+                <p class="muted">
+                  Takes <code>{@site.slug}</code> offline and removes it from your sites.
+                  The data is retained for recovery — contact support if you delete it by mistake.
+                </p>
+              </div>
+              <button
+                type="button"
+                phx-click="delete_site"
+                class="btn btn-danger"
+                data-confirm={"Delete #{@site.name}? It will go offline immediately and disappear from your sites."}
+              >
+                Delete site
+              </button>
+            </div>
+          </div>
+
           <div class="wizard-footer">
             <.link navigate={~p"/#{@site.slug}"} class="btn">Cancel</.link>
             <button type="submit" class="btn btn-primary" data-shortcut="save">
@@ -538,30 +562,6 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
             </button>
           </div>
         </.form>
-
-        <div class="settings-section danger-zone">
-          <header class="settings-section-head">
-            <h2>Danger zone</h2>
-            <p>Permanently remove this site from your account.</p>
-          </header>
-          <div class="danger-row">
-            <div>
-              <strong>Delete this site</strong>
-              <p class="muted">
-                Takes <code>{@site.slug}</code> offline and removes it from your sites.
-                The data is retained for recovery — contact support if you delete it by mistake.
-              </p>
-            </div>
-            <button
-              type="button"
-              phx-click="delete_site"
-              class="btn btn-danger"
-              data-confirm={"Delete #{@site.name}? It will go offline immediately and disappear from your sites."}
-            >
-              Delete site
-            </button>
-          </div>
-        </div>
       </div>
 
       <div

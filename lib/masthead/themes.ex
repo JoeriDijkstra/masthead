@@ -95,8 +95,43 @@ defmodule Masthead.Themes do
     theme |> Theme.upload_changeset(attrs) |> Repo.update()
   end
 
-  def delete_theme(%Theme{source: "uploaded"} = theme), do: Repo.delete(theme)
+  @doc """
+  Delete an uploaded theme.
+
+  Built-ins are protected. A theme that is still referenced by one or more
+  sites can't be deleted (the `sites.theme_id` foreign key forbids it):
+  rather than letting the DB raise an `Ecto.ConstraintError`, we look up
+  the referencing sites first and return `{:error, {:in_use, sites}}`,
+  where `sites` is a list of `{name, deleted_at}` tuples so the caller can
+  tell the user exactly which site is holding the theme. The delete itself
+  also carries a `foreign_key_constraint` as a safety net against the race
+  where a site adopts the theme between the check and the delete.
+  """
   def delete_theme(%Theme{source: "built_in"}), do: {:error, :built_in_protected}
+
+  def delete_theme(%Theme{source: "uploaded"} = theme) do
+    case sites_using_theme(theme.id) do
+      [] ->
+        theme
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.foreign_key_constraint(:id, name: "sites_theme_id_fkey")
+        |> Repo.delete()
+
+      sites ->
+        {:error, {:in_use, sites}}
+    end
+  end
+
+  # Sites referencing the theme, including soft-deleted ones — a soft-deleted
+  # row still holds the foreign key, so it would block the delete too.
+  defp sites_using_theme(theme_id) do
+    Repo.all(
+      from s in Masthead.Sites.Site,
+        where: s.theme_id == ^theme_id,
+        order_by: [asc: s.name],
+        select: {s.name, s.deleted_at}
+    )
+  end
 
   # ---- admin ----
 

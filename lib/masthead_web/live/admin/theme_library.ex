@@ -92,10 +92,28 @@ defmodule MastheadWeb.AdminLive.ThemeLibrary do
              |> assign(themes: themes_for(socket))
              |> put_flash(:info, "Theme deleted.")}
 
+          {:error, {:in_use, sites}} ->
+            {:noreply, put_flash(socket, :error, theme_in_use_message(sites))}
+
           {:error, _} ->
             {:noreply, put_flash(socket, :error, "Could not delete theme.")}
         end
     end
+  end
+
+  # Build a flash naming the sites that still reference a theme. Soft-deleted
+  # sites still hold the foreign key, so they're flagged as "(deleted)".
+  defp theme_in_use_message(sites) do
+    names =
+      Enum.map_join(sites, ", ", fn
+        {name, nil} -> name
+        {name, _deleted_at} -> "#{name} (deleted)"
+      end)
+
+    site_word = if length(sites) == 1, do: "site", else: "sites"
+
+    "Can't delete this theme — it's still in use by #{length(sites)} #{site_word}: " <>
+      "#{names}. Switch #{if length(sites) == 1, do: "it", else: "them"} to another theme first."
   end
 
   defp close_modal(socket) do
