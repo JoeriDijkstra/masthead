@@ -29,6 +29,37 @@ defmodule Masthead.Themes.PackageTest do
     File.rm(zip_path)
   end
 
+  test "preserves token category and options in the persisted manifest", %{user: user} do
+    slug = "tokens#{System.unique_integer([:positive])}"
+
+    manifest =
+      Jason.encode!(%{
+        "name" => "Demo #{slug}",
+        "slug" => slug,
+        "version" => "1.0.0",
+        "tokens" => [
+          %{
+            "key" => "header_style",
+            "label" => "Header text color",
+            "type" => "select",
+            "default" => "dark",
+            "options" => ["dark", "light"],
+            "category" => "Header"
+          }
+        ]
+      })
+
+    files = valid_files(slug) |> Map.put("manifest.json", manifest)
+    zip_path = build_zip(files)
+
+    assert {:ok, theme} = Package.install(zip_path, user.id)
+    assert [token] = theme.manifest["tokens"]
+    assert token["category"] == "Header"
+    assert token["options"] == ["dark", "light"]
+
+    File.rm(zip_path)
+  end
+
   test "rejects an archive that exceeds the size cap", %{user: user} do
     slug = "bloat#{System.unique_integer([:positive])}"
     # 26 MB of repeating chars compresses to a few KB but trips the 25 MB

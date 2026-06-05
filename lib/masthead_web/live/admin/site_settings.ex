@@ -76,6 +76,18 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
     end
   end
 
+  def handle_event("delete_site", _params, socket) do
+    # The site is owner-scoped by the :load_site hook, so the current user is
+    # authorized. Soft-delete keeps the row recoverable (by an admin); the
+    # owner can no longer reach it, so send them back to their site list.
+    {:ok, _} = Sites.soft_delete_site(socket.assigns.site)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Site deleted. Contact support if you need it back.")
+     |> push_navigate(to: ~p"/sites")}
+  end
+
   # ---- file-token picker modal ----
 
   def handle_event("open_picker", %{"token" => key}, socket) do
@@ -526,6 +538,30 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
             </button>
           </div>
         </.form>
+
+        <div class="settings-section danger-zone">
+          <header class="settings-section-head">
+            <h2>Danger zone</h2>
+            <p>Permanently remove this site from your account.</p>
+          </header>
+          <div class="danger-row">
+            <div>
+              <strong>Delete this site</strong>
+              <p class="muted">
+                Takes <code>{@site.slug}</code> offline and removes it from your sites.
+                The data is retained for recovery — contact support if you delete it by mistake.
+              </p>
+            </div>
+            <button
+              type="button"
+              phx-click="delete_site"
+              class="btn btn-danger"
+              data-confirm={"Delete #{@site.name}? It will go offline immediately and disappear from your sites."}
+            >
+              Delete site
+            </button>
+          </div>
+        </div>
       </div>
 
       <div

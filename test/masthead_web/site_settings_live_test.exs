@@ -181,6 +181,19 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
     refute html =~ ~s(value="#0066cc")
   end
 
+  test "the owner can soft-delete their site from the danger zone", %{conn: conn, site: site} do
+    {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/settings")
+
+    lv |> element("button", "Delete site") |> render_click()
+
+    assert_redirect(lv, ~p"/sites")
+
+    # The row is retained (soft delete) but hidden from the owner's list and
+    # no longer resolvable as their site.
+    assert Sites.get_site!(site.id).deleted_at != nil
+    assert Sites.list_sites_for_user(site.owner_id) == []
+  end
+
   defp create_upload(site, filename) do
     tmp = Path.join(System.tmp_dir!(), "ss-up-#{System.unique_integer([:positive])}.png")
     File.write!(tmp, "bytes")
