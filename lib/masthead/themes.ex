@@ -98,39 +98,64 @@ defmodule Masthead.Themes do
   @doc """
   Delete an uploaded theme.
 
-  Built-ins are protected. A theme that is still referenced by one or more
-  sites can't be deleted (the `sites.theme_id` foreign key forbids it):
-  rather than letting the DB raise an `Ecto.ConstraintError`, we look up
-  the referencing sites first and return `{:error, {:in_use, sites}}`,
-  where `sites` is a list of `{name, deleted_at}` tuples so the caller can
-  tell the user exactly which site is holding the theme. The delete itself
-  also carries a `foreign_key_constraint` as a safety net against the race
-  where a site adopts the theme between the check and the delete.
+  Built-ins are protected. A theme still referenced by a *live* site can't
+  be deleted (the `sites.theme_id` foreign key forbids it): rather than
+  letting the DB raise an `Ecto.ConstraintError`, we look those sites up
+  first and return `{:error, {:in_use, names}}` so the caller can name
+  them. A *disabled* site still counts — its owner can re-enable it.
+
+  Soft-deleted sites are different: they render nothing, but their row
+  still holds the foreign key, so they would otherwise pin the theme
+  forever. We detach them onto the built-in `default` theme before
+  deleting, so they no longer block (they'd come back on `default` if ever
+  restored). The delete also carries a `foreign_key_constraint` as a
+  safety net against a site adopting the theme mid-operation.
   """
   def delete_theme(%Theme{source: "built_in"}), do: {:error, :built_in_protected}
 
   def delete_theme(%Theme{source: "uploaded"} = theme) do
-    case sites_using_theme(theme.id) do
+    case live_sites_using_theme(theme.id) do
       [] ->
+        detach_deleted_sites(theme.id)
+
         theme
         |> Ecto.Changeset.change()
         |> Ecto.Changeset.foreign_key_constraint(:id, name: "sites_theme_id_fkey")
         |> Repo.delete()
 
-      sites ->
-        {:error, {:in_use, sites}}
+      names ->
+        {:error, {:in_use, names}}
     end
   end
 
-  # Sites referencing the theme, including soft-deleted ones — a soft-deleted
-  # row still holds the foreign key, so it would block the delete too.
-  defp sites_using_theme(theme_id) do
+  # Names of non-deleted sites referencing the theme. Only `deleted_at`
+  # excludes a site; a disabled site can be re-enabled, so it still blocks.
+  defp live_sites_using_theme(theme_id) do
     Repo.all(
       from s in Masthead.Sites.Site,
-        where: s.theme_id == ^theme_id,
+        where: s.theme_id == ^theme_id and is_nil(s.deleted_at),
         order_by: [asc: s.name],
-        select: {s.name, s.deleted_at}
+        select: s.name
     )
+  end
+
+  # Re-point any soft-deleted sites off the doomed theme and onto `default`,
+  # so the foreign key no longer blocks its deletion.
+  defp detach_deleted_sites(theme_id) do
+    case get_built_in_by_slug("default") do
+      %Theme{id: default_id} ->
+        Repo.update_all(
+          from(s in Masthead.Sites.Site,
+            where: s.theme_id == ^theme_id and not is_nil(s.deleted_at)
+          ),
+          set: [theme_id: default_id]
+        )
+
+        :ok
+
+      nil ->
+        :ok
+    end
   end
 
   # ---- admin ----
