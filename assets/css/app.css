@@ -446,8 +446,8 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
    Namespaced as `flash-toast*` to avoid colliding with daisyUI's `.toast`. */
 .flash-toasts {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  bottom: 2rem;
+  right: 2rem;
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -459,9 +459,9 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 .flash-toast {
   pointer-events: auto;
   width: 100%;
-  padding: 0.7rem 1rem;
+  padding: 1.2rem;
   border-radius: 10px;
-  font-size: 0.9rem;
+  font-size: 1.2rem;
   font-weight: 500;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   cursor: pointer;
