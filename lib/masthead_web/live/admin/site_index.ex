@@ -164,19 +164,15 @@ defmodule MastheadWeb.AdminLive.SiteIndex do
             <div class="dialog-scroll">
               <.error_list changeset={@changeset} show={@show_errors} />
 
-              <label>
-                Name
-                <input type="text" name="site[name]" value={@form[:name].value} required autofocus />
-                <small>Shown in nav and as default page title.</small>
-              </label>
+              <label>Name</label>
+              <small>Shown in nav and as default page title.</small>
+              <input type="text" name="site[name]" value={@form[:name].value} required autofocus />
 
-              <label>
-                Slug (subdomain)
-                <input type="text" name="site[slug]" value={@form[:slug].value} required />
-                <small>
-                  Public URL: <code>{(@form[:slug].value || "your-slug") <> "." <> @host}</code>. Auto-filled from the name; edit to customize. Lowercase letters, numbers, hyphens only.
-                </small>
-              </label>
+              <label>Slug (subdomain)</label>
+              <input type="text" name="site[slug]" value={@form[:slug].value} required />
+              <small>
+                Public URL: <code>{(@form[:slug].value || "your-slug") <> "." <> @host}</code>
+              </small>
             </div>
 
             <footer class="dialog-footer">
