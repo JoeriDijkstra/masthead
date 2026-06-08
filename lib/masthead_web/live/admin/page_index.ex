@@ -38,46 +38,62 @@ defmodule MastheadWeb.AdminLive.PageIndex do
       <:actions>
         <.link
           navigate={~p"/#{@site.slug}/pages/new"}
-          class="btn btn-primary"
+          class="btn btn-primary btn-add"
           data-shortcut="new"
         >
-          + New page
+          <span class="btn-add-icon" aria-hidden="true">+</span>
+          <span class="btn-add-label">New page</span>
         </.link>
       </:actions>
 
-      <table :if={@pages != []} class="table">
+      <table :if={@pages != []} class="table table-cards">
         <thead>
           <tr>
             <th>Title</th>
             <th>Format</th>
             <th>Status</th>
+            <th>Updated</th>
             <th class="actions-cell"></th>
           </tr>
         </thead>
         <tbody>
-          <tr :for={p <- @pages}>
+          <tr
+            :for={p <- @pages}
+            class="row-link"
+            phx-click={JS.navigate(~p"/#{@site.slug}/pages/#{p.id}/edit")}
+          >
             <td>
-              <.link navigate={~p"/#{@site.slug}/pages/#{p.id}/edit"}>{p.title}</.link>
+              <span class="row-title">{p.title}</span>
               <div class="muted">/{p.slug}</div>
             </td>
-            <td>
+            <td data-label="Format">
               <span class={"format-tag format-tag-" <> p.format}>{format_label(p.format)}</span>
             </td>
-            <td>
+            <td data-label="Status">
               <span class={"pill pill-" <> if(p.published, do: "live", else: "draft")}>
                 {if p.published, do: "Published", else: "Draft"}
               </span>
             </td>
+            <td data-label="Updated"><.relative_time at={p.updated_at} /></td>
             <td class="actions-cell">
-              <button
-                type="button"
-                phx-click="delete"
-                phx-value-id={p.id}
-                data-confirm={"Delete page \"" <> p.title <> "\"?"}
-                class="btn btn-danger btn-sm"
-              >
-                Delete
-              </button>
+              <div class="row-actions">
+                <button
+                  type="button"
+                  phx-click={JS.navigate(~p"/#{@site.slug}/pages/#{p.id}/edit")}
+                  class="btn btn-sm"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  phx-click="delete"
+                  phx-value-id={p.id}
+                  data-confirm={"Delete page \"" <> p.title <> "\"?"}
+                  class="btn btn-danger btn-sm"
+                >
+                  Delete
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>

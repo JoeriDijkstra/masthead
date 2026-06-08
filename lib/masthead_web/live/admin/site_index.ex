@@ -111,7 +111,10 @@ defmodule MastheadWeb.AdminLive.SiteIndex do
     ~H"""
     <.shell title="Your sites" current_user={@current_user} flash={@flash} active={:sites}>
       <:actions>
-        <button type="button" phx-click="open_modal" class="btn btn-primary">+ New site</button>
+        <button type="button" phx-click="open_modal" class="btn btn-primary btn-add">
+          <span class="btn-add-icon" aria-hidden="true">+</span>
+          <span class="btn-add-label">New site</span>
+        </button>
       </:actions>
 
       <ul :if={@sites != []} class="card-list">

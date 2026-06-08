@@ -97,10 +97,11 @@ defmodule MastheadWeb.AdminLive.UploadIndex do
         <button
           type="button"
           phx-click="open_modal"
-          class="btn btn-primary"
+          class="btn btn-primary btn-add"
           data-shortcut="new"
         >
-          + New upload
+          <span class="btn-add-icon" aria-hidden="true">+</span>
+          <span class="btn-add-label">New upload</span>
         </button>
       </:actions>
 

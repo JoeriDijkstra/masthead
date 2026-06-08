@@ -229,6 +229,15 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 .btn .icon { width: 1em; height: 1em; flex: 0 0 auto; }
 .btn-sm { padding: 0.35rem 0.85rem; font-size: 0.8rem; }
 .btn-danger.btn-sm { padding: 0.3rem 0.8rem; }
+
+/* Header "create" buttons (`+ New …`). On phones they collapse to a compact
+   icon-only "+" so the action stays top-right without crowding the title. */
+.btn-add-icon { font-weight: 600; }
+@media (max-width: 640px) {
+  .btn-add { padding-left: 0.65rem; padding-right: 0.65rem; }
+  .btn-add .btn-add-label { display: none; }
+  .btn-add .btn-add-icon { font-size: 1.1rem; line-height: 1; }
+}
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Right-align an actions column in tables */
@@ -275,6 +284,7 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
 }
 
 .sidebar-brand {
+  position: relative;
   padding: 1.4rem 1.25rem 1.25rem;
   border-bottom: 1px solid var(--sidebar-border);
 }
@@ -417,30 +427,143 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   background: var(--bg);
 }
 
+/* Mobile chrome — the top bar (with hamburger), the drawer backdrop and the
+   in-drawer close button exist in the markup at every width but only show
+   below the breakpoint, where the sidebar turns into an off-canvas drawer. */
+.admin-topbar { display: none; }
+.sidebar-overlay { display: none; }
+.sidebar-close { display: none; }
+
 @media (max-width: 800px) {
-  .admin-shell { flex-direction: column; }
-  .admin-sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
-    flex-direction: row;
-    padding: 0.5rem 0.75rem;
+  /* The sidebar leaves the flow and becomes an off-canvas drawer, so the
+     content fills the full width with a sticky top bar above it. */
+  .admin-shell { display: block; }
+
+  .admin-topbar {
+    display: flex;
     align-items: center;
-    border-right: 0;
+    gap: 0.75rem;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    padding: 0.6rem 1rem;
+    background: var(--sidebar-bg);
+    color: var(--sidebar-fg-active);
     border-bottom: 1px solid var(--sidebar-border);
   }
-  .sidebar-brand { padding: 0; border: 0; }
-  .sidebar-nav {
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 0 0.5rem;
-    flex-wrap: nowrap;
+  .hamburger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin: -0.25rem 0;
+    border-radius: 9px;
+    color: var(--sidebar-fg);
+    flex-shrink: 0;
+    cursor: pointer;
   }
-  .sidebar-nav .nav-item span { display: none; }
-  .sidebar-divider { display: none; }
-  .sidebar-user { border-top: 0; padding: 0; }
-  .user-email { display: none; }
+  .hamburger:hover {
+    background: var(--sidebar-bg-hover);
+    color: var(--sidebar-fg-active);
+  }
+  .hamburger .icon {
+    width: 24px;
+    height: 24px;
+  }
+  .topbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--sidebar-fg-active);
+    font-weight: 600;
+    font-size: 1rem;
+  }
+  .topbar-brand:hover {
+    text-decoration: none;
+    color: var(--sidebar-fg-active);
+  }
+  .topbar-brand .brand-logo {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 30%;
+    object-fit: cover;
+  }
+  .topbar-site {
+    margin-left: auto;
+    max-width: 38%;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--sidebar-fg-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* The drawer: a fixed full-height panel that slides in from the left and
+     keeps its desktop column layout (vertical nav, visible labels). */
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100dvh;
+    width: min(82vw, 300px);
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 50;
+    will-change: transform;
+  }
+  .admin-shell.nav-open .admin-sidebar {
+    transform: translateX(0);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.45);
+  }
+
+  .sidebar-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    color: var(--sidebar-fg-muted);
+    cursor: pointer;
+  }
+  .sidebar-close:hover {
+    background: var(--sidebar-bg-hover);
+    color: var(--sidebar-fg-active);
+  }
+  .sidebar-close .icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Backdrop — fades in only while the drawer is open. */
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease;
+  }
+  .admin-shell.nav-open .sidebar-overlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   .admin-content { padding: 1.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-sidebar,
+  .sidebar-overlay { transition: none; }
 }
 /* Flash toasts — floating, auto-dismissing messages.
    Namespaced as `flash-toast*` to avoid colliding with daisyUI's `.toast`. */
@@ -636,6 +759,18 @@ button.danger:hover { filter: brightness(0.92); }
 }
 .page-head .actions { display: flex; gap: 0.5rem; }
 
+@media (max-width: 640px) {
+  .page-head {
+    gap: 0.75rem;
+    padding: 1.15rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  /* Keep the title left and actions on the right (as on desktop); let the
+     title shrink/wrap rather than push the buttons off-screen. */
+  .page-head h1 { font-size: 1.3rem; min-width: 0; }
+  .page-head .actions { flex-shrink: 0; }
+}
+
 /* Stats / cards */
 .action-card {
   display: flex;
@@ -684,13 +819,17 @@ button.danger:hover { filter: brightness(0.92); }
 }
 .action-list .action-card { margin-bottom: 0; }
 
-.stats {
+/* Dashboard metrics. Named `metric*` rather than `stat*` on purpose:
+   daisyUI ships a `.stats`/`.stat`/`.stat-value` component whose
+   `grid-auto-flow: column` would otherwise win the cascade and force the
+   cards into a single overflowing row instead of this responsive grid. */
+.metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
   margin-bottom: 2.5rem;
 }
-.stat {
+.metric {
   background: var(--card);
   border: 1px solid var(--rule);
   border-radius: 14px;
@@ -702,7 +841,7 @@ button.danger:hover { filter: brightness(0.92); }
   position: relative;
   overflow: hidden;
 }
-.stat .stat-icon {
+.metric .metric-icon {
   width: 44px;
   height: 44px;
   border-radius: 12px;
@@ -713,25 +852,31 @@ button.danger:hover { filter: brightness(0.92); }
   justify-content: center;
   flex-shrink: 0;
 }
-.stat .stat-icon svg { width: 22px; height: 22px; }
-.stat.stat-good .stat-icon { background: var(--good-soft); color: var(--good); }
-.stat.stat-amber .stat-icon { background: var(--amber-soft); color: var(--amber); }
-.stat.stat-violet .stat-icon { background: var(--violet-soft); color: var(--violet); }
-.stat .stat-body { display: flex; flex-direction: column; min-width: 0; }
-.stat .num {
+.metric .metric-icon svg { width: 22px; height: 22px; }
+.metric.metric-good .metric-icon { background: var(--good-soft); color: var(--good); }
+.metric.metric-amber .metric-icon { background: var(--amber-soft); color: var(--amber); }
+.metric.metric-violet .metric-icon { background: var(--violet-soft); color: var(--violet); }
+.metric .metric-body { display: flex; flex-direction: column; min-width: 0; }
+.metric .num {
   font-size: 1.9rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--fg);
   line-height: 1.1;
 }
-.stat .stat-label {
+.metric .metric-label {
   font-size: 0.78rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
   margin-top: 0.2rem;
+}
+
+/* On phones, stack the metric cards into a single column so each reads
+   clearly on its own line instead of squeezing two or three across. */
+@media (max-width: 640px) {
+  .metrics { grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 1.75rem; }
 }
 
 .card-list {
@@ -812,6 +957,88 @@ button.danger:hover { filter: brightness(0.92); }
 .table .muted {
   font-size: 0.78rem;
   font-family: ui-monospace, Menlo, monospace;
+}
+
+/* Right-aligned cluster of row action buttons (e.g. Edit / Delete). */
+.row-actions { display: inline-flex; align-items: center; gap: 0.4rem; }
+
+/* Whole-row link: clicking anywhere on the row navigates to its edit page
+   (wired with phx-click on the <tr>). The title still reads as a link, and
+   the action buttons keep their own behaviour via closest-match handling. */
+.row-link { cursor: pointer; }
+.row-title { color: var(--accent); font-weight: 500; }
+.row-link:hover .row-title { text-decoration: underline; }
+
+/* Relative timestamp ("a day ago"); the exact date is in its title tooltip,
+   hinted by the dotted underline + help cursor. */
+.rel-time {
+  color: var(--muted);
+  cursor: help;
+  white-space: nowrap;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 2px;
+}
+
+/* On phones, a multi-column table is unreadable. Tables opting in with
+   `.table-cards` collapse into a stack of cards: each row becomes a card,
+   each cell a labelled line (label from `data-label`). The first cell is the
+   card title and the `.actions-cell` is pinned to the bottom-right. */
+@media (max-width: 640px) {
+  .table-cards {
+    display: block;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    overflow: visible;
+  }
+  .table-cards thead { display: none; }
+  .table-cards tbody { display: block; }
+  .table-cards tr {
+    display: block;
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.75rem;
+  }
+  .table-cards tbody tr:hover td { background: transparent; }
+  .table-cards td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.32rem 0;
+    border: 0;
+    font-size: 0.9rem;
+  }
+  .table-cards td[data-label]::before {
+    content: attr(data-label);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  /* Title cell — full-width heading with its slug beneath, no label. */
+  .table-cards td:first-child {
+    display: block;
+    padding: 0 0 0.55rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .table-cards td:first-child .muted { font-size: 0.75rem; margin-top: 0.15rem; }
+  /* Actions — right-aligned, separated from the meta rows. */
+  .table-cards td.actions-cell {
+    justify-content: flex-end;
+    padding-top: 0.6rem;
+    margin-top: 0.4rem;
+    border-top: 1px solid var(--rule);
+  }
 }
 
 /* Section heading inside a page */
@@ -1091,6 +1318,14 @@ button.danger:hover { filter: brightness(0.92); }
 .step-done .step-num { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .step-done .step-label { color: var(--fg-soft); }
 .step-done::after { background: var(--accent); }
+
+/* On narrow screens the row of labelled steps overflows; drop the labels and
+   keep numbers + connectors so progress is still readable at a glance. */
+@media (max-width: 640px) {
+  .stepper { padding: 0.85rem 1rem; gap: 0.4rem; margin-bottom: 1.5rem; }
+  .stepper .step .step-label { display: none; }
+  .stepper .step::after { margin-left: 0.4rem; }
+}
 
 .wizard-heading {
   font-size: 1.4rem;

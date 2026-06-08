@@ -37,14 +37,15 @@ defmodule MastheadWeb.AdminLive.PostIndex do
       <:actions>
         <.link
           navigate={~p"/#{@site.slug}/posts/new"}
-          class="btn btn-primary"
+          class="btn btn-primary btn-add"
           data-shortcut="new"
         >
-          + New post
+          <span class="btn-add-icon" aria-hidden="true">+</span>
+          <span class="btn-add-label">New post</span>
         </.link>
       </:actions>
 
-      <table :if={@posts != []} class="table">
+      <table :if={@posts != []} class="table table-cards">
         <thead>
           <tr>
             <th>Title</th>
@@ -55,30 +56,43 @@ defmodule MastheadWeb.AdminLive.PostIndex do
           </tr>
         </thead>
         <tbody>
-          <tr :for={p <- @posts}>
+          <tr
+            :for={p <- @posts}
+            class="row-link"
+            phx-click={JS.navigate(~p"/#{@site.slug}/posts/#{p.id}/edit")}
+          >
             <td>
-              <.link navigate={~p"/#{@site.slug}/posts/#{p.id}/edit"}>{p.title}</.link>
+              <span class="row-title">{p.title}</span>
               <div class="muted">/posts/{p.slug}</div>
             </td>
-            <td>
+            <td data-label="Format">
               <span class={"format-tag format-tag-" <> p.format}>{format_label(p.format)}</span>
             </td>
-            <td>
+            <td data-label="Status">
               <span class={"pill pill-" <> if(p.published, do: "live", else: "draft")}>
                 {if p.published, do: "Published", else: "Draft"}
               </span>
             </td>
-            <td class="muted">{Calendar.strftime(p.updated_at, "%Y-%m-%d")}</td>
+            <td data-label="Updated"><.relative_time at={p.updated_at} /></td>
             <td class="actions-cell">
-              <button
-                type="button"
-                phx-click="delete"
-                phx-value-id={p.id}
-                data-confirm={"Delete post \"" <> p.title <> "\"?"}
-                class="btn btn-danger btn-sm"
-              >
-                Delete
-              </button>
+              <div class="row-actions">
+                <button
+                  type="button"
+                  phx-click={JS.navigate(~p"/#{@site.slug}/posts/#{p.id}/edit")}
+                  class="btn btn-sm"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  phx-click="delete"
+                  phx-value-id={p.id}
+                  data-confirm={"Delete post \"" <> p.title <> "\"?"}
+                  class="btn btn-danger btn-sm"
+                >
+                  Delete
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>

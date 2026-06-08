@@ -55,6 +55,20 @@ defmodule MastheadWeb.AdminLive.PostForm do
     {:noreply, assign(socket, step: max(socket.assigns.step - 1, 1))}
   end
 
+  # Stepper navigation — jump straight to a step by clicking it. Steps 2–3
+  # require a chosen format; step 1 is always reachable. The draft is kept in
+  # sync by each step's `phx-change="validate"`, so jumping never loses input.
+  def handle_event("goto_step", %{"step" => step}, socket) do
+    target = String.to_integer(step)
+    format_chosen = socket.assigns.draft["format"] not in [nil, ""]
+
+    if target == 1 or (target in 2..3 and format_chosen) do
+      {:noreply, assign(socket, step: target)}
+    else
+      {:noreply, socket}
+    end
+  end
+
   def handle_event("next_meta", %{"post" => params}, socket) do
     draft = Map.merge(socket.assigns.draft, params)
     changeset = build_changeset(socket, draft)
@@ -303,7 +317,14 @@ defmodule MastheadWeb.AdminLive.PostForm do
   defp stepper(assigns) do
     ~H"""
     <ol class="stepper">
-      <li :for={i <- 1..3} class={"step " <> step_class(i, @step)}>
+      <li
+        :for={i <- 1..3}
+        class={"step " <> step_class(i, @step)}
+        phx-click="goto_step"
+        phx-value-step={i}
+        role="button"
+        tabindex="0"
+      >
         <span class="step-num">{i}</span>
         <span class="step-label">{step_label(i)}</span>
       </li>
