@@ -165,6 +165,21 @@ defmodule MastheadWeb.AdminLive.PostForm do
     end
   end
 
+  def handle_event("delete", _params, socket) do
+    case socket.assigns[:post] do
+      nil ->
+        {:noreply, socket}
+
+      post ->
+        {:ok, _} = Content.delete_post(post)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Post deleted.")
+         |> push_navigate(to: ~p"/#{socket.assigns.site.slug}/posts")}
+    end
+  end
+
   # ---- Helpers ----
 
   defp update_slug_touched(_prev, "slug", %{"slug" => slug}) when slug != "", do: true
@@ -211,14 +226,7 @@ defmodule MastheadWeb.AdminLive.PostForm do
       active={:posts}
     >
       <:actions>
-        <button
-          :if={@post}
-          type="button"
-          phx-click="toggle_publish"
-          class={publish_button_class(@post.published)}
-        >
-          {if @post && @post.published, do: "Unpublish", else: "Publish"}
-        </button>
+        <.publish_status :if={@post} published={@post.published} />
       </:actions>
 
       <div class="wizard">
@@ -245,6 +253,9 @@ defmodule MastheadWeb.AdminLive.PostForm do
               changeset={@changeset}
               format={@draft["format"]}
               editing={@post != nil}
+              published={@post != nil and @post.published}
+              site={@site}
+              view_path={@post && "/posts/" <> @post.slug}
               site_slug={@site.slug}
               show_errors={@show_errors}
             />
@@ -253,9 +264,6 @@ defmodule MastheadWeb.AdminLive.PostForm do
     </.shell>
     """
   end
-
-  defp publish_button_class(true), do: "btn btn-publish-toggle btn-published"
-  defp publish_button_class(_), do: "btn btn-publish-toggle btn-draft"
 
   attr :step, :integer, default: 1
 
@@ -350,6 +358,9 @@ defmodule MastheadWeb.AdminLive.PostForm do
   attr :changeset, :map, required: true
   attr :format, :string, required: true
   attr :editing, :boolean, default: false
+  attr :published, :boolean, default: false
+  attr :site, :map, default: nil
+  attr :view_path, :string, default: nil
   attr :site_slug, :string, required: true
   attr :show_errors, :boolean, default: false
 
@@ -357,47 +368,31 @@ defmodule MastheadWeb.AdminLive.PostForm do
     ~H"""
     <.stepper step={3} />
 
-    <form id="content-form" phx-submit="save" phx-change="validate" class="form post-form">
-      <.error_list changeset={@changeset} show={@show_errors} />
+    <div class="content-layout">
+      <div class="content-main">
+        <form id="content-form" phx-submit="save" phx-change="validate" class="form post-form">
+          <.error_list changeset={@changeset} show={@show_errors} />
 
-      <input type="hidden" name="post[title]" value={@form[:title].value} />
-      <input type="hidden" name="post[slug]" value={@form[:slug].value} />
-      <input type="hidden" name="post[excerpt]" value={@form[:excerpt].value} />
-      <input type="hidden" name="post[format]" value={@format} />
+          <input type="hidden" name="post[title]" value={@form[:title].value} />
+          <input type="hidden" name="post[slug]" value={@form[:slug].value} />
+          <input type="hidden" name="post[excerpt]" value={@form[:excerpt].value} />
+          <input type="hidden" name="post[format]" value={@format} />
 
-      <.body_editor form={@form} format={@format} />
-    </form>
+          <.body_editor form={@form} format={@format} />
+        </form>
+      </div>
+
+      <.content_sidebar
+        editing={@editing}
+        published={@published}
+        entity="post"
+        site={@site}
+        view_path={@view_path}
+      />
+    </div>
 
     <div class="wizard-footer">
       <button type="button" phx-click="back" class="btn">&larr; Back</button>
-      <div class="wizard-actions">
-        <%= if @editing do %>
-          <button type="submit" form="content-form" class="btn btn-primary" data-shortcut="save">
-            Save changes
-          </button>
-        <% else %>
-          <button
-            type="submit"
-            form="content-form"
-            name="action"
-            value="draft"
-            class="btn"
-            data-shortcut="save"
-          >
-            Save as draft
-          </button>
-          <button
-            type="submit"
-            form="content-form"
-            name="action"
-            value="publish"
-            class="btn btn-primary"
-            data-shortcut="publish"
-          >
-            Save &amp; publish
-          </button>
-        <% end %>
-      </div>
     </div>
     """
   end

@@ -230,6 +230,21 @@ defmodule MastheadWeb.AdminLive.PageForm do
     end
   end
 
+  def handle_event("delete", _params, socket) do
+    case socket.assigns[:page] do
+      nil ->
+        {:noreply, socket}
+
+      page ->
+        {:ok, _} = Content.delete_page(page)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Page deleted.")
+         |> push_navigate(to: ~p"/#{socket.assigns.site.slug}/pages")}
+    end
+  end
+
   defp update_slug_touched(_prev, "slug", %{"slug" => slug}) when slug != "", do: true
   defp update_slug_touched(_prev, "slug", _params), do: false
   defp update_slug_touched(prev, _target, _params), do: prev || false
@@ -282,14 +297,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
       active={:pages}
     >
       <:actions>
-        <button
-          :if={@page}
-          type="button"
-          phx-click="toggle_publish"
-          class={publish_button_class(@page.published)}
-        >
-          {if @page && @page.published, do: "Unpublish", else: "Publish"}
-        </button>
+        <.publish_status :if={@page} published={@page.published} />
       </:actions>
 
       <div class="wizard">
@@ -324,6 +332,9 @@ defmodule MastheadWeb.AdminLive.PageForm do
               changeset={@changeset}
               format={@draft["format"]}
               editing={@page != nil}
+              published={@page != nil and @page.published}
+              site={@site}
+              view_path={@page && "/" <> @page.slug}
               site_slug={@site.slug}
               show_errors={@show_errors}
               has_metadata={@has_metadata?}
@@ -483,6 +494,9 @@ defmodule MastheadWeb.AdminLive.PageForm do
   attr :changeset, :map, required: true
   attr :format, :string, required: true
   attr :editing, :boolean, default: false
+  attr :published, :boolean, default: false
+  attr :site, :map, default: nil
+  attr :view_path, :string, default: nil
   attr :site_slug, :string, required: true
   attr :show_errors, :boolean, default: false
   attr :has_metadata, :boolean, default: false
@@ -491,50 +505,34 @@ defmodule MastheadWeb.AdminLive.PageForm do
     ~H"""
     <.stepper step={4} has_metadata={@has_metadata} />
 
-    <form id="content-form" phx-submit="save" phx-change="validate" class="form post-form">
-      <.error_list changeset={@changeset} show={@show_errors} />
+    <div class="content-layout">
+      <div class="content-main">
+        <form id="content-form" phx-submit="save" phx-change="validate" class="form post-form">
+          <.error_list changeset={@changeset} show={@show_errors} />
 
-      <input type="hidden" name="page[title]" value={@form[:title].value} />
-      <input type="hidden" name="page[slug]" value={@form[:slug].value} />
-      <input type="hidden" name="page[format]" value={@format} />
+          <input type="hidden" name="page[title]" value={@form[:title].value} />
+          <input type="hidden" name="page[slug]" value={@form[:slug].value} />
+          <input type="hidden" name="page[format]" value={@format} />
 
-      <%= if @format == "blog" do %>
-        <.blog_description_editor form={@form} slug={Ecto.Changeset.get_field(@changeset, :slug)} />
-      <% else %>
-        <.body_editor form={@form} format={@format} />
-      <% end %>
-    </form>
+          <%= if @format == "blog" do %>
+            <.blog_description_editor form={@form} slug={Ecto.Changeset.get_field(@changeset, :slug)} />
+          <% else %>
+            <.body_editor form={@form} format={@format} />
+          <% end %>
+        </form>
+      </div>
+
+      <.content_sidebar
+        editing={@editing}
+        published={@published}
+        entity="page"
+        site={@site}
+        view_path={@view_path}
+      />
+    </div>
 
     <div class="wizard-footer">
       <button type="button" phx-click="back" class="btn">&larr; Back</button>
-      <div class="wizard-actions">
-        <%= if @editing do %>
-          <button type="submit" form="content-form" class="btn btn-primary" data-shortcut="save">
-            Save changes
-          </button>
-        <% else %>
-          <button
-            type="submit"
-            form="content-form"
-            name="action"
-            value="draft"
-            class="btn"
-            data-shortcut="save"
-          >
-            Save as draft
-          </button>
-          <button
-            type="submit"
-            form="content-form"
-            name="action"
-            value="publish"
-            class="btn btn-primary"
-            data-shortcut="publish"
-          >
-            Save &amp; publish
-          </button>
-        <% end %>
-      </div>
     </div>
     """
   end
@@ -701,7 +699,4 @@ defmodule MastheadWeb.AdminLive.PageForm do
       _ -> truthy?(default, false)
     end
   end
-
-  defp publish_button_class(true), do: "btn btn-publish-toggle btn-published"
-  defp publish_button_class(_), do: "btn btn-publish-toggle btn-draft"
 end
