@@ -445,15 +445,6 @@ defmodule MastheadWeb.AdminLive.Components do
         </button>
       </div>
 
-      <.live_component
-        module={MastheadWeb.AdminLive.FilePicker}
-        id={@entity <> "-file-picker"}
-        site={@site}
-        accept={~w(.png .jpg .jpeg .gif .webp .svg)}
-        images_only
-        title="Insert image"
-      />
-
       <div :if={@editing} class="sidebar-card sidebar-card-danger">
         <h3 class="sidebar-card-title">Danger zone</h3>
         <button
@@ -465,6 +456,15 @@ defmodule MastheadWeb.AdminLive.Components do
           Delete {@entity}
         </button>
       </div>
+
+      <.live_component
+        module={MastheadWeb.AdminLive.FilePicker}
+        id={@entity <> "-file-picker"}
+        site={@site}
+        accept={~w(.png .jpg .jpeg .gif .webp .svg)}
+        images_only
+        title="Insert image"
+      />
     </aside>
     """
   end
