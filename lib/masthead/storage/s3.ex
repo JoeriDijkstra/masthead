@@ -79,7 +79,7 @@ defmodule Masthead.Storage.S3 do
 
   @impl true
   def url(rel_path) do
-    "{public_url()}/#{rel_path}"
+    "#{public_url()}/#{rel_path}"
   end
 
   # ---- helpers ----
