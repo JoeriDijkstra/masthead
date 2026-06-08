@@ -44,3 +44,5 @@ masthead-*.tar
 npm-debug.log
 /assets/node_modules/
 
+priv/themes/.DS_Store
+.gitignore

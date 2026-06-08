@@ -24,7 +24,7 @@ kill_signal = 'SIGTERM'
   # Must be on the Resend-verified sending domain. RESEND_API_KEY is set
   # via `fly secrets`.
   MAIL_FROM = 'noreply@masthead.site'
-  AWS_ENDPOINT_URL_S3 = 'uploads.masthead.site'
+  AWS_PUBLIC_URL_S3 = 'https://uploads.masthead.site'
 
 [http_service]
   internal_port = 8080

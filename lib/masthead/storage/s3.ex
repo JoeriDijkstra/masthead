@@ -79,12 +79,7 @@ defmodule Masthead.Storage.S3 do
 
   @impl true
   def url(rel_path) do
-    # Virtual-hosted style URL: <scheme>://<bucket>.<host>/<key>.
-    # Tigris (and most S3-compatible services) serve public objects via
-    # the bucket-as-subdomain form. Path-style works for authenticated
-    # API calls but not for anonymous browser access on Tigris.
-    uri = URI.parse(endpoint())
-    "#{uri.scheme}://#{bucket()}.#{uri.host}/#{rel_path}"
+    "{public_url()}/#{rel_path}"
   end
 
   # ---- helpers ----
@@ -131,5 +126,16 @@ defmodule Masthead.Storage.S3 do
   defp endpoint do
     System.get_env("AWS_ENDPOINT_URL_S3", "https://fly.storage.tigris.dev")
     |> String.trim_trailing("/")
+  end
+
+  defp public_url() do
+    case System.get_env("AWS_PUBLIC_URL_S3") do
+      nil ->
+        uri = URI.parse(endpoint())
+        "#{uri.scheme}://#{bucket()}.#{uri.host}"
+
+      url ->
+        url
+    end
   end
 end
