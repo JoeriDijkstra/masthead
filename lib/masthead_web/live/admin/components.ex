@@ -361,6 +361,8 @@ defmodule MastheadWeb.AdminLive.Components do
     default: nil,
     doc: ~s(public path of the record, e.g. "/posts/my-slug")
 
+  attr :format, :string, default: "markdown", doc: ~s("markdown" | "html" | "blog")
+
   def content_sidebar(assigns) do
     ~H"""
     <aside class="content-sidebar">
@@ -397,21 +399,9 @@ defmodule MastheadWeb.AdminLive.Components do
             <.icon_external /> View {@entity}
           </button>
         </div>
-
-        <div class="sidebar-card sidebar-card-danger">
-          <h3 class="sidebar-card-title">Danger zone</h3>
-          <button
-            type="button"
-            phx-click="delete"
-            data-confirm={"Delete this " <> @entity <> "? This can't be undone."}
-            class="btn btn-danger btn-block"
-          >
-            Delete {@entity}
-          </button>
-        </div>
       <% else %>
         <div class="sidebar-card">
-          <h3 class="sidebar-card-title">Save</h3>
+          <h3 class="sidebar-card-title">Manage</h3>
           <button
             type="submit"
             form="content-form"
@@ -434,7 +424,67 @@ defmodule MastheadWeb.AdminLive.Components do
           </button>
         </div>
       <% end %>
+
+      <div class="sidebar-card">
+        <h3 class="sidebar-card-title">Tools</h3>
+        <button
+          type="button"
+          class="btn btn-block"
+          phx-click="open"
+          phx-target={"#" <> @entity <> "-file-picker"}
+        >
+          <.icon_image /> Insert
+        </button>
+        <button
+          :if={@format == "html"}
+          type="button"
+          class="btn btn-block"
+          phx-click="format_body"
+        >
+          <.icon_format /> Format
+        </button>
+      </div>
+
+      <.live_component
+        module={MastheadWeb.AdminLive.FilePicker}
+        id={@entity <> "-file-picker"}
+        site={@site}
+        accept={~w(.png .jpg .jpeg .gif .webp .svg)}
+        images_only
+        title="Insert image"
+      />
+
+      <div :if={@editing} class="sidebar-card sidebar-card-danger">
+        <h3 class="sidebar-card-title">Danger zone</h3>
+        <button
+          type="button"
+          phx-click="delete"
+          data-confirm={"Delete this " <> @entity <> "? This can't be undone."}
+          class="btn btn-danger btn-block"
+        >
+          Delete {@entity}
+        </button>
+      </div>
     </aside>
+    """
+  end
+
+  defp icon_format(assigns) do
+    ~H"""
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="icon"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"
+      />
+    </svg>
     """
   end
 

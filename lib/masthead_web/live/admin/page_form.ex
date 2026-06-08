@@ -245,6 +245,41 @@ defmodule MastheadWeb.AdminLive.PageForm do
     end
   end
 
+  # ---- Editor tools (sidebar) ----
+
+  def handle_event("format_body", _params, socket) do
+    format = socket.assigns.draft["format"] || "markdown"
+    formatted = Masthead.Content.Format.run(socket.assigns.draft["body"] || "", format)
+    draft = Map.put(socket.assigns.draft, "body", formatted)
+
+    {:noreply,
+     socket
+     |> assign(draft: draft)
+     |> assign_changeset(draft)
+     |> push_event("editor_replace", %{id: editor_dom_id(format), text: formatted})}
+  end
+
+  @impl true
+  def handle_info({:file_picked, %Masthead.Uploads.Upload{} = upload, _ctx}, socket) do
+    format = socket.assigns.draft["format"] || "markdown"
+    text = image_snippet(upload, format)
+    {:noreply, push_event(socket, "editor_insert", %{id: editor_dom_id(format), text: text})}
+  end
+
+  def handle_info({:file_picked, _other, _ctx}, socket), do: {:noreply, socket}
+
+  # The blog format edits the description in a separate editor element.
+  defp editor_dom_id("blog"), do: "page-description-editor"
+  defp editor_dom_id(format), do: "page-body-editor-" <> format
+
+  defp image_snippet(upload, "html"),
+    do: ~s(<img src="#{Masthead.Uploads.url(upload)}" alt="#{image_alt(upload)}" />)
+
+  defp image_snippet(upload, _markdown),
+    do: "![#{image_alt(upload)}](#{Masthead.Uploads.url(upload)})"
+
+  defp image_alt(upload), do: upload.filename |> Path.rootname()
+
   defp update_slug_touched(_prev, "slug", %{"slug" => slug}) when slug != "", do: true
   defp update_slug_touched(_prev, "slug", _params), do: false
   defp update_slug_touched(prev, _target, _params), do: prev || false
@@ -528,6 +563,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
         entity="page"
         site={@site}
         view_path={@view_path}
+        format={@format}
       />
     </div>
 

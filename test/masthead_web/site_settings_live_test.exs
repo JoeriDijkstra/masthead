@@ -96,7 +96,7 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
     # an "Upload new" add-card.
     html =
       lv
-      |> element(~s(button[phx-click="open_picker"][phx-value-token="favicon"]))
+      |> element(~s(button[phx-click="open"][phx-value-token="favicon"]))
       |> render_click()
 
     assert html =~ "No file"
@@ -114,17 +114,16 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/settings")
 
     lv
-    |> element(~s(button[phx-click="open_picker"][phx-value-token="favicon"]))
+    |> element(~s(button[phx-click="open"][phx-value-token="favicon"]))
     |> render_click()
 
-    # Clicking a card selects it (and closes the modal); the field now shows
-    # the chosen filename.
-    html =
-      lv
-      |> element(~s(button[phx-click="select_upload"][phx-value-id="#{upload.id}"]))
-      |> render_click()
+    # Clicking a card selects it (the picker reports back to the LiveView,
+    # which sets the token); the field now shows the chosen filename.
+    lv
+    |> element(~s(button[phx-click="select"][phx-value-id="#{upload.id}"]))
+    |> render_click()
 
-    assert html =~ "icon.png"
+    assert render(lv) =~ "icon.png"
 
     # Selection is part of the settings form; Save persists it.
     lv |> form("#site-settings-form") |> render_submit()
@@ -137,22 +136,22 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/settings")
 
     lv
-    |> element(~s(button[phx-click="open_picker"][phx-value-token="favicon"]))
+    |> element(~s(button[phx-click="open"][phx-value-token="favicon"]))
     |> render_click()
 
     # The uploader lives behind the "Upload new" add-card.
-    lv |> element(~s(button[phx-click="open_uploader"])) |> render_click()
+    lv |> element(~s(button[phx-click="show_upload"])) |> render_click()
 
     file =
-      file_input(lv, "#token-upload-form", :picker_image, [
+      file_input(lv, "#settings-file-picker-upload-form", :file, [
         %{name: "fresh.png", content: "imgbytes", type: "image/png"}
       ])
 
     render_upload(file, "fresh.png")
-    html = lv |> element("#token-upload-form") |> render_submit()
+    lv |> element("#settings-file-picker-upload-form") |> render_submit()
 
     # Stored and immediately selected for the active token.
-    assert html =~ "fresh.png"
+    assert render(lv) =~ "fresh.png"
     fresh = Enum.find(Uploads.list_uploads(site.id), &(&1.filename == "fresh.png"))
     assert fresh
 

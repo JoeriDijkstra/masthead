@@ -67,6 +67,7 @@ defmodule Masthead.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       {:earmark, "~> 1.4"},
       {:html_sanitize_ex, "~> 1.4"},
+      {:floki, "~> 0.36"},
       {:slugify, "~> 1.3"},
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},

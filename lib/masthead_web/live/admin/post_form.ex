@@ -180,6 +180,39 @@ defmodule MastheadWeb.AdminLive.PostForm do
     end
   end
 
+  # ---- Editor tools (sidebar) ----
+
+  def handle_event("format_body", _params, socket) do
+    format = socket.assigns.draft["format"] || "markdown"
+    formatted = Masthead.Content.Format.run(socket.assigns.draft["body"] || "", format)
+    draft = Map.put(socket.assigns.draft, "body", formatted)
+
+    {:noreply,
+     socket
+     |> assign(draft: draft)
+     |> assign_changeset(draft)
+     |> push_event("editor_replace", %{id: "post-body-editor-" <> format, text: formatted})}
+  end
+
+  @impl true
+  def handle_info({:file_picked, %Masthead.Uploads.Upload{} = upload, _ctx}, socket) do
+    format = socket.assigns.draft["format"] || "markdown"
+    text = image_snippet(upload, format)
+
+    {:noreply,
+     push_event(socket, "editor_insert", %{id: "post-body-editor-" <> format, text: text})}
+  end
+
+  def handle_info({:file_picked, _other, _ctx}, socket), do: {:noreply, socket}
+
+  defp image_snippet(upload, "html"),
+    do: ~s(<img src="#{Masthead.Uploads.url(upload)}" alt="#{image_alt(upload)}" />)
+
+  defp image_snippet(upload, _markdown),
+    do: "![#{image_alt(upload)}](#{Masthead.Uploads.url(upload)})"
+
+  defp image_alt(upload), do: upload.filename |> Path.rootname()
+
   # ---- Helpers ----
 
   defp update_slug_touched(_prev, "slug", %{"slug" => slug}) when slug != "", do: true
@@ -388,6 +421,7 @@ defmodule MastheadWeb.AdminLive.PostForm do
         entity="post"
         site={@site}
         view_path={@view_path}
+        format={@format}
       />
     </div>
 
