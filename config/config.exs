@@ -56,6 +56,10 @@ config :esbuild,
 # Configure tailwind (the version is required)
 config :tailwind,
   version: "4.1.12",
+  # Use the npm-installed Tailwind CLI (assets/package.json) instead of the
+  # standalone GitHub-release binary, so the Docker/Fly build never has to
+  # reach github.com to download it. `npm ci` provides this during the build.
+  path: Path.expand("../assets/node_modules/.bin/tailwindcss", __DIR__),
   masthead: [
     args: ~w(
       --input=assets/css/app.css
