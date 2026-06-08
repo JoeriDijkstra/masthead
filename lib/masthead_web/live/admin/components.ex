@@ -227,6 +227,61 @@ defmodule MastheadWeb.AdminLive.Components do
   end
 
   @doc """
+  Filter + search toolbar for the admin overview tables (users / sites /
+  themes). Renders a row of filter buttons — highlighting the active one —
+  and a search box. The caller owns the state; this only emits events:
+
+  * clicking a filter button sends `"switch_filter"` with `scope` + `filter`
+  * typing in the search box sends `"search_list"` (debounced) with
+    `scope` + `query`
+
+  `scope` identifies which list the events belong to so a single pair of
+  handlers can serve all three tabs.
+  """
+  attr :scope, :atom, required: true, doc: ":users | :sites | :themes"
+  attr :filter, :atom, required: true, doc: "the currently active filter value"
+  attr :options, :list, required: true, doc: ~s(list of `{value, label}` filter buttons)
+  attr :search, :string, default: "", doc: "the current search term"
+  attr :placeholder, :string, default: "Search…"
+  attr :limit, :integer, required: true, doc: "the row cap applied to the list"
+  attr :truncated?, :boolean, default: false, doc: "true when the list hit the cap"
+
+  def list_toolbar(assigns) do
+    ~H"""
+    <div class="admin-toolbar">
+      <div class="admin-toolbar-row">
+        <div class="admin-filters">
+          <button
+            :for={{value, label} <- @options}
+            type="button"
+            class={["btn btn-sm", @filter == value && "btn-primary"]}
+            phx-click="switch_filter"
+            phx-value-scope={@scope}
+            phx-value-filter={value}
+          >
+            {label}
+          </button>
+        </div>
+        <form phx-change="search_list" class="admin-search">
+          <input type="hidden" name="scope" value={@scope} />
+          <input
+            type="search"
+            name="query"
+            value={@search}
+            placeholder={@placeholder}
+            phx-debounce="300"
+            autocomplete="off"
+          />
+        </form>
+      </div>
+      <p :if={@truncated?} class="admin-toolbar-hint">
+        Showing the first {@limit}. Refine with search or a filter to find more.
+      </p>
+    </div>
+    """
+  end
+
+  @doc """
   Renders the Markdown / HTML format picker as a pair of cards.
 
   * `selected` — `"markdown"` or `"html"` to mark a card as active, or `nil` for none

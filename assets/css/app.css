@@ -903,6 +903,40 @@ button.danger:hover { filter: brightness(0.92); }
   align-items: center;
   justify-content: flex-end;
 }
+/* Toolbar above each admin table: filter buttons on the left, search on
+   the right, with a cap hint underneath when the list is truncated. */
+.admin-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.admin-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.admin-toolbar-hint { margin: 0; font-size: 0.8rem; color: var(--muted); }
+.admin-filters { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.admin-search { margin: 0; flex: 0 1 18rem; }
+.admin-search input[type="search"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--fg);
+}
+.admin-search input[type="search"]::placeholder { color: var(--muted); }
+.admin-search input[type="search"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
 
 /* Format tags (Markdown / HTML / Blog) */
 .format-tag {

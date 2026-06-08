@@ -14,16 +14,50 @@ defmodule MastheadWeb.AdminLive.Console do
        page_title: "Admin",
        tab: :users,
        action_modal?: false,
-       action_site: nil
+       action_site: nil,
+       users_filter: :all,
+       users_search: "",
+       sites_filter: :all,
+       sites_search: "",
+       themes_filter: :all,
+       themes_search: ""
      )
      |> load_data()}
   end
 
-  defp load_data(socket) do
+  # Filter buttons offered per tab. The atoms match the context
+  # `apply_filter/2` clauses, so `String.to_existing_atom/1` is safe.
+  defp filter_options(:users),
+    do: [
+      {:all, "All"},
+      {:verified, "Verified"},
+      {:unverified, "Unverified"},
+      {:disabled, "Disabled"},
+      {:admins, "Admins"}
+    ]
+
+  defp filter_options(:sites),
+    do: [{:all, "All"}, {:enabled, "Enabled"}, {:disabled, "Disabled"}, {:deleted, "Deleted"}]
+
+  defp filter_options(:themes),
+    do: [
+      {:all, "All"},
+      {:built_in, "Built-in"},
+      {:uploaded, "Uploaded"},
+      {:public, "Public"},
+      {:private, "Private"}
+    ]
+
+  # Each tab shows at most this many rows; the overview is meant to be
+  # narrowed with the filter + search, not paged through. The toolbar warns
+  # when a list hits the cap so a hidden match doesn't read as "none".
+  defp list_limit, do: 20
+
+  defp load_data(%{assigns: a} = socket) do
     assign(socket,
-      users: Accounts.list_all_users(),
-      sites: Sites.list_all_sites(),
-      themes: Themes.list_all_themes()
+      users: Accounts.list_all_users(a.users_filter, a.users_search, list_limit()),
+      sites: Sites.list_all_sites(a.sites_filter, a.sites_search, list_limit()),
+      themes: Themes.list_all_themes(a.themes_filter, a.themes_search, list_limit())
     )
   end
 
@@ -79,6 +113,18 @@ defmodule MastheadWeb.AdminLive.Console do
     {:noreply, assign(socket, action_modal?: false, action_site: nil)}
   end
 
+  # ---- filtering & search (users / sites / themes) ----
+
+  def handle_event("switch_filter", %{"scope" => scope, "filter" => filter}, socket) do
+    key = String.to_existing_atom("#{scope}_filter")
+    {:noreply, socket |> assign(key, String.to_existing_atom(filter)) |> load_data()}
+  end
+
+  def handle_event("search_list", %{"scope" => scope, "query" => query}, socket) do
+    key = String.to_existing_atom("#{scope}_search")
+    {:noreply, socket |> assign(key, query) |> load_data()}
+  end
+
   def handle_event("create_action", %{"title" => title} = params, socket) do
     site = socket.assigns.action_site
 
@@ -113,6 +159,15 @@ defmodule MastheadWeb.AdminLive.Console do
       </div>
 
       <div :if={@tab == :users} class="admin-table-wrap">
+        <.list_toolbar
+          scope={:users}
+          filter={@users_filter}
+          options={filter_options(:users)}
+          search={@users_search}
+          placeholder="Search by email…"
+          limit={list_limit()}
+          truncated?={length(@users) == list_limit()}
+        />
         <table class="table">
           <thead>
             <tr>
@@ -167,6 +222,15 @@ defmodule MastheadWeb.AdminLive.Console do
       </div>
 
       <div :if={@tab == :sites} class="admin-table-wrap">
+        <.list_toolbar
+          scope={:sites}
+          filter={@sites_filter}
+          options={filter_options(:sites)}
+          search={@sites_search}
+          placeholder="Search by name…"
+          limit={list_limit()}
+          truncated?={length(@sites) == list_limit()}
+        />
         <table class="table">
           <thead>
             <tr>
@@ -249,6 +313,15 @@ defmodule MastheadWeb.AdminLive.Console do
       </div>
 
       <div :if={@tab == :themes} class="admin-table-wrap">
+        <.list_toolbar
+          scope={:themes}
+          filter={@themes_filter}
+          options={filter_options(:themes)}
+          search={@themes_search}
+          placeholder="Search by name…"
+          limit={list_limit()}
+          truncated?={length(@themes) == list_limit()}
+        />
         <table class="table">
           <thead>
             <tr>

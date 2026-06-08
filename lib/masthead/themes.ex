@@ -160,9 +160,35 @@ defmodule Masthead.Themes do
 
   # ---- admin ----
 
-  @doc "Every theme, with owner preloaded. Admin overview."
-  def list_all_themes do
-    Repo.all(from t in Theme, order_by: ^theme_order(), preload: [:owner])
+  @doc """
+  Themes for the admin overview, with owner preloaded and optional filter +
+  search. Capped at `count` rows — narrow with the filter + search rather
+  than paging.
+  """
+  def list_all_themes(filter \\ :all, search_query \\ nil, count \\ 20) do
+    from(t in Theme, order_by: ^theme_order(), preload: [:owner])
+    |> apply_filter(filter)
+    |> apply_search(search_query)
+    |> limit(^count)
+    |> Repo.all()
+  end
+
+  defp apply_filter(query, filter) do
+    case filter do
+      :built_in -> from t in query, where: t.source == "built_in"
+      :uploaded -> from t in query, where: t.source == "uploaded"
+      :public -> from t in query, where: t.public == true
+      :private -> from t in query, where: t.public == false
+      _ -> query
+    end
+  end
+
+  defp apply_search(query, search_query) do
+    if search_query && search_query != "" do
+      from t in query, where: ilike(t.name, ^"%#{search_query}%")
+    else
+      query
+    end
   end
 
   @doc """
