@@ -14,7 +14,8 @@ defmodule MastheadWeb.AdminLive.Components do
 
   attr :active, :atom,
     default: nil,
-    doc: ":overview | :posts | :pages | :uploads | :settings | :checklist | :sites | :themes"
+    doc:
+      ":overview | :posts | :pages | :uploads | :theme | :settings | :checklist | :sites | :themes"
 
   attr :action_count, :integer,
     default: nil,
@@ -91,6 +92,9 @@ defmodule MastheadWeb.AdminLive.Components do
             </.nav_link>
             <.nav_link href={~p"/#{@site.slug}/uploads"} label="Uploads" active={@active == :uploads}>
               <.icon_image />
+            </.nav_link>
+            <.nav_link href={~p"/#{@site.slug}/theme"} label="Theme" active={@active == :theme}>
+              <.icon_palette />
             </.nav_link>
             <.nav_link
               href={~p"/#{@site.slug}/settings"}
