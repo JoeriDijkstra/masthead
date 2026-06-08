@@ -54,6 +54,29 @@ export const CodeEditor = {
       }),
       parent: this.el,
     })
+
+    // Server-driven edits (editor tools). The `id` in the payload scopes the
+    // event to one editor so other CodeEditor instances ignore it. The sync
+    // listener above mirrors the change back to the textarea automatically.
+    this.handleEvent("editor_insert", ({id, text}) => {
+      if (id && id !== this.el.id) return
+      if (!this.view || !text) return
+      const {from, to} = this.view.state.selection.main
+      this.view.dispatch({
+        changes: {from, to, insert: text},
+        selection: {anchor: from + text.length},
+      })
+      this.view.focus()
+    })
+
+    this.handleEvent("editor_replace", ({id, text}) => {
+      if (id && id !== this.el.id) return
+      if (!this.view) return
+      this.view.dispatch({
+        changes: {from: 0, to: this.view.state.doc.length, insert: text || ""},
+      })
+      this.view.focus()
+    })
   },
 
   destroyed() {

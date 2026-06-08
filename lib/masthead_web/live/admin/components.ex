@@ -112,11 +112,27 @@ defmodule MastheadWeb.AdminLive.Components do
       <main class="admin-content">
         <.unconfirmed_banner :if={@current_user} user={@current_user} />
 
-        <div :if={@flash != %{} and Phoenix.Flash.get(@flash, :info)} class="admin-flash">
-          <p class="flash flash-info">{Phoenix.Flash.get(@flash, :info)}</p>
-        </div>
-        <div :if={@flash != %{} and Phoenix.Flash.get(@flash, :error)} class="admin-flash">
-          <p class="flash flash-error">{Phoenix.Flash.get(@flash, :error)}</p>
+        <div class="flash-toasts" aria-live="polite">
+          <div
+            :if={Phoenix.Flash.get(@flash, :info)}
+            id="toast-info"
+            class="flash-toast flash-toast-info"
+            phx-hook="FlashToast"
+            data-key="info"
+            role="status"
+          >
+            {Phoenix.Flash.get(@flash, :info)}
+          </div>
+          <div
+            :if={Phoenix.Flash.get(@flash, :error)}
+            id="toast-error"
+            class="flash-toast flash-toast-error"
+            phx-hook="FlashToast"
+            data-key="error"
+            role="alert"
+          >
+            {Phoenix.Flash.get(@flash, :error)}
+          </div>
         </div>
 
         <div :if={@title || @actions != []} class="page-head">
@@ -325,6 +341,165 @@ defmodule MastheadWeb.AdminLive.Components do
     <ul :if={@show and @changeset.errors != []} class="errors">
       <li :for={{field, {msg, _}} <- @changeset.errors}>{field}: {msg}</li>
     </ul>
+    """
+  end
+
+  @doc """
+  Right-hand control rail for the content editor (post & page forms).
+
+  Sits beside the body editor on the content step and holds the save,
+  publishing, and delete controls. The save buttons submit the body form
+  via `form="content-form"`; the publish/delete buttons emit the
+  `"toggle_publish"` and `"delete"` events handled by the parent LiveView.
+  """
+  attr :editing, :boolean, required: true
+  attr :published, :boolean, default: false
+  attr :entity, :string, required: true, doc: ~s(noun for labels, e.g. "post" or "page")
+  attr :site, :map, default: nil
+
+  attr :view_path, :string,
+    default: nil,
+    doc: ~s(public path of the record, e.g. "/posts/my-slug")
+
+  attr :format, :string, default: "markdown", doc: ~s("markdown" | "html" | "blog")
+
+  def content_sidebar(assigns) do
+    ~H"""
+    <aside class="content-sidebar">
+      <%= if @editing do %>
+        <div class="sidebar-card">
+          <h3 class="sidebar-card-title">Manage</h3>
+          <button
+            type="submit"
+            form="content-form"
+            class="btn btn-primary btn-block"
+            data-shortcut="save"
+          >
+            Save changes
+          </button>
+          <button type="button" phx-click="toggle_publish" class="btn btn-block">
+            {if @published, do: "Unpublish", else: "Publish"}
+          </button>
+          <a
+            :if={@published}
+            href={site_url(@site) <> @view_path}
+            target="_blank"
+            rel="noopener"
+            class="btn btn-block"
+          >
+            <.icon_external /> View {@entity}
+          </a>
+          <button
+            :if={not @published}
+            type="button"
+            class="btn btn-block"
+            disabled
+            title={"Publish this " <> @entity <> " to view it live"}
+          >
+            <.icon_external /> View {@entity}
+          </button>
+        </div>
+      <% else %>
+        <div class="sidebar-card">
+          <h3 class="sidebar-card-title">Manage</h3>
+          <button
+            type="submit"
+            form="content-form"
+            name="action"
+            value="publish"
+            class="btn btn-primary btn-block"
+            data-shortcut="publish"
+          >
+            Save &amp; publish
+          </button>
+          <button
+            type="submit"
+            form="content-form"
+            name="action"
+            value="draft"
+            class="btn btn-block"
+            data-shortcut="save"
+          >
+            Save as draft
+          </button>
+        </div>
+      <% end %>
+
+      <div class="sidebar-card">
+        <h3 class="sidebar-card-title">Tools</h3>
+        <button
+          type="button"
+          class="btn btn-block"
+          phx-click="open"
+          phx-target={"#" <> @entity <> "-file-picker"}
+        >
+          <.icon_image /> Insert
+        </button>
+        <button
+          :if={@format == "html"}
+          type="button"
+          class="btn btn-block"
+          phx-click="format_body"
+        >
+          <.icon_format /> Format
+        </button>
+      </div>
+
+      <.live_component
+        module={MastheadWeb.AdminLive.FilePicker}
+        id={@entity <> "-file-picker"}
+        site={@site}
+        accept={~w(.png .jpg .jpeg .gif .webp .svg)}
+        images_only
+        title="Insert image"
+      />
+
+      <div :if={@editing} class="sidebar-card sidebar-card-danger">
+        <h3 class="sidebar-card-title">Danger zone</h3>
+        <button
+          type="button"
+          phx-click="delete"
+          data-confirm={"Delete this " <> @entity <> "? This can't be undone."}
+          class="btn btn-danger btn-block"
+        >
+          Delete {@entity}
+        </button>
+      </div>
+    </aside>
+    """
+  end
+
+  defp icon_format(assigns) do
+    ~H"""
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="icon"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"
+      />
+    </svg>
+    """
+  end
+
+  @doc """
+  Read-only publish-state badge for the editor header. Mirrors the pill
+  shape of a button, but only reports state — the actual publish/unpublish
+  action lives in the content sidebar's "Manage" card.
+  """
+  attr :published, :boolean, required: true
+
+  def publish_status(assigns) do
+    ~H"""
+    <span class={"publish-status " <> if(@published, do: "is-published", else: "is-draft")}>
+      {if @published, do: "Published", else: "Draft"}
+    </span>
     """
   end
 

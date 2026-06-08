@@ -228,6 +228,7 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   background: #fee2e2;
   color: #b91c1c;
 }
+.btn .icon { width: 1em; height: 1em; flex: 0 0 auto; }
 .btn-sm { padding: 0.35rem 0.85rem; font-size: 0.8rem; }
 .btn-danger.btn-sm { padding: 0.3rem 0.8rem; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -443,10 +444,48 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   .user-email { display: none; }
   .admin-content { padding: 1.5rem; }
 }
-.admin-flash { margin-bottom: 1rem; }
-.flash { padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.9rem; margin: 0; }
-.flash-info { background: #ecfdf5; color: var(--good); border: 1px solid #a7f3d0; }
-.flash-error { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+/* Flash toasts — floating, auto-dismissing messages.
+   Namespaced as `flash-toast*` to avoid colliding with daisyUI's `.toast`. */
+.flash-toasts {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+  width: min(92vw, 400px);
+  pointer-events: none;
+}
+.flash-toast {
+  pointer-events: auto;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  /* Visible by default — entrance is a CSS animation so the toast shows
+     even if the JS hook hasn't loaded; the hook only auto-dismisses it. */
+  animation: flash-toast-in 0.22s ease both;
+}
+@keyframes flash-toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* Leave: a dedicated keyframe animation reliably overrides the entrance
+   one (a plain transition was masked by the entrance animation's fill). */
+.flash-toast.is-leaving {
+  animation: flash-toast-out 0.2s ease forwards;
+}
+@keyframes flash-toast-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(12px); }
+}
+.flash-toast-info { background: #ecfdf5; color: var(--good); border: 1px solid #a7f3d0; }
+.flash-toast-error { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
 
 .account-banner {
   display: flex;
@@ -1389,6 +1428,75 @@ button.danger:hover { filter: brightness(0.92); }
 .code-editor-short, .code-editor-short .cm-editor { min-height: 180px; }
 .editor.editor-short .code-editor, .editor.editor-short .code-editor .cm-editor {
   min-height: 180px;
+}
+
+/* Content editor layout — body editor (left) + control rail (right) */
+.content-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 1.5rem;
+  align-items: start;
+}
+.content-main { min-width: 0; }
+.content-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 1.5rem;
+}
+.sidebar-card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.sidebar-card-title {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.btn-block { width: 100%; justify-content: center; }
+.sidebar-card-danger { border-color: var(--danger-soft); }
+
+/* Read-only publish-state badge in the editor header */
+.publish-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.5rem 1.1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+.publish-status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.publish-status.is-published {
+  background: var(--good-soft);
+  color: #166534;
+  border: 1px solid #86efac;
+}
+.publish-status.is-draft {
+  background: var(--bg-soft);
+  color: var(--muted);
+  border: 1px solid var(--rule);
+}
+
+@media (max-width: 900px) {
+  .content-layout { grid-template-columns: 1fr; }
+  .content-sidebar { position: static; }
 }
 /* Prose — rendered post/page body. Tailwind preflight resets default
    heading/paragraph styles to inherit, so we restore the typical
