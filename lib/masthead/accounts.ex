@@ -327,9 +327,35 @@ defmodule Masthead.Accounts do
 
   # ---- admin ----
 
-  @doc "Every user, newest first. Admin overview."
-  def list_all_users do
-    Repo.all(from u in User, order_by: [desc: u.inserted_at])
+  @doc """
+  Users for the admin overview, newest first, with optional filter +
+  search. Capped at `count` rows — narrow with the filter + search rather
+  than paging.
+  """
+  def list_all_users(filter \\ :all, search_query \\ nil, count \\ 20) do
+    from(u in User, order_by: [desc: u.inserted_at])
+    |> apply_filter(filter)
+    |> apply_search(search_query)
+    |> limit(^count)
+    |> Repo.all()
+  end
+
+  defp apply_filter(query, filter) do
+    case filter do
+      :verified -> from u in query, where: not is_nil(u.confirmed_at)
+      :unverified -> from u in query, where: is_nil(u.confirmed_at)
+      :disabled -> from u in query, where: not is_nil(u.disabled_at)
+      :admins -> from u in query, where: u.admin == true
+      _ -> query
+    end
+  end
+
+  defp apply_search(query, search_query) do
+    if search_query && search_query != "" do
+      from u in query, where: ilike(u.email, ^"%#{search_query}%")
+    else
+      query
+    end
   end
 
   @doc "Marks a user's email confirmed without a token (admin verify)."

@@ -5,6 +5,7 @@ defmodule MastheadWeb.AdminLive.Components do
 
   alias Masthead.Accounts.User
   alias Masthead.Actions
+  alias Phoenix.LiveView.JS
 
   attr :title, :string, default: nil
   attr :site, :map, default: nil
@@ -27,13 +28,44 @@ defmodule MastheadWeb.AdminLive.Components do
 
   def shell(assigns) do
     ~H"""
-    <div class="admin-shell">
-      <aside class="admin-sidebar">
+    <div id="admin-shell" class="admin-shell">
+      <%!-- Mobile-only top bar. The hamburger opens the off-canvas sidebar
+            drawer; the bar and drawer behaviour are hidden at desktop widths
+            via CSS, where the sidebar is a normal fixed column. --%>
+      <header class="admin-topbar">
+        <button
+          type="button"
+          class="hamburger"
+          aria-label="Open menu"
+          aria-controls="admin-sidebar"
+          phx-click={JS.add_class("nav-open", to: "#admin-shell")}
+        >
+          <.icon_menu />
+        </button>
+        <.link navigate={~p"/sites"} class="topbar-brand">
+          <img src={~p"/images/logo.png"} alt="Masthead" class="brand-logo" />
+          <span class="brand-name">Masthead</span>
+        </.link>
+        <span :if={@site} class="topbar-site">{@site.name}</span>
+      </header>
+
+      <%!-- Backdrop behind the open drawer; tapping it closes the menu. --%>
+      <div class="sidebar-overlay" aria-hidden="true" phx-click={close_nav()}></div>
+
+      <aside id="admin-sidebar" class="admin-sidebar">
         <div class="sidebar-brand">
           <.link navigate={~p"/sites"} class="brand">
             <img src={~p"/images/logo.png"} alt="Masthead" class="brand-logo" />
             <span class="brand-name">Masthead</span>
           </.link>
+          <button
+            type="button"
+            class="sidebar-close"
+            aria-label="Close menu"
+            phx-click={close_nav()}
+          >
+            <.icon_close />
+          </button>
           <p class="sidebar-version">v{Application.spec(:masthead, :vsn)}</p>
           <p :if={@site} class="sidebar-site">{@site.name}</p>
         </div>
@@ -70,7 +102,13 @@ defmodule MastheadWeb.AdminLive.Components do
 
             <div class="sidebar-divider"></div>
 
-            <a class="nav-item nav-external" href={site_url(@site)} target="_blank" rel="noopener">
+            <a
+              class="nav-item nav-external"
+              href={site_url(@site)}
+              target="_blank"
+              rel="noopener"
+              phx-click={close_nav()}
+            >
               <.icon_external />
               <span>View site</span>
             </a>
@@ -100,7 +138,12 @@ defmodule MastheadWeb.AdminLive.Components do
 
         <div :if={@current_user} class="sidebar-user">
           <div class="user-avatar">{user_initial(@current_user)}</div>
-          <.link navigate={~p"/account"} class="user-email" title="Account settings">
+          <.link
+            navigate={~p"/account"}
+            class="user-email"
+            title="Account settings"
+            phx-click={close_nav()}
+          >
             {@current_user.email}
           </.link>
           <.link href={~p"/logout"} method="delete" class="logout-link" title="Log out">
@@ -174,13 +217,22 @@ defmodule MastheadWeb.AdminLive.Components do
 
   defp nav_link(assigns) do
     ~H"""
-    <.link navigate={@href} class={"nav-item" <> if(@active, do: " active", else: "")}>
+    <.link
+      navigate={@href}
+      class={"nav-item" <> if(@active, do: " active", else: "")}
+      phx-click={close_nav()}
+    >
       {render_slot(@inner_block)}
       <span>{@label}</span>
       <span :if={@badge && @badge > 0} class="nav-badge">{@badge}</span>
     </.link>
     """
   end
+
+  # Collapses the mobile sidebar drawer. The class is toggled on the shell so
+  # CSS can drive both the drawer transform and the backdrop. On desktop the
+  # class is inert (the sidebar is a static column), so this is a no-op there.
+  defp close_nav, do: JS.remove_class("nav-open", to: "#admin-shell")
 
   attr :action, :map, required: true
   attr :dismissible, :boolean, default: true
@@ -223,6 +275,107 @@ defmodule MastheadWeb.AdminLive.Components do
   def button(assigns) do
     ~H"""
     <button class={"btn btn-" <> @variant} {@rest}>{render_slot(@inner_block)}</button>
+    """
+  end
+
+  attr :at, :any, default: nil, doc: "a DateTime to render as a relative 'time ago' label"
+
+  @doc """
+  Renders a timestamp as a relative label (e.g. "a day ago") with the exact
+  date shown in a native hover tooltip. Renders nothing when `at` is nil.
+  """
+  def relative_time(assigns) do
+    ~H"""
+    <time
+      :if={@at}
+      class="rel-time"
+      datetime={DateTime.to_iso8601(@at)}
+      title={Calendar.strftime(@at, "%b %-d, %Y at %-I:%M %p UTC")}
+    >
+      {relative_label(@at)}
+    </time>
+    """
+  end
+
+  # Coarse "time ago" phrasing in the style of moment.js's fromNow. Computed at
+  # render time; it doesn't tick live, which is fine for list timestamps.
+  defp relative_label(at) do
+    diff = DateTime.diff(DateTime.utc_now(), at, :second)
+
+    cond do
+      diff < 0 -> "just now"
+      diff < 45 -> "a few seconds ago"
+      true -> diff |> relative_unit() |> relative_phrase()
+    end
+  end
+
+  defp relative_unit(s) when s < 90, do: {1, "minute"}
+  defp relative_unit(s) when s < 2_700, do: {div(s, 60), "minute"}
+  defp relative_unit(s) when s < 5_400, do: {1, "hour"}
+  defp relative_unit(s) when s < 79_200, do: {div(s, 3_600), "hour"}
+  defp relative_unit(s) when s < 129_600, do: {1, "day"}
+  defp relative_unit(s) when s < 2_246_400, do: {div(s, 86_400), "day"}
+  defp relative_unit(s) when s < 3_974_400, do: {1, "month"}
+  defp relative_unit(s) when s < 27_648_000, do: {round(s / 2_629_800), "month"}
+  defp relative_unit(s) when s < 47_347_200, do: {1, "year"}
+  defp relative_unit(s), do: {round(s / 31_557_600), "year"}
+
+  defp relative_phrase({1, "hour"}), do: "an hour ago"
+  defp relative_phrase({1, unit}), do: "a #{unit} ago"
+  defp relative_phrase({n, unit}), do: "#{n} #{unit}s ago"
+
+  @doc """
+  Filter + search toolbar for the admin overview tables (users / sites /
+  themes). Renders a row of filter buttons — highlighting the active one —
+  and a search box. The caller owns the state; this only emits events:
+
+  * clicking a filter button sends `"switch_filter"` with `scope` + `filter`
+  * typing in the search box sends `"search_list"` (debounced) with
+    `scope` + `query`
+
+  `scope` identifies which list the events belong to so a single pair of
+  handlers can serve all three tabs.
+  """
+  attr :scope, :atom, required: true, doc: ":users | :sites | :themes"
+  attr :filter, :atom, required: true, doc: "the currently active filter value"
+  attr :options, :list, required: true, doc: ~s(list of `{value, label}` filter buttons)
+  attr :search, :string, default: "", doc: "the current search term"
+  attr :placeholder, :string, default: "Search…"
+  attr :limit, :integer, required: true, doc: "the row cap applied to the list"
+  attr :truncated?, :boolean, default: false, doc: "true when the list hit the cap"
+
+  def list_toolbar(assigns) do
+    ~H"""
+    <div class="admin-toolbar">
+      <div class="admin-toolbar-row">
+        <div class="admin-filters">
+          <button
+            :for={{value, label} <- @options}
+            type="button"
+            class={["btn btn-sm", @filter == value && "btn-primary"]}
+            phx-click="switch_filter"
+            phx-value-scope={@scope}
+            phx-value-filter={value}
+          >
+            {label}
+          </button>
+        </div>
+        <form phx-change="search_list" class="admin-search">
+          <input type="hidden" name="scope" value={@scope} />
+          <input
+            type="search"
+            name="query"
+            value={@search}
+            placeholder={@placeholder}
+            phx-debounce="300"
+            autocomplete="off"
+          />
+        </form>
+      </div>
+      <p :if={@truncated?} class="admin-toolbar-hint">
+        Showing the first {@limit}. Refine with search or a filter to find more.
+      </p>
+    </div>
     """
   end
 
@@ -743,6 +896,40 @@ defmodule MastheadWeb.AdminLive.Components do
         stroke-linejoin="round"
         d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
       />
+    </svg>
+    """
+  end
+
+  defp icon_menu(assigns) do
+    ~H"""
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.75"
+      stroke="currentColor"
+      class="icon"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5"
+      />
+    </svg>
+    """
+  end
+
+  defp icon_close(assigns) do
+    ~H"""
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.75"
+      stroke="currentColor"
+      class="icon"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
     </svg>
     """
   end

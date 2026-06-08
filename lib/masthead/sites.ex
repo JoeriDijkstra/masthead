@@ -69,9 +69,17 @@ defmodule Masthead.Sites do
 
   # ---- admin ----
 
-  @doc "Every site (incl. disabled/soft-deleted), with owner preloaded."
-  def list_all_sites do
-    Repo.all(from s in Site, order_by: [asc: s.name], preload: [:owner])
+  @doc """
+  Sites for the admin overview (incl. disabled/soft-deleted), with owner
+  preloaded. Capped at `count` rows — the overview is meant to be narrowed
+  with the filter + search, not paged through.
+  """
+  def list_all_sites(filter \\ :all, search_query \\ nil, count \\ 20) do
+    from(s in Site, order_by: [asc: s.name], preload: [:owner])
+    |> apply_filter(filter)
+    |> apply_search(search_query)
+    |> limit(^count)
+    |> Repo.all()
   end
 
   @doc "Load any site by slug for an admin entering it. Excludes soft-deleted."
@@ -172,5 +180,22 @@ defmodule Masthead.Sites do
 
   def change_settings(%Site{} = site, attrs \\ %{}) do
     Site.settings_changeset(site, attrs)
+  end
+
+  defp apply_filter(query, filter) do
+    case filter do
+      :disabled -> from s in query, where: not is_nil(s.disabled_at)
+      :deleted -> from s in query, where: not is_nil(s.deleted_at)
+      :enabled -> from s in query, where: is_nil(s.disabled_at) and is_nil(s.deleted_at)
+      _ -> query
+    end
+  end
+
+  defp apply_search(query, search_query) do
+    if search_query && search_query != "" do
+      from s in query, where: ilike(s.name, ^"%#{search_query}%")
+    else
+      query
+    end
   end
 end

@@ -31,7 +31,10 @@ defmodule MastheadWeb.AdminLive.SiteDashboard do
       active={:overview}
     >
       <:actions>
-        <.link navigate={~p"/#{@site.slug}/posts/new"} class="btn btn-primary">+ New post</.link>
+        <.link navigate={~p"/#{@site.slug}/posts/new"} class="btn btn-primary btn-add">
+          <span class="btn-add-icon" aria-hidden="true">+</span>
+          <span class="btn-add-label">New post</span>
+        </.link>
       </:actions>
 
       <h2 :if={@top_action} class="section-heading">Pending</h2>
@@ -39,12 +42,12 @@ defmodule MastheadWeb.AdminLive.SiteDashboard do
 
       <h2 class="section-heading">Statistics</h2>
 
-      <section class="stats">
-        <div class="stat"><span class="num">{length(@posts)}</span> posts</div>
-        <div class="stat">
+      <section class="metrics">
+        <div class="metric"><span class="num">{length(@posts)}</span> posts</div>
+        <div class="metric">
           <span class="num">{Enum.count(@posts, & &1.published)}</span> published
         </div>
-        <div class="stat"><span class="num">{length(@pages)}</span> pages</div>
+        <div class="metric"><span class="num">{length(@pages)}</span> pages</div>
       </section>
 
       <h2 class="section-heading">Recent posts</h2>

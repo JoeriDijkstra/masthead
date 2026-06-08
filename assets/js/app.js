@@ -104,6 +104,14 @@ window.addEventListener("keydown", e => {
     e.preventDefault()
     target.click()
   }
+
+  // Escape closes the mobile sidebar drawer (opened via the hamburger).
+  if (e.key === "Escape") {
+    const shell = document.getElementById("admin-shell")
+    if (shell && shell.classList.contains("nav-open")) {
+      shell.classList.remove("nav-open")
+    }
+  }
 })
 
 // connect if there are any LiveViews on the page
