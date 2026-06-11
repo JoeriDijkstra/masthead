@@ -25,11 +25,13 @@ config :masthead, :site_url,
   port: 4000
 
 # Custom-domain feature. `cname_target` is the hostname users point
-# their domain's CNAME at (the Fly app's edge); `txt_prefix` is the
+# their domain's CNAME at — our own branded edge host, not the
+# underlying `*.fly.dev` app name, so the target is stable and never
+# exposes the hosting provider to customers' DNS. `txt_prefix` is the
 # label under which the ownership token is published as a TXT record.
-# Prod overrides `cname_target` from FLY_APP_NAME in runtime.exs.
+# Prod overrides `cname_target` from the primary app host in runtime.exs.
 config :masthead, :custom_domain,
-  cname_target: "dijkstra-masthead.fly.dev",
+  cname_target: "masthead.site",
   txt_prefix: "_masthead-verify"
 
 # Configure the endpoint

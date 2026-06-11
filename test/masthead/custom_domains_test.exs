@@ -3,7 +3,9 @@ defmodule Masthead.CustomDomainsTest do
 
   alias Masthead.{Accounts, Sites, CustomDomains}
 
-  @cname_target "dijkstra-masthead.fly.dev"
+  # Read the configured target so this stays in sync with config rather
+  # than hardcoding a value that can silently drift from the real one.
+  @cname_target Application.compile_env(:masthead, [:custom_domain, :cname_target])
 
   setup do
     Masthead.Themes.Seed.run()

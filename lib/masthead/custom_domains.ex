@@ -266,7 +266,7 @@ defmodule Masthead.CustomDomains do
 
   defp cname_target do
     Application.get_env(:masthead, :custom_domain, [])
-    |> Keyword.get(:cname_target, "dijkstra-masthead.fly.dev")
+    |> Keyword.get(:cname_target, "masthead.site")
   end
 
   defp txt_prefix do
