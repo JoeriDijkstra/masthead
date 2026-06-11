@@ -89,13 +89,13 @@ if config_env() == :prod do
     host: List.first(app_hosts),
     port: nil
 
-  # Custom domains: users CNAME their domain at the Fly app's edge.
-  # Derive the target from FLY_APP_NAME so it tracks the deployed app.
-  if fly_app = System.get_env("FLY_APP_NAME") do
-    config :masthead, :custom_domain,
-      cname_target: "#{fly_app}.fly.dev",
-      txt_prefix: "_masthead-verify"
-  end
+  # Custom domains: users delegate by CNAME-ing their domain at our
+  # primary app host (a stable, branded edge we control) rather than the
+  # underlying `*.fly.dev` app name — so the target survives infra
+  # changes and never leaks the hosting provider into customers' DNS.
+  config :masthead, :custom_domain,
+    cname_target: List.first(app_hosts),
+    txt_prefix: "_masthead-verify"
 
   config :masthead, MastheadWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],

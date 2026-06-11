@@ -75,7 +75,7 @@ defmodule Masthead.CustomDomains.DnsResolver.Stub do
 
       config :masthead, :dns_stub, %{
         txt: %{"_masthead-verify.blog.example.com" => ["token123"]},
-        cname: %{"blog.example.com" => ["dijkstra-masthead.fly.dev"]}
+        cname: %{"blog.example.com" => ["masthead.site"]}
       }
   """
   @behaviour Masthead.CustomDomains.DnsResolver
