@@ -13,6 +13,7 @@ defmodule MastheadWeb.UserAuth do
 
   def log_in_user(conn, user, params \\ %{}) do
     return_to = get_session(conn, :user_return_to)
+    {:ok, _} = Accounts.record_login(user)
 
     conn
     |> renew_session()

@@ -6,6 +6,8 @@ defmodule MastheadWeb.AdminLive.Console do
 
   alias Masthead.{Accounts, Actions, Sites, Themes}
 
+  @default_filters %{users: :all, sites: :enabled, themes: :all}
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
@@ -15,18 +17,52 @@ defmodule MastheadWeb.AdminLive.Console do
        tab: :users,
        action_modal?: false,
        action_site: nil,
-       users_filter: :all,
+       users_filter: @default_filters.users,
        users_search: "",
-       sites_filter: :all,
+       sites_filter: @default_filters.sites,
        sites_search: "",
-       themes_filter: :all,
+       themes_filter: @default_filters.themes,
        themes_search: ""
-     )
-     |> load_data()}
+     )}
   end
 
+  # Tab and filter live in the URL (`/admin/:tab/:filter` or `?filter=`),
+  # so views are shareable. Unknown values fall back to the defaults.
+  @impl true
+  def handle_params(params, _uri, socket) do
+    tab = parse_tab(params)
+    socket = assign(socket, tab: tab)
+
+    socket =
+      case parse_filter(tab, params) do
+        nil -> socket
+        filter -> assign(socket, :"#{tab}_filter", filter)
+      end
+
+    {:noreply, load_data(socket)}
+  end
+
+  defp parse_tab(%{"tab" => tab}) when tab in ~w(users sites themes),
+    do: String.to_existing_atom(tab)
+
+  defp parse_tab(_params), do: :users
+
+  defp parse_filter(tab, %{"filter" => filter}) do
+    Enum.find_value(filter_options(tab), fn {value, _label} ->
+      if Atom.to_string(value) == filter, do: value
+    end)
+  end
+
+  defp parse_filter(_tab, _params), do: nil
+
+  # Always include the filter segment: a bare `/admin/:tab` keeps whatever
+  # filter is currently assigned, so e.g. "All" must link to `/users/all`
+  # explicitly to reset it.
+  defp admin_path(tab, filter), do: ~p"/admin/#{tab}/#{filter}"
+
   # Filter buttons offered per tab. The atoms match the context
-  # `apply_filter/2` clauses, so `String.to_existing_atom/1` is safe.
+  # `apply_filter/2` clauses; this list also whitelists the `:filter`
+  # URL param in `parse_filter/2`.
   defp filter_options(:users),
     do: [
       {:all, "All"},
@@ -37,7 +73,7 @@ defmodule MastheadWeb.AdminLive.Console do
     ]
 
   defp filter_options(:sites),
-    do: [{:all, "All"}, {:enabled, "Enabled"}, {:disabled, "Disabled"}, {:deleted, "Deleted"}]
+    do: [{:enabled, "Enabled"}, {:disabled, "Disabled"}, {:deleted, "Deleted"}]
 
   defp filter_options(:themes),
     do: [
@@ -62,8 +98,9 @@ defmodule MastheadWeb.AdminLive.Console do
   end
 
   @impl true
-  def handle_event("switch_tab", %{"tab" => tab}, socket) do
-    {:noreply, assign(socket, tab: String.to_existing_atom(tab))}
+  def handle_event("switch_tab", %{"tab" => tab}, socket) when tab in ~w(users sites themes) do
+    tab = String.to_existing_atom(tab)
+    {:noreply, push_patch(socket, to: admin_path(tab, socket.assigns[:"#{tab}_filter"]))}
   end
 
   # ---- users ----
@@ -116,8 +153,9 @@ defmodule MastheadWeb.AdminLive.Console do
   # ---- filtering & search (users / sites / themes) ----
 
   def handle_event("switch_filter", %{"scope" => scope, "filter" => filter}, socket) do
-    key = String.to_existing_atom("#{scope}_filter")
-    {:noreply, socket |> assign(key, String.to_existing_atom(filter)) |> load_data()}
+    tab = parse_tab(%{"tab" => scope})
+    filter = parse_filter(tab, %{"filter" => filter}) || @default_filters[tab]
+    {:noreply, push_patch(socket, to: admin_path(tab, filter))}
   end
 
   def handle_event("search_list", %{"scope" => scope, "query" => query}, socket) do
@@ -175,6 +213,7 @@ defmodule MastheadWeb.AdminLive.Console do
               <th>Status</th>
               <th>Role</th>
               <th>Joined</th>
+              <th>Last login</th>
               <th></th>
             </tr>
           </thead>
@@ -188,7 +227,11 @@ defmodule MastheadWeb.AdminLive.Console do
                 <span :if={Accounts.User.disabled?(u)} class="pill pill-danger">disabled</span>
               </td>
               <td>{if u.admin, do: "admin", else: "—"}</td>
-              <td class="muted">{Calendar.strftime(u.inserted_at, "%b %-d, %Y")}</td>
+              <td class="muted"><.relative_time at={u.inserted_at} /></td>
+              <td class="muted">
+                <.relative_time :if={u.last_login_at} at={u.last_login_at} />
+                <span :if={is_nil(u.last_login_at)}>—</span>
+              </td>
               <td class="admin-row-actions">
                 <button
                   :if={not Accounts.User.confirmed?(u)}
@@ -237,6 +280,7 @@ defmodule MastheadWeb.AdminLive.Console do
               <th>Name</th>
               <th>Slug</th>
               <th>Owner</th>
+              <th>Created</th>
               <th>Status</th>
               <th>Add action</th>
               <th></th>
@@ -247,6 +291,7 @@ defmodule MastheadWeb.AdminLive.Console do
               <td>{s.name}</td>
               <td class="muted">{s.slug}</td>
               <td class="muted">{s.owner && s.owner.email}</td>
+              <td class="muted"><.relative_time at={s.inserted_at} /></td>
               <td>
                 <span :if={not is_nil(s.deleted_at)} class="pill pill-danger">deleted</span>
                 <span

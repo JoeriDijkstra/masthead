@@ -8,6 +8,7 @@ defmodule Masthead.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
     field :disabled_at, :utc_datetime
+    field :last_login_at, :utc_datetime
     field :wants_onboarding_emails, :boolean, default: true
     field :admin, :boolean, default: false
 
