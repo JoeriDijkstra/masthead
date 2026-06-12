@@ -139,6 +139,7 @@ defmodule Masthead.Sites do
   defp maybe_create_onboarding_actions(%Site{} = site) do
     Masthead.Actions.create_action(site, "create_first_post")
     Masthead.Actions.create_action(site, "create_first_page")
+    Masthead.Actions.create_action(site, "import_site")
   end
 
   defp blank?(nil), do: true

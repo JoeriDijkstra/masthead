@@ -3,7 +3,7 @@ defmodule MastheadWeb.SiteImportLiveTest do
 
   import Phoenix.LiveViewTest
 
-  alias Masthead.{Accounts, Content, Sites, Themes}
+  alias Masthead.{Accounts, Actions, Content, Sites, Themes}
 
   setup do
     Themes.Seed.run()
@@ -60,6 +60,9 @@ defmodule MastheadWeb.SiteImportLiveTest do
     assert html =~ "Imported 1 posts, 1 pages"
     assert length(Content.list_posts(site.id)) == 1
     assert length(Content.list_pages(site.id)) == 1
+
+    # A successful import ticks off the onboarding checklist item.
+    refute Enum.any?(Actions.list_pending(site), &(&1.key == "import_site"))
   end
 
   # Builds an in-memory zip of a Hugo source tree from a relpath => content map.

@@ -3,6 +3,7 @@ defmodule MastheadWeb.AdminLive.SiteImport do
   on_mount {MastheadWeb.AdminLive.Hooks, :load_site}
 
   import MastheadWeb.AdminLive.Components
+  alias Masthead.Actions
   alias Masthead.Content.HugoImport
 
   @impl true
@@ -34,6 +35,8 @@ defmodule MastheadWeb.AdminLive.SiteImport do
 
     case result do
       {:ok, summary} ->
+        Actions.complete_action(site, "import_site")
+
         {:noreply,
          socket
          |> assign(import_summary: summary)

@@ -30,6 +30,13 @@ defmodule Masthead.Actions.Definitions do
       remindable: true,
       path: &__MODULE__.new_page_path/1
     },
+    "import_site" => %{
+      title: "Import your old site",
+      message: "Coming from another platform? Import your posts, pages, and images.",
+      priority: 110,
+      cta: "Import a site",
+      path: &__MODULE__.import_path/1
+    },
     "set_description" => %{
       title: "Set the description",
       message: "Add a description so visitors and search engines know what your site is about.",
@@ -93,6 +100,8 @@ defmodule Masthead.Actions.Definitions do
   def new_post_path(%Site{slug: slug}), do: "/#{slug}/posts/new"
   @doc false
   def new_page_path(%Site{slug: slug}), do: "/#{slug}/pages/new"
+  @doc false
+  def import_path(%Site{slug: slug}), do: "/#{slug}/import"
 
   defp humanize(key) do
     key

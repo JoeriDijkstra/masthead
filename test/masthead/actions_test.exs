@@ -17,7 +17,8 @@ defmodule Masthead.ActionsTest do
   end
 
   # A new site is seeded with onboarding actions: create_first_post,
-  # create_first_page, and set_description (unless a description is given).
+  # create_first_page, and import_site. (set_description is staggered in
+  # later, once the site has its first post or page.)
   defp new_site(user, attrs \\ %{}) do
     {:ok, site} =
       Sites.create_site(
@@ -161,14 +162,16 @@ defmodule Masthead.ActionsTest do
   end
 
   describe "site lifecycle hooks" do
-    test "a new site is seeded with only the content actions", %{user: user} do
+    test "a new site is seeded with the onboarding actions", %{user: user} do
       site = new_site(user)
-      assert Enum.sort(pending_keys(site)) == ["create_first_page", "create_first_post"]
+
+      assert Enum.sort(pending_keys(site)) ==
+               ["create_first_page", "create_first_post", "import_site"]
     end
 
-    test "top_action for a new site is to create the first post", %{user: user} do
+    test "top_action for a new site is to import an existing site", %{user: user} do
       site = new_site(user)
-      assert %Action{key: "create_first_post"} = Actions.top_action(site)
+      assert %Action{key: "import_site"} = Actions.top_action(site)
     end
 
     test "set_description is staggered in once the site gets its first post", %{user: user} do

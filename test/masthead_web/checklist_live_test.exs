@@ -42,15 +42,15 @@ defmodule MastheadWeb.ChecklistLiveTest do
   test "the overview dashboard surfaces the highest-priority action", %{conn: conn, site: site} do
     {:ok, _lv, html} = live(conn, "/#{site.slug}")
     assert html =~ "action-card"
-    # a brand-new site leads with creating the first post
-    assert html =~ "Create your first post"
+    # a brand-new site leads with importing an existing site
+    assert html =~ "Import your old site"
   end
 
   test "dismissing an action removes it and updates the badge count", %{conn: conn, site: site} do
     {:ok, lv, html} = live(conn, "/#{site.slug}/checklist")
     assert html =~ "Create your first post"
-    # two seeded content actions
-    assert html =~ ~s(nav-badge">2)
+    # three seeded actions: import_site, create_first_post, create_first_page
+    assert html =~ ~s(nav-badge">3)
 
     html =
       lv
@@ -58,7 +58,7 @@ defmodule MastheadWeb.ChecklistLiveTest do
       |> render_click()
 
     refute html =~ "Create your first post"
-    assert html =~ ~s(nav-badge">1)
+    assert html =~ ~s(nav-badge">2)
   end
 
   test "the sidebar shows a red badge with the pending count", %{conn: conn, site: site} do
@@ -67,7 +67,7 @@ defmodule MastheadWeb.ChecklistLiveTest do
   end
 
   test "the checklist shows the empty state once every action is done", %{conn: conn, site: site} do
-    for key <- ["set_description", "create_first_post", "create_first_page"] do
+    for key <- ["set_description", "create_first_post", "create_first_page", "import_site"] do
       :ok = Masthead.Actions.complete_action(site, key)
     end
 
