@@ -77,6 +77,19 @@ defmodule MastheadWeb.ContentImportLiveTest do
       assert html =~ ~s(value="About us")
       assert html =~ ~s(<input type="hidden" name="post[format]" value="html")
     end
+
+    test "frontmatter title is used over the filename and is stripped from the body", %{
+      conn: conn,
+      site: site
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/posts/import")
+
+      content = "---\ntitle: \"From Frontmatter\"\ndraft: false\n---\nBody text."
+      html = upload_one(lv, %{name: "ignore-me.md", content: content, type: "text/markdown"})
+
+      assert html =~ ~s(value="From Frontmatter")
+      refute html =~ "Ignore me"
+    end
   end
 
   describe "pages" do

@@ -311,10 +311,10 @@ defmodule MastheadWeb.AdminLive.PostForm do
     }
   end
 
-  defp import_flash(entity, ok, 0), do: "Imported #{ok} #{entity}s as drafts."
+  defp import_flash(entity, ok, 0), do: "Imported #{ok} #{entity}s."
 
   defp import_flash(entity, ok, failed),
-    do: "Imported #{ok} #{entity}s as drafts. #{failed} couldn't be imported."
+    do: "Imported #{ok} #{entity}s. #{failed} couldn't be imported."
 
   defp import_error(:too_large), do: "That file is too large (5MB max)."
   defp import_error(:not_accepted), do: "Only Markdown and HTML files are allowed."
@@ -428,8 +428,10 @@ defmodule MastheadWeb.AdminLive.PostForm do
     <p class="wizard-intro muted">
       Upload one or more Markdown (<code>.md</code>) or HTML (<code>.html</code>)
       files. The format is detected per file and the title is prefilled from the
-      filename. Import a single file to refine it in the editor, or several to
-      create drafts in bulk.
+      filename. YAML frontmatter is stripped — its <code>title</code>
+      wins and <code>draft: false</code>
+      publishes. Import a single file to refine it in
+      the editor, or several to create them in bulk.
     </p>
 
     <form id="import-form" phx-submit="import_file" phx-change="validate_import" class="form">

@@ -22,7 +22,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
         :edit ->
           page = Content.get_page!(socket.assigns.site.id, params["id"])
           # Existing pages open directly on the content step (4). Reaching
-          # the settings step (3) requires the Back button — it's an edit
+          # the settings step (3) requires the Back button â it's an edit
           # affordance, not the primary path.
           {page, page_to_draft(page), "Edit: #{page.title}", 4}
       end
@@ -103,7 +103,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
   end
 
   def handle_event("advance", _params, socket) do
-    # Only fired from the Format step → Details.
+    # Only fired from the Format step â Details.
     {:noreply, assign(socket, step: 2)}
   end
 
@@ -111,7 +111,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
     {:noreply, assign(socket, step: prev_step(socket))}
   end
 
-  # Stepper navigation — jump directly to any visible step. The draft is
+  # Stepper navigation â jump directly to any visible step. The draft is
   # kept in sync by the per-step `phx-change="validate"`, so jumping
   # around doesn't lose typed content or metadata selections. Final
   # validation still happens on save.
@@ -146,7 +146,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
 
       [{filename, body}] ->
         # A single file flows into the wizard so details can be refined
-        # before saving — landing on step 2 (Details).
+        # before saving â landing on step 2 (Details).
         draft = Map.merge(socket.assigns.draft, Content.Import.attrs_from_file(filename, body))
 
         {:noreply,
@@ -179,7 +179,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
 
     if Ecto.Changeset.get_field(changeset, :title) not in [nil, ""] do
       # Skip the settings step entirely when the theme declares no
-      # metadata — we'd render an empty step otherwise.
+      # metadata â we'd render an empty step otherwise.
       next = if socket.assigns.has_metadata?, do: 3, else: 4
 
       {:noreply,
@@ -369,10 +369,10 @@ defmodule MastheadWeb.AdminLive.PageForm do
     end
   end
 
-  defp import_flash(entity, ok, 0), do: "Imported #{ok} #{entity}s as drafts."
+  defp import_flash(entity, ok, 0), do: "Imported #{ok} #{entity}s."
 
   defp import_flash(entity, ok, failed),
-    do: "Imported #{ok} #{entity}s as drafts. #{failed} couldn't be imported."
+    do: "Imported #{ok} #{entity}s. #{failed} couldn't be imported."
 
   defp import_error(:too_large), do: "That file is too large (5MB max)."
   defp import_error(:not_accepted), do: "Only Markdown and HTML files are allowed."
@@ -506,8 +506,10 @@ defmodule MastheadWeb.AdminLive.PageForm do
     <p class="wizard-intro muted">
       Upload one or more Markdown (<code>.md</code>) or HTML (<code>.html</code>)
       files. The format is detected per file and the title is prefilled from the
-      filename. Import a single file to refine it in the editor, or several to
-      create drafts in bulk.
+      filename. YAML frontmatter is stripped — its <code>title</code>
+      wins and <code>draft: false</code>
+      publishes. Import a single file to refine it in
+      the editor, or several to create them in bulk.
     </p>
 
     <form id="import-form" phx-submit="import_file" phx-change="validate_import" class="form">
@@ -841,7 +843,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
     """
   end
 
-  # Show the page override if set, else the manifest default — matches the
+  # Show the page override if set, else the manifest default â matches the
   # select field's behaviour so every settings input reflects its effective
   # value (the color input has no placeholder to fall back on).
   defp metadata_display_value(value, field) do
@@ -860,7 +862,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
     case value do
       v when v in [true, "true", "on", "1", 1] -> true
       v when v in [false, "false", "0", 0] -> false
-      # Unset (nil / "") → fall back to the manifest default so a field
+      # Unset (nil / "") â fall back to the manifest default so a field
       # declared `"default": true` starts checked.
       _ -> truthy?(default, false)
     end
