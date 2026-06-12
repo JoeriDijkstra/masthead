@@ -106,7 +106,8 @@ defmodule Masthead.Content.HugoImportTest do
 
     pages = Content.list_pages(site.id)
     assert [%{title: "About Us"} = about] = pages
-    assert about.show_in_nav == false
+    # Imported pages follow the normal default — shown in nav.
+    assert about.show_in_nav == true
 
     assert [%{filename: "logo.png"}] = Uploads.list_uploads(site.id)
   end

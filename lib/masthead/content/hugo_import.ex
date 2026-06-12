@@ -217,8 +217,9 @@ defmodule Masthead.Content.HugoImport do
       if post_path?(rel) do
         finish(:post, Content.create_post(site.id, attrs))
       else
-        # Imported pages stay out of the nav by default to avoid flooding it.
-        finish(:page, Content.create_page(site.id, Map.put(attrs, "show_in_nav", "false")))
+        # Pages follow the normal default (shown in nav). Unpublished imports
+        # are drafts and stay out of the nav until published regardless.
+        finish(:page, Content.create_page(site.id, attrs))
       end
     end
   end
