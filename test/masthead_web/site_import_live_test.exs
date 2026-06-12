@@ -1,0 +1,83 @@
+defmodule MastheadWeb.SiteImportLiveTest do
+  use MastheadWeb.ConnCase
+
+  import Phoenix.LiveViewTest
+
+  alias Masthead.{Accounts, Content, Sites, Themes}
+
+  setup do
+    Themes.Seed.run()
+
+    {:ok, user} =
+      Accounts.register_user(%{
+        "email" => "si-#{System.unique_integer([:positive])}@example.com",
+        "password" => "password1234"
+      })
+
+    default = Themes.get_built_in_by_slug("default")
+
+    {:ok, site} =
+      Sites.create_site(%{
+        "slug" => "si#{System.unique_integer([:positive])}",
+        "name" => "SI Test",
+        "owner_id" => user.id,
+        "theme_id" => default.id
+      })
+
+    conn =
+      build_conn()
+      |> Plug.Test.init_test_session(%{})
+      |> Plug.Conn.put_session(:user_id, user.id)
+
+    %{conn: conn, site: site}
+  end
+
+  test "renders the import screen", %{conn: conn, site: site} do
+    {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/import")
+
+    assert html =~ "Import a Hugo site"
+    assert html =~ "dropzone"
+  end
+
+  test "imports a Hugo site uploaded as a zip", %{conn: conn, site: site} do
+    {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/import")
+
+    zip =
+      hugo_zip(%{
+        "content/posts/hello.md" => "---\ntitle: Hello\ndraft: false\n---\nHi there.",
+        "content/about.md" => "---\ntitle: About\n---\nAbout us.",
+        "config.toml" => "x = 1"
+      })
+
+    file =
+      file_input(lv, "#import-form", :site_archive, [
+        %{name: "site.zip", content: zip, type: "application/zip"}
+      ])
+
+    render_upload(file, "site.zip")
+    html = lv |> element("#import-form") |> render_submit()
+
+    assert html =~ "Imported 1 posts, 1 pages"
+    assert length(Content.list_posts(site.id)) == 1
+    assert length(Content.list_pages(site.id)) == 1
+  end
+
+  # Builds an in-memory zip of a Hugo source tree from a relpath => content map.
+  defp hugo_zip(files) do
+    base = Path.join(System.tmp_dir!(), "si-hugo-#{System.unique_integer([:positive])}")
+
+    for {rel, content} <- files do
+      abs = Path.join(base, rel)
+      File.mkdir_p!(Path.dirname(abs))
+      File.write!(abs, content)
+    end
+
+    rels = files |> Map.keys() |> Enum.map(&String.to_charlist/1)
+
+    {:ok, {_name, bytes}} =
+      :zip.create(~c"site.zip", rels, [:memory, cwd: String.to_charlist(base)])
+
+    File.rm_rf(base)
+    bytes
+  end
+end

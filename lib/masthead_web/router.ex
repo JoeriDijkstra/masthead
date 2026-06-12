@@ -78,6 +78,7 @@ defmodule MastheadWeb.Router do
 
       live "/:site_slug", AdminLive.SiteDashboard, :show
       live "/:site_slug/settings", AdminLive.SiteSettings, :edit
+      live "/:site_slug/import", AdminLive.SiteImport, :index
       live "/:site_slug/theme", AdminLive.SiteTheme, :edit
       live "/:site_slug/checklist", AdminLive.Checklist, :index
       live "/:site_slug/domain", AdminLive.DomainSetup, :show

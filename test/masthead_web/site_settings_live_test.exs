@@ -67,46 +67,10 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
     assert Sites.list_sites_for_user(site.owner_id) == []
   end
 
-  test "a Hugo site can be imported from the Import block", %{conn: conn, site: site} do
-    {:ok, lv, html} = live(conn, ~p"/#{site.slug}/settings")
+  test "the settings page links to the Hugo import page", %{conn: conn, site: site} do
+    {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/settings")
+
     assert html =~ "Import site"
-
-    zip =
-      hugo_zip(%{
-        "content/posts/hello.md" => "---\ntitle: Hello\ndraft: false\n---\nHi there.",
-        "content/about.md" => "---\ntitle: About\n---\nAbout us.",
-        "config.toml" => "x = 1"
-      })
-
-    file =
-      file_input(lv, "#site-import-form", :site_archive, [
-        %{name: "site.zip", content: zip, type: "application/zip"}
-      ])
-
-    render_upload(file, "site.zip")
-    html = lv |> element("#site-import-form") |> render_submit()
-
-    assert html =~ "Imported 1 posts, 1 pages"
-    assert length(Masthead.Content.list_posts(site.id)) == 1
-    assert length(Masthead.Content.list_pages(site.id)) == 1
-  end
-
-  # Builds an in-memory zip of a Hugo source tree from a relpath => content map.
-  defp hugo_zip(files) do
-    base = Path.join(System.tmp_dir!(), "ss-hugo-#{System.unique_integer([:positive])}")
-
-    for {rel, content} <- files do
-      abs = Path.join(base, rel)
-      File.mkdir_p!(Path.dirname(abs))
-      File.write!(abs, content)
-    end
-
-    rels = files |> Map.keys() |> Enum.map(&String.to_charlist/1)
-
-    {:ok, {_name, bytes}} =
-      :zip.create(~c"site.zip", rels, [:memory, cwd: String.to_charlist(base)])
-
-    File.rm_rf(base)
-    bytes
+    assert html =~ ~p"/#{site.slug}/import"
   end
 end
