@@ -35,6 +35,10 @@ defmodule MastheadWeb.AdminLive.PostIndex do
     ~H"""
     <.shell title="Posts" site={@site} current_user={@current_user} flash={@flash} active={:posts}>
       <:actions>
+        <.link navigate={~p"/#{@site.slug}/posts/import"} class="btn btn-add">
+          <span class="btn-add-icon" aria-hidden="true">↑</span>
+          <span class="btn-add-label">Import</span>
+        </.link>
         <.link
           navigate={~p"/#{@site.slug}/posts/new"}
           class="btn btn-primary btn-add"

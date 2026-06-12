@@ -84,10 +84,12 @@ defmodule MastheadWeb.Router do
 
       live "/:site_slug/posts", AdminLive.PostIndex, :index
       live "/:site_slug/posts/new", AdminLive.PostForm, :new
+      live "/:site_slug/posts/import", AdminLive.PostForm, :import
       live "/:site_slug/posts/:id/edit", AdminLive.PostForm, :edit
 
       live "/:site_slug/pages", AdminLive.PageIndex, :index
       live "/:site_slug/pages/new", AdminLive.PageForm, :new
+      live "/:site_slug/pages/import", AdminLive.PageForm, :import
       live "/:site_slug/pages/:id/edit", AdminLive.PageForm, :edit
 
       live "/:site_slug/uploads", AdminLive.UploadIndex, :index

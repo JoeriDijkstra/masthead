@@ -36,6 +36,10 @@ defmodule MastheadWeb.AdminLive.PageIndex do
     ~H"""
     <.shell title="Pages" site={@site} current_user={@current_user} flash={@flash} active={:pages}>
       <:actions>
+        <.link navigate={~p"/#{@site.slug}/pages/import"} class="btn btn-add">
+          <span class="btn-add-icon" aria-hidden="true">↑</span>
+          <span class="btn-add-label">Import</span>
+        </.link>
         <.link
           navigate={~p"/#{@site.slug}/pages/new"}
           class="btn btn-primary btn-add"

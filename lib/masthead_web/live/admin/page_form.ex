@@ -13,6 +13,12 @@ defmodule MastheadWeb.AdminLive.PageForm do
         :new ->
           {nil, %{"format" => "markdown"}, "New page", 1}
 
+        :import ->
+          # Step 0 is the file-picker screen. A single imported file seeds the
+          # draft and jumps to step 2 (Details); multiple files are created as
+          # drafts directly.
+          {nil, %{"format" => "markdown"}, "Import pages", 0}
+
         :edit ->
           page = Content.get_page!(socket.assigns.site.id, params["id"])
           # Existing pages open directly on the content step (4). Reaching
@@ -36,8 +42,19 @@ defmodule MastheadWeb.AdminLive.PageForm do
        metadata_fields: metadata_fields,
        has_metadata?: has_metadata?
      )
+     |> maybe_allow_import()
      |> assign_changeset(draft)}
   end
+
+  defp maybe_allow_import(%{assigns: %{live_action: :import}} = socket) do
+    allow_upload(socket, :document,
+      accept: ~w(.md .markdown .html .htm .txt),
+      max_entries: 20,
+      max_file_size: 5_000_000
+    )
+  end
+
+  defp maybe_allow_import(socket), do: socket
 
   # Pull the metadata schema off the site's current theme. Returns a list
   # of `%{key, label, type, default, description, options}` maps, or [] if
@@ -106,6 +123,53 @@ defmodule MastheadWeb.AdminLive.PageForm do
       {:noreply, assign(socket, step: target)}
     else
       {:noreply, socket}
+    end
+  end
+
+  # ---- Import ----
+
+  def handle_event("validate_import", _params, socket), do: {:noreply, socket}
+
+  def handle_event("cancel_import", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :document, ref)}
+  end
+
+  def handle_event("import_file", _params, socket) do
+    files =
+      consume_uploaded_entries(socket, :document, fn %{path: path}, entry ->
+        {:ok, {entry.client_name, File.read!(path)}}
+      end)
+
+    case files do
+      [] ->
+        {:noreply, socket}
+
+      [{filename, body}] ->
+        # A single file flows into the wizard so details can be refined
+        # before saving — landing on step 2 (Details).
+        draft = Map.merge(socket.assigns.draft, Content.Import.attrs_from_file(filename, body))
+
+        {:noreply,
+         socket
+         |> assign(draft: draft, step: 2, slug_touched: false)
+         |> assign_changeset(draft)}
+
+      many ->
+        # Multiple files are created as drafts straight away.
+        {ok, failed} =
+          Enum.reduce(many, {0, 0}, fn {filename, body}, {ok, failed} ->
+            attrs = Content.Import.attrs_from_file(filename, body)
+
+            case Content.create_page(socket.assigns.site.id, attrs) do
+              {:ok, _} -> {ok + 1, failed}
+              {:error, _} -> {ok, failed + 1}
+            end
+          end)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, import_flash("page", ok, failed))
+         |> push_navigate(to: ~p"/#{socket.assigns.site.slug}/pages")}
     end
   end
 
@@ -305,6 +369,16 @@ defmodule MastheadWeb.AdminLive.PageForm do
     end
   end
 
+  defp import_flash(entity, ok, 0), do: "Imported #{ok} #{entity}s as drafts."
+
+  defp import_flash(entity, ok, failed),
+    do: "Imported #{ok} #{entity}s as drafts. #{failed} couldn't be imported."
+
+  defp import_error(:too_large), do: "That file is too large (5MB max)."
+  defp import_error(:not_accepted), do: "Only Markdown and HTML files are allowed."
+  defp import_error(:too_many_files), do: "You can import up to 20 files at once."
+  defp import_error(other), do: to_string(other)
+
   defp build_changeset(socket, attrs) do
     base = socket.assigns[:page] || %Page{site_id: socket.assigns.site.id}
     Content.change_page(base, attrs)
@@ -337,6 +411,8 @@ defmodule MastheadWeb.AdminLive.PageForm do
 
       <div class="wizard">
         <%= case @step do %>
+          <% 0 -> %>
+            <.import_step uploads={@uploads} site_slug={@site.slug} />
           <% 1 -> %>
             <.format_step
               locked={@page != nil}
@@ -420,6 +496,60 @@ defmodule MastheadWeb.AdminLive.PageForm do
   defp prev_step(%{assigns: %{step: 4, has_metadata?: false}}), do: 2
   defp prev_step(%{assigns: %{step: step}}) when step > 1, do: step - 1
   defp prev_step(_), do: 1
+
+  attr :uploads, :map, required: true
+  attr :site_slug, :string, required: true
+
+  defp import_step(assigns) do
+    ~H"""
+    <h2 class="wizard-heading">Import pages</h2>
+    <p class="wizard-intro muted">
+      Upload one or more Markdown (<code>.md</code>) or HTML (<code>.html</code>)
+      files. The format is detected per file and the title is prefilled from the
+      filename. Import a single file to refine it in the editor, or several to
+      create drafts in bulk.
+    </p>
+
+    <form id="import-form" phx-submit="import_file" phx-change="validate_import" class="form">
+      <label class="dropzone" phx-drop-target={@uploads.document.ref}>
+        <.live_file_input upload={@uploads.document} />
+        <p class="dropzone-headline">Drop files here, or click to browse</p>
+        <p class="muted">Markdown or HTML, up to 5MB each.</p>
+      </label>
+
+      <ul :if={@uploads.document.entries != []} class="upload-entries">
+        <li :for={entry <- @uploads.document.entries}>
+          <span class="filename">{entry.client_name}</span>
+          <button
+            type="button"
+            phx-click="cancel_import"
+            phx-value-ref={entry.ref}
+            class="btn btn-sm"
+          >
+            Remove
+          </button>
+          <p :for={err <- upload_errors(@uploads.document, entry)} class="error entry-error">
+            {import_error(err)}
+          </p>
+        </li>
+      </ul>
+
+      <p :for={err <- upload_errors(@uploads.document)} class="error">{import_error(err)}</p>
+    </form>
+
+    <div class="wizard-footer">
+      <.link navigate={~p"/#{@site_slug}/pages"} class="btn">Cancel</.link>
+      <button
+        type="submit"
+        form="import-form"
+        class="btn btn-primary"
+        disabled={@uploads.document.entries == []}
+      >
+        Import &rarr;
+      </button>
+    </div>
+    """
+  end
 
   attr :locked, :boolean, default: false
   attr :format, :string, default: nil
