@@ -228,7 +228,13 @@ defmodule MastheadWeb.AdminLive.Components do
     >
       {render_slot(@inner_block)}
       <span>{@label}</span>
-      <span :if={@badge && @badge > 0} class="nav-badge">{@badge}</span>
+      <span
+        :if={@badge && @badge > 0}
+        id="checklist-badge"
+        phx-hook="BadgePulse"
+        class="nav-badge"
+        phx-no-format
+      >{@badge}</span>
     </.link>
     """
   end

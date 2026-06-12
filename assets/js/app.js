@@ -26,12 +26,13 @@ import {hooks as colocatedHooks} from "phoenix-colocated/masthead"
 import topbar from "../vendor/topbar"
 import {CodeEditor} from "./hooks/code_editor"
 import {FlashToast} from "./hooks/flash_toast"
+import {BadgePulse} from "./hooks/badge_pulse"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, CodeEditor, FlashToast},
+  hooks: {...colocatedHooks, CodeEditor, FlashToast, BadgePulse},
 })
 
 // Show progress bar on live navigation and form submits

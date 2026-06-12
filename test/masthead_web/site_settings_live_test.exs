@@ -66,4 +66,11 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
     assert Sites.get_site!(site.id).deleted_at != nil
     assert Sites.list_sites_for_user(site.owner_id) == []
   end
+
+  test "the settings page links to the Hugo import page", %{conn: conn, site: site} do
+    {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/settings")
+
+    assert html =~ "Import site"
+    assert html =~ ~p"/#{site.slug}/import"
+  end
 end

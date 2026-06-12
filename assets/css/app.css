@@ -368,6 +368,29 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   line-height: 1.45;
   text-align: center;
 }
+
+/* Pulse applied by the BadgePulse hook when the count changes. */
+.nav-badge.badge-pulse {
+  animation: badge-pulse 0.45s ease-out;
+}
+@keyframes badge-pulse {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.4);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 30%, transparent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-badge.badge-pulse {
+    animation: none;
+  }
+}
 .sidebar-divider {
   height: 1px;
   background: var(--sidebar-border);
@@ -2997,6 +3020,21 @@ button.danger:hover { filter: brightness(0.92); }
   gap: 1rem;
   flex-wrap: wrap;
 }
+
+.import-summary {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--accent-soft);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+.import-summary p { margin: 0 0 0.5rem; }
+.import-summary p:last-child { margin-bottom: 0; }
+.import-summary-links { display: flex; gap: 1rem; }
+.import-problems { margin-top: 0.5rem; }
+.import-problems summary { cursor: pointer; color: var(--danger); font-weight: 500; }
+.import-problems ul { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+.import-problems li { font-size: 0.85rem; margin-bottom: 0.25rem; }
 
 .domain-badge {
   display: inline-block;

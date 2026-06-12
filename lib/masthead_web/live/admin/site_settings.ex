@@ -174,6 +174,22 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
             </div>
           </div>
 
+          <div class="settings-section">
+            <header class="settings-section-head">
+              <h2>Import site</h2>
+              <p>Import posts, pages, and images from an existing site.</p>
+            </header>
+
+            <div class="settings-fields">
+              <div class="domain-summary">
+                <span class="muted">Hugo exports (.zip) are supported.</span>
+                <.link navigate={~p"/#{@site.slug}/import"} class="btn btn-primary">
+                  Import a site
+                </.link>
+              </div>
+            </div>
+          </div>
+
           <div class="settings-section danger-zone">
             <header class="settings-section-head">
               <h2>Danger zone</h2>
