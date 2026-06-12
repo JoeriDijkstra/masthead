@@ -64,6 +64,8 @@ defmodule MastheadWeb.ChecklistLiveTest do
   test "the sidebar shows a red badge with the pending count", %{conn: conn, site: site} do
     {:ok, _lv, html} = live(conn, "/#{site.slug}")
     assert html =~ "nav-badge"
+    # The badge carries the pulse hook so it animates when the count changes.
+    assert html =~ ~s(phx-hook="BadgePulse")
   end
 
   test "the checklist shows the empty state once every action is done", %{conn: conn, site: site} do

@@ -368,6 +368,29 @@ code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background
   line-height: 1.45;
   text-align: center;
 }
+
+/* Pulse applied by the BadgePulse hook when the count changes. */
+.nav-badge.badge-pulse {
+  animation: badge-pulse 0.45s ease-out;
+}
+@keyframes badge-pulse {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.4);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 30%, transparent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-badge.badge-pulse {
+    animation: none;
+  }
+}
 .sidebar-divider {
   height: 1px;
   background: var(--sidebar-border);
