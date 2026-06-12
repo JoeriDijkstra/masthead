@@ -35,7 +35,7 @@ defmodule MastheadWeb.SiteImportLiveTest do
   test "renders the import screen", %{conn: conn, site: site} do
     {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/import")
 
-    assert html =~ "Import a Hugo site"
+    assert html =~ "Import a site"
     assert html =~ "dropzone"
   end
 

@@ -177,16 +177,14 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
           <div class="settings-section">
             <header class="settings-section-head">
               <h2>Import site</h2>
-              <p>
-                Bring an existing Hugo site in — posts, pages, and image assets. Your theme is left untouched.
-              </p>
+              <p>Import posts, pages, and images from an existing site.</p>
             </header>
 
             <div class="settings-fields">
               <div class="domain-summary">
-                <span class="muted">Imports content and images from a Hugo <code>.zip</code>.</span>
+                <span class="muted">Hugo exports (.zip) are supported.</span>
                 <.link navigate={~p"/#{@site.slug}/import"} class="btn btn-primary">
-                  Import a Hugo site
+                  Import a site
                 </.link>
               </div>
             </div>

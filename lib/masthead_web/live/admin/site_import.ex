@@ -58,7 +58,7 @@ defmodule MastheadWeb.AdminLive.SiteImport do
   end
 
   defp import_error(:no_content_dir),
-    do: "That archive doesn't look like a Hugo site — no content/ directory found."
+    do: "That archive doesn't look like a site we can import (no content/ folder)."
 
   defp import_error(:too_many_files), do: "That archive has too many files."
   defp import_error(:archive_too_large), do: "That archive is too large."
@@ -85,14 +85,10 @@ defmodule MastheadWeb.AdminLive.SiteImport do
       active={:settings}
     >
       <div class="wizard">
-        <h2 class="wizard-heading">Import a Hugo site</h2>
+        <h2 class="wizard-heading">Import a site</h2>
         <p class="wizard-intro muted">
-          Upload a Hugo site as a <code>.zip</code>. <code>content/</code>
-          becomes posts and
-          pages, <code>static/</code>
-          images become uploads. Frontmatter titles and <code>draft</code>
-          state are honoured and asset URLs are rewritten. Your theme is
-          left untouched.
+          Upload a site export as a <code>.zip</code>. Posts, pages, and images
+          are imported; your theme is left untouched. Hugo sites are supported today.
         </p>
 
         <%= if @import_summary do %>
@@ -108,7 +104,7 @@ defmodule MastheadWeb.AdminLive.SiteImport do
           <form id="import-form" phx-submit="import_site" phx-change="validate_import" class="form">
             <label class="dropzone" phx-drop-target={@uploads.site_archive.ref}>
               <.live_file_input upload={@uploads.site_archive} />
-              <p class="dropzone-headline">Drop a Hugo site .zip here, or click to browse</p>
+              <p class="dropzone-headline">Drop a .zip here, or click to browse</p>
               <p class="muted">A single .zip, up to 50MB.</p>
             </label>
 
