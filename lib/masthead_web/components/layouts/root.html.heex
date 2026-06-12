@@ -5,6 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
     <.live_title default="Home" suffix=" · Masthead" phx-no-format>{assigns[:page_title]}</.live_title>
+    <meta
+      name="description"
+      content={
+        assigns[:meta_description] ||
+          "Masthead is an open-source, multi-tenant publishing platform for blogs and small business sites. Custom domains, Markdown or HTML, themes, and automatic HTTPS."
+      }
+    />
+    <meta :if={assigns[:noindex]} name="robots" content="noindex, nofollow" />
+    <link :if={assigns[:canonical_url]} rel="canonical" href={@canonical_url} />
+    <meta name="theme-color" content="#2563eb" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Masthead" />
+    <meta property="og:title" content={assigns[:og_title] || assigns[:page_title] || "Masthead"} />
+    <meta
+      property="og:description"
+      content={
+        assigns[:meta_description] ||
+          "Open-source, multi-tenant publishing platform for blogs and small business sites."
+      }
+    />
+    <meta :if={assigns[:canonical_url]} property="og:url" content={@canonical_url} />
+    <meta property="og:image" content={assigns[:og_image] || url(~p"/images/logo.png")} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={assigns[:og_title] || assigns[:page_title] || "Masthead"} />
+    <meta
+      name="twitter:description"
+      content={
+        assigns[:meta_description] ||
+          "Open-source, multi-tenant publishing platform for blogs and small business sites."
+      }
+    />
+    <meta name="twitter:image" content={assigns[:og_image] || url(~p"/images/logo.png")} />
+    <script :if={assigns[:json_ld]} type="application/ld+json" phx-no-format><%= raw(Jason.encode!(@json_ld)) %></script>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
