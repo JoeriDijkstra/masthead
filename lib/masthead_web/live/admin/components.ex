@@ -292,7 +292,8 @@ defmodule MastheadWeb.AdminLive.Components do
 
   @doc """
   Renders a timestamp as a relative label (e.g. "a day ago") with the exact
-  date shown in a native hover tooltip. Renders nothing when `at` is nil.
+  date and time shown in a custom hover tooltip (see `.rel-time` in app.css).
+  Renders nothing when `at` is nil.
   """
   def relative_time(assigns) do
     ~H"""
@@ -300,7 +301,7 @@ defmodule MastheadWeb.AdminLive.Components do
       :if={@at}
       class="rel-time"
       datetime={DateTime.to_iso8601(@at)}
-      title={Calendar.strftime(@at, "%b %-d, %Y at %-I:%M %p UTC")}
+      data-tooltip={Calendar.strftime(@at, "%b %-d, %Y at %-I:%M %p UTC")}
     >
       {relative_label(@at)}
     </time>

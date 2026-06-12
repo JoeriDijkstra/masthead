@@ -358,6 +358,12 @@ defmodule Masthead.Accounts do
     end
   end
 
+  @doc "Stamps the user's last successful login. Called from `UserAuth.log_in_user/3`."
+  def record_login(%User{} = user) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    user |> Ecto.Changeset.change(last_login_at: now) |> Repo.update()
+  end
+
   @doc "Marks a user's email confirmed without a token (admin verify)."
   def verify_user(%User{} = user), do: user |> User.confirm_changeset() |> Repo.update()
 

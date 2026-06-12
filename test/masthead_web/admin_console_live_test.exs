@@ -58,6 +58,54 @@ defmodule MastheadWeb.AdminConsoleLiveTest do
     assert html =~ "Tailwind"
   end
 
+  test "tab and filter are read from the URL", %{conn: conn, member: member, site: site} do
+    {:ok, _} = Sites.soft_delete_site(site)
+
+    # Filter as a path segment.
+    {:ok, _lv, html} = live(conn, ~p"/admin/sites/deleted")
+    assert html =~ site.name
+
+    # The default sites view (enabled) hides the deleted site.
+    {:ok, _lv, html} = live(conn, ~p"/admin/sites")
+    refute html =~ site.name
+
+    # Filter as a query param.
+    {:ok, _} = Accounts.verify_user(member)
+    {:ok, _lv, html} = live(conn, ~p"/admin/users?filter=verified")
+    assert html =~ member.email
+  end
+
+  test "switching tab and filter patches the URL", %{conn: conn} do
+    {:ok, lv, _} = live(conn, ~p"/admin")
+
+    lv |> element(~s(button[phx-value-tab="sites"])) |> render_click()
+    assert_patch(lv, ~p"/admin/sites/enabled")
+
+    lv
+    |> element(~s(button[phx-click="switch_filter"][phx-value-filter="deleted"]))
+    |> render_click()
+
+    assert_patch(lv, ~p"/admin/sites/deleted")
+
+    # "All" on the users tab resets explicitly via /all (a bare /admin/users
+    # would keep the previous filter).
+    lv |> element(~s(button[phx-value-tab="users"])) |> render_click()
+
+    lv
+    |> element(~s(button[phx-click="switch_filter"][phx-value-filter="verified"]))
+    |> render_click()
+
+    assert_patch(lv, ~p"/admin/users/verified")
+
+    lv
+    |> element(
+      ~s(button[phx-click="switch_filter"][phx-value-scope="users"][phx-value-filter="all"])
+    )
+    |> render_click()
+
+    assert_patch(lv, ~p"/admin/users/all")
+  end
+
   test "admin can verify an unverified user", %{conn: conn, member: member} do
     refute Accounts.User.confirmed?(member)
     {:ok, lv, _} = live(conn, ~p"/admin")
@@ -79,6 +127,13 @@ defmodule MastheadWeb.AdminConsoleLiveTest do
 
     assert Sites.get_site!(site.id).disabled_at
 
+    # The list defaults to enabled sites, so switch filters to find it again.
+    lv
+    |> element(
+      ~s(button[phx-click="switch_filter"][phx-value-scope="sites"][phx-value-filter="disabled"])
+    )
+    |> render_click()
+
     lv
     |> element(~s(button[phx-click="enable_site"][phx-value-id="#{site.id}"]))
     |> render_click()
@@ -95,6 +150,13 @@ defmodule MastheadWeb.AdminConsoleLiveTest do
     |> render_click()
 
     assert Sites.get_site!(site.id).deleted_at
+
+    # The list defaults to enabled sites, so switch filters to find it again.
+    lv
+    |> element(
+      ~s(button[phx-click="switch_filter"][phx-value-scope="sites"][phx-value-filter="deleted"])
+    )
+    |> render_click()
 
     lv
     |> element(~s(button[phx-click="restore_site"][phx-value-id="#{site.id}"]))

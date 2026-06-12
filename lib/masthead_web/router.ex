@@ -68,6 +68,8 @@ defmodule MastheadWeb.Router do
     live_session :admin,
       on_mount: [{MastheadWeb.UserAuth, :require_admin}] do
       live "/admin", AdminLive.Console, :index
+      live "/admin/:tab", AdminLive.Console, :index
+      live "/admin/:tab/:filter", AdminLive.Console, :index
     end
 
     live_session :authenticated,

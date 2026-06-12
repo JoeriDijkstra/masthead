@@ -992,15 +992,60 @@ button.danger:hover { filter: brightness(0.92); }
 .row-title { color: var(--accent); font-weight: 500; }
 .row-link:hover .row-title { text-decoration: underline; }
 
-/* Relative timestamp ("a day ago"); the exact date is in its title tooltip,
-   hinted by the dotted underline + help cursor. */
+/* Relative timestamp ("a day ago"); the exact date is in a custom tooltip
+   (from `data-tooltip`), hinted by the dotted underline + help cursor. */
 .rel-time {
+  position: relative;
   color: var(--muted);
   cursor: help;
   white-space: nowrap;
   text-decoration: underline dotted;
   text-decoration-color: var(--rule-strong);
   text-underline-offset: 2px;
+}
+
+/* Black tooltip bubble + arrow above the label. Custom (not the native
+   `title`) so it appears near-instantly instead of after the ~1s UA delay.
+   Positioned above so it stays inside the table's overflow box (it overlays
+   the row above / the header rather than escaping the table). */
+.rel-time::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000;
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.rel-time::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #000;
+  border-bottom: none;
+  z-index: 10;
+}
+
+.rel-time::before,
+.rel-time::after {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 80ms ease-out 100ms;
+}
+
+.rel-time:hover::before,
+.rel-time:hover::after {
+  opacity: 1;
 }
 
 /* On phones, a multi-column table is unreadable. Tables opting in with
