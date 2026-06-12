@@ -223,6 +223,20 @@
     </ul>
   </section>
 
+  <section class="landing-faq" aria-labelledby="faq-title">
+    <h2 class="section-title" id="faq-title">Frequently asked questions</h2>
+
+    <div class="faq-list">
+      <details :for={{question, answer} <- @faqs} class="faq-item">
+        <summary>
+          <h3>{question}</h3>
+          <span class="faq-marker" aria-hidden="true"></span>
+        </summary>
+        <p>{answer}</p>
+      </details>
+    </div>
+  </section>
+
   <section class="landing-cta">
     <div class="cta-card">
       <h2>Get started today.</h2>
