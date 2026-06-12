@@ -60,6 +60,20 @@ window.addEventListener("masthead:copy", e => {
   })
 })
 
+// Relative timestamps (.rel-time) server-render their exact-date tooltip in
+// UTC as a no-JS fallback; on hover, rewrite it to the viewer's local
+// timezone. Delegated so it survives LiveView patches without per-element
+// hooks, and recomputed on every hover so a patch can't leave it stale.
+const tooltipDate = new Intl.DateTimeFormat(undefined, {month: "short", day: "numeric", year: "numeric"})
+const tooltipTime = new Intl.DateTimeFormat(undefined, {hour: "numeric", minute: "2-digit"})
+document.addEventListener("pointerover", e => {
+  const el = e.target.closest && e.target.closest(".rel-time[datetime]")
+  if (!el) return
+  const at = new Date(el.getAttribute("datetime"))
+  if (isNaN(at)) return
+  el.dataset.tooltip = `${tooltipDate.format(at)} at ${tooltipTime.format(at)}`
+})
+
 // Sign-up: block submit unless the two password fields match. Uses the
 // native validity bubble — no server round-trip, no LiveView needed.
 function wirePasswordConfirm(form) {

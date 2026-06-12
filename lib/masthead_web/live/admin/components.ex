@@ -293,7 +293,8 @@ defmodule MastheadWeb.AdminLive.Components do
   @doc """
   Renders a timestamp as a relative label (e.g. "a day ago") with the exact
   date and time shown in a custom hover tooltip (see `.rel-time` in app.css).
-  Renders nothing when `at` is nil.
+  The tooltip is server-rendered in UTC as a no-JS fallback; app.js rewrites
+  it to the viewer's local timezone on hover. Renders nothing when `at` is nil.
   """
   def relative_time(assigns) do
     ~H"""
