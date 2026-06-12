@@ -5,8 +5,9 @@ defmodule Masthead.Content.Import do
   The format is inferred from the extension (`.html`/`.htm` → HTML, anything
   else → Markdown) and the file contents become the body.
 
-  If the file opens with a YAML frontmatter block (Hugo/Jekyll style), it is
-  stripped from the body and used to seed attributes:
+  If the file opens with a frontmatter block (YAML `---` or TOML `+++`, the
+  Hugo/Jekyll defaults — see `Masthead.Content.Frontmatter`) it is stripped
+  from the body and used to seed attributes:
 
       ---
       title: "Compressing images in Elixir with Mogrify"
@@ -16,16 +17,16 @@ defmodule Masthead.Content.Import do
 
   `title` overrides the filename-derived title, and `draft` drives the
   published state (`draft: false` → published, `draft: true`/absent → draft).
-  We only read the handful of keys we care about rather than pull in a full
-  YAML dependency.
   """
+
+  alias Masthead.Content.Frontmatter
 
   @doc """
   Build a `%{"title" => ..., "format" => ..., "slug" => "", "body" => ...,
   "published" => ...}` attribute map from an uploaded file's name and contents.
   """
   def attrs_from_file(filename, body) do
-    {meta, content} = split_frontmatter(body)
+    {meta, content} = Frontmatter.split(body)
 
     %{
       "format" => format_from_filename(filename),
@@ -63,48 +64,11 @@ defmodule Masthead.Content.Import do
     end
   end
 
-  # A leading `---` block, terminated by a `---` line. Tolerates CRLF line
-  # endings and trailing spaces on the fence lines. A leading BOM is stripped
-  # separately (see split_frontmatter/1) so this pattern stays ASCII-only.
-  @frontmatter ~r/\A[ \t]*---[ \t]*\r?\n(.*?)\r?\n---[ \t]*\r?\n?/s
-
   @doc """
-  Split a leading YAML frontmatter block off `body`. Returns
-  `{meta_map, remaining_body}`; `meta_map` is empty when there's no
-  frontmatter and the body is returned untouched.
+  The frontmatter `title`, or `nil` when absent/blank so callers can fall
+  back to a filename-derived title.
   """
-  def split_frontmatter(body) when is_binary(body) do
-    body = strip_bom(body)
-
-    case Regex.run(@frontmatter, body) do
-      [whole, yaml] ->
-        rest = body |> String.replace_prefix(whole, "") |> String.trim_leading()
-        {parse_meta(yaml), rest}
-
-      _ ->
-        {%{}, body}
-    end
-  end
-
-  defp strip_bom("﻿" <> rest), do: rest
-  defp strip_bom(body), do: body
-
-  defp parse_meta(yaml) do
-    yaml
-    |> String.split("\n")
-    |> Enum.reduce(%{}, fn line, acc ->
-      case Regex.run(~r/^\s*([A-Za-z0-9_-]+)\s*:\s*(.*)$/, line) do
-        [_, key, value] -> Map.put(acc, String.downcase(key), unquote_value(value))
-        _ -> acc
-      end
-    end)
-  end
-
-  defp unquote_value(value) do
-    value |> String.trim() |> String.trim("\"") |> String.trim("'")
-  end
-
-  defp frontmatter_title(meta) do
+  def frontmatter_title(meta) do
     case meta["title"] do
       title when is_binary(title) ->
         case String.trim(title) do
@@ -117,9 +81,12 @@ defmodule Masthead.Content.Import do
     end
   end
 
-  # Published when frontmatter explicitly says `draft: false`. No frontmatter,
-  # no `draft` key, or `draft: true` all mean "keep it a draft".
-  defp published?(meta) do
+  @doc """
+  Whether imported content should be published. Published only when
+  frontmatter explicitly says `draft: false`; no frontmatter, no `draft`
+  key, or `draft: true` all mean "keep it a draft".
+  """
+  def published?(meta) do
     case Map.get(meta, "draft") do
       nil -> false
       value -> not truthy?(value)
