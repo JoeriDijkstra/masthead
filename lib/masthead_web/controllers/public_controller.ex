@@ -25,17 +25,24 @@ defmodule MastheadWeb.PublicController do
   def show_post(conn, %{"slug" => slug}) do
     site = conn.assigns.current_site
     pages = nav_pages(site, Content.list_published_pages(site.id))
+    posts = Content.list_published_posts(site.id)
 
     case Content.get_published_post_by_slug(site.id, slug) do
       nil ->
-        body = Renderer.render_not_found(%{site: site, pages: pages})
+        body = Renderer.render_not_found(%{site: site, pages: pages, posts: posts})
         conn |> put_status(:not_found) |> send_themed(body)
 
       post ->
         body_html = Content.render_body(post.body, post.format)
 
         body =
-          Renderer.render_post(%{site: site, post: post, body_html: body_html, pages: pages})
+          Renderer.render_post(%{
+            site: site,
+            post: post,
+            body_html: body_html,
+            pages: pages,
+            posts: posts
+          })
 
         send_themed(conn, body)
     end
@@ -48,9 +55,20 @@ defmodule MastheadWeb.PublicController do
     render_page_or_404(conn, page, pages)
   end
 
+  @doc "Public post search: `/search?q=...`."
+  def search(conn, params) do
+    site = conn.assigns.current_site
+    pages = nav_pages(site, Content.list_published_pages(site.id))
+    query = params["q"] || ""
+    posts = Content.search_posts(site.id, query)
+    body = Renderer.render_search(%{site: site, posts: posts, query: query, pages: pages})
+    send_themed(conn, body)
+  end
+
   defp render_page_or_404(conn, nil, pages) do
     site = conn.assigns.current_site
-    body = Renderer.render_not_found(%{site: site, pages: pages})
+    posts = Content.list_published_posts(site.id)
+    body = Renderer.render_not_found(%{site: site, pages: pages, posts: posts})
     conn |> put_status(:not_found) |> send_themed(body)
   end
 
@@ -75,8 +93,18 @@ defmodule MastheadWeb.PublicController do
 
   defp render_page_or_404(conn, page, pages) do
     site = conn.assigns.current_site
+    posts = Content.list_published_posts(site.id)
     body_html = Content.render_body(page.body, page.format)
-    body = Renderer.render_page(%{site: site, page: page, body_html: body_html, pages: pages})
+
+    body =
+      Renderer.render_page(%{
+        site: site,
+        page: page,
+        body_html: body_html,
+        pages: pages,
+        posts: posts
+      })
+
     send_themed(conn, body)
   end
 

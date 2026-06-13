@@ -107,6 +107,90 @@ defmodule Masthead.Themes.RendererTest do
     end
   end
 
+  describe "tags and search" do
+    setup %{site: site} do
+      {:ok, tag} = Content.create_tag(site.id, %{"name" => "Featured", "color" => "#ff0000"})
+
+      {:ok, _} =
+        Content.create_post(site.id, %{
+          "title" => "Tagged post",
+          "published" => true,
+          "tag_ids" => [tag.id]
+        })
+
+      %{tag: tag}
+    end
+
+    test "render_index shows the search box and colored tag pills", %{site: site} do
+      posts = Content.list_published_posts(site.id)
+      pages = Content.list_published_pages(site.id)
+      out = Renderer.render_index(%{site: site, posts: posts, pages: pages})
+
+      assert out =~ ~s(action="/search")
+      assert out =~ "Featured"
+      assert out =~ "--tag-color: #ff0000"
+    end
+
+    test "render_search exposes the query and result count", %{site: site} do
+      posts = Content.search_posts(site.id, "tagged")
+      pages = Content.list_published_pages(site.id)
+      out = Renderer.render_search(%{site: site, posts: posts, query: "tagged", pages: pages})
+
+      assert out =~ "1 result"
+      assert out =~ "Tagged post"
+    end
+
+    test "render_search with no matches shows the empty-search message", %{site: site} do
+      pages = Content.list_published_pages(site.id)
+      out = Renderer.render_search(%{site: site, posts: [], query: "zzz", pages: pages})
+
+      assert out =~ "0 results"
+      assert out =~ "No posts match your search."
+    end
+  end
+
+  describe "where_tag through the sandbox" do
+    setup %{user: user, site: site} do
+      slug = "tagtheme#{System.unique_integer([:positive])}"
+      zip_path = build_where_tag_theme_zip(slug)
+      {:ok, theme} = Masthead.Themes.Package.install(zip_path, user.id)
+      File.rm(zip_path)
+      {:ok, site} = Sites.update_settings(site, %{"theme_id" => theme.id})
+
+      {:ok, faq} = Content.create_tag(site.id, %{"name" => "FAQ", "slug" => "faq"})
+
+      {:ok, _} =
+        Content.create_post(site.id, %{
+          "title" => "How do I publish?",
+          "published" => true,
+          "tag_ids" => [faq.id]
+        })
+
+      {:ok, _} = Content.create_post(site.id, %{"title" => "Untagged news", "published" => true})
+
+      %{site: Sites.get_site!(site.id)}
+    end
+
+    test "a page template can query posts by tag", %{site: site} do
+      [page | _] = Content.list_published_pages(site.id)
+      pages = Content.list_published_pages(site.id)
+      posts = Content.list_published_posts(site.id)
+      body_html = Content.render_body(page.body, page.format)
+
+      out =
+        Renderer.render_page(%{
+          site: site,
+          page: page,
+          body_html: body_html,
+          pages: pages,
+          posts: posts
+        })
+
+      assert out =~ "How do I publish?"
+      refute out =~ "Untagged news"
+    end
+  end
+
   describe "escaping" do
     test "site name is HTML-escaped in templates", %{user: user} do
       default = Themes.get_built_in_by_slug("default")
@@ -401,6 +485,39 @@ defmodule Masthead.Themes.RendererTest do
 
     File.rm(tmp)
     upload
+  end
+
+  # Helper: write a minimal zipped theme whose page template queries posts by
+  # tag via the `where_tag` filter, so we can prove the filter is wired into
+  # the sandbox end-to-end.
+  defp build_where_tag_theme_zip(slug) do
+    page_template = """
+    {% assign faqs = posts | where_tag: "faq" %}
+    <ul>{% for p in faqs %}<li>{{ p.title | escape }}</li>{% endfor %}</ul>
+    """
+
+    files = %{
+      "manifest.json" =>
+        Jason.encode!(%{
+          "name" => "Tag " <> slug,
+          "slug" => slug,
+          "version" => "1.0.0",
+          "tokens" => [],
+          "metadata" => []
+        }),
+      "templates/layout.liquid" => "<html><head></head><body>{{ content }}</body></html>",
+      "templates/index.liquid" => "<h1>{{ site.name | escape }}</h1>",
+      "templates/post.liquid" => "<article>{{ body_html }}</article>",
+      "templates/page.liquid" => page_template,
+      "templates/blog.liquid" => "<h1>{{ page.title | escape }}</h1>",
+      "templates/not_found.liquid" => "<h1>Not found</h1>",
+      "theme.css" => "body { background: white; }"
+    }
+
+    tmp = Path.join(System.tmp_dir!(), "tagtheme-#{System.unique_integer([:positive])}.zip")
+    entries = Enum.map(files, fn {n, b} -> {String.to_charlist(n), b} end)
+    {:ok, _} = :zip.create(String.to_charlist(tmp), entries)
+    tmp
   end
 
   # Helper: write a minimal zipped theme that surfaces page.metadata.layout

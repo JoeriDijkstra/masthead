@@ -27,23 +27,30 @@ defmodule Masthead.Themes.Renderer do
     })
   end
 
-  @doc "Render a single blog post."
-  def render_post(%{site: site, post: post, body_html: body_html, pages: pages}) do
+  @doc """
+  Render a single blog post. The full published-posts list is exposed as
+  `posts` too, so a post template can pull related/tagged posts.
+  """
+  def render_post(%{site: site, post: post, body_html: body_html, pages: pages} = assigns) do
     render(site, :post, %{
       "post" => Presenter.post(post),
       "pages" => Presenter.pages(pages),
-      "posts" => [],
+      "posts" => Presenter.posts(Map.get(assigns, :posts, [])),
       "page" => nil,
       "body_html" => body_html
     })
   end
 
-  @doc "Render a standalone page (markdown or html)."
-  def render_page(%{site: site, page: page, body_html: body_html, pages: pages}) do
+  @doc """
+  Render a standalone page (markdown or html). The full published-posts list
+  is exposed as `posts` so any page can query posts by tag and render them as
+  generic content blocks.
+  """
+  def render_page(%{site: site, page: page, body_html: body_html, pages: pages} = assigns) do
     render(site, :page, %{
       "page" => Presenter.page(page),
       "pages" => Presenter.pages(pages),
-      "posts" => [],
+      "posts" => Presenter.posts(Map.get(assigns, :posts, [])),
       "post" => nil,
       "body_html" => body_html
     })
@@ -61,13 +68,31 @@ defmodule Masthead.Themes.Renderer do
   end
 
   @doc "Render the site-scoped 404."
-  def render_not_found(%{site: site, pages: pages}) do
+  def render_not_found(%{site: site, pages: pages} = assigns) do
     render(site, :not_found, %{
       "pages" => Presenter.pages(pages),
-      "posts" => [],
+      "posts" => Presenter.posts(Map.get(assigns, :posts, [])),
       "post" => nil,
       "page" => nil,
       "body_html" => ""
+    })
+  end
+
+  @doc """
+  Render public search results. Reuses the theme's `index` template (so no
+  new required template is introduced) and exposes `search_query` and
+  `search_count` so a theme can branch on `{% if search_query %}` to show a
+  results heading. `posts` is the already-filtered result set.
+  """
+  def render_search(%{site: site, posts: posts, query: query, pages: pages}) do
+    render(site, :index, %{
+      "posts" => Presenter.posts(posts),
+      "pages" => Presenter.pages(pages),
+      "post" => nil,
+      "page" => nil,
+      "body_html" => "",
+      "search_query" => query,
+      "search_count" => length(posts)
     })
   end
 

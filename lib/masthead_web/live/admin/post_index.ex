@@ -7,10 +7,31 @@ defmodule MastheadWeb.AdminLive.PostIndex do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, load(socket)}
+    tags = Content.list_tags(socket.assigns.site.id)
+    {:ok, assign(socket, tags: tags, page_title: "Posts — #{socket.assigns.site.name}")}
   end
 
   @impl true
+  def handle_params(params, _uri, socket) do
+    filter = parse_filter(params)
+    search = params["q"] || ""
+
+    {:noreply,
+     socket
+     |> assign(tag_filter: filter, search: search)
+     |> reload_posts()}
+  end
+
+  @impl true
+  def handle_event("switch_filter", %{"filter" => filter}, socket) do
+    {:noreply, push_patch(socket, to: posts_path(socket, filter, socket.assigns.search))}
+  end
+
+  def handle_event("search_list", %{"query" => query}, socket) do
+    {:noreply,
+     push_patch(socket, to: posts_path(socket, filter_param(socket.assigns.tag_filter), query))}
+  end
+
   def handle_event("delete", %{"id" => id}, socket) do
     post = Content.get_post!(socket.assigns.site.id, id)
     {:ok, _} = Content.delete_post(post)
@@ -18,17 +39,57 @@ defmodule MastheadWeb.AdminLive.PostIndex do
     {:noreply,
      socket
      |> put_flash(:info, "Post deleted.")
-     |> load()}
+     |> reload_posts()}
   end
 
-  defp load(socket) do
-    posts = Content.list_posts(socket.assigns.site.id)
-    assign(socket, posts: posts, page_title: "Posts — #{socket.assigns.site.name}")
+  defp reload_posts(socket) do
+    posts =
+      Content.list_posts(socket.assigns.site.id,
+        filter: socket.assigns.tag_filter,
+        search: socket.assigns.search
+      )
+
+    assign(socket, :posts, posts)
   end
+
+  defp parse_filter(%{"tag" => "untagged"}), do: :untagged
+  defp parse_filter(%{"tag" => slug}) when is_binary(slug) and slug not in ["", "all"], do: slug
+  defp parse_filter(_params), do: :all
+
+  defp filter_param(:all), do: "all"
+  defp filter_param(:untagged), do: "untagged"
+  defp filter_param(slug) when is_binary(slug), do: slug
+
+  # Build a `/posts` path carrying the active tag filter and search as query
+  # params, dropping the defaults so a clean list stays at a clean URL.
+  defp posts_path(socket, tag, query) do
+    params =
+      %{}
+      |> maybe_put("tag", tag, &(&1 in [nil, "", "all"]))
+      |> maybe_put("q", query, &(&1 in [nil, ""]))
+
+    ~p"/#{socket.assigns.site.slug}/posts?#{params}"
+  end
+
+  defp maybe_put(params, key, value, drop?) do
+    if drop?.(value), do: params, else: Map.put(params, key, value)
+  end
+
+  # The filter buttons: All, Untagged, then one per tag (value is the slug).
+  defp filter_options(tags) do
+    [{:all, "All"}, {:untagged, "Untagged"}] ++ Enum.map(tags, &{&1.slug, &1.name})
+  end
+
+  defp filtering?(tag_filter, search), do: tag_filter != :all or search != ""
 
   defp format_label("markdown"), do: "Markdown"
   defp format_label("html"), do: "HTML"
   defp format_label(other), do: other
+
+  defp tag_chip_style(%{color: color}) when is_binary(color),
+    do: "background: #{color}; color: #fff;"
+
+  defp tag_chip_style(_), do: nil
 
   @impl true
   def render(assigns) do
@@ -49,10 +110,22 @@ defmodule MastheadWeb.AdminLive.PostIndex do
         </.link>
       </:actions>
 
+      <.list_toolbar
+        :if={@tags != [] or @search != "" or @tag_filter != :all}
+        scope={:posts}
+        filter={@tag_filter}
+        options={filter_options(@tags)}
+        search={@search}
+        placeholder="Search posts…"
+        limit={length(@posts)}
+        truncated?={false}
+      />
+
       <table :if={@posts != []} class="table table-cards">
         <thead>
           <tr>
             <th>Title</th>
+            <th>Tags</th>
             <th>Format</th>
             <th>Status</th>
             <th>Updated</th>
@@ -68,6 +141,21 @@ defmodule MastheadWeb.AdminLive.PostIndex do
             <td>
               <span class="row-title">{p.title}</span>
               <div class="muted">/posts/{p.slug}</div>
+            </td>
+            <td data-label="Tags">
+              <div class="tag-cell">
+                <button
+                  :for={t <- p.tags}
+                  type="button"
+                  class="tag-filter"
+                  style={tag_chip_style(t)}
+                  phx-click="switch_filter"
+                  phx-value-scope="posts"
+                  phx-value-filter={t.slug}
+                >
+                  {t.name}
+                </button>
+              </div>
             </td>
             <td data-label="Format">
               <span class={"format-tag format-tag-" <> p.format}>{format_label(p.format)}</span>
@@ -102,13 +190,23 @@ defmodule MastheadWeb.AdminLive.PostIndex do
         </tbody>
       </table>
 
-      <div :if={@posts == []} class="empty-state empty-state-illustrated">
+      <div
+        :if={@posts == [] and not filtering?(@tag_filter, @search)}
+        class="empty-state empty-state-illustrated"
+      >
         <img src={~p"/images/illustrations/empty-posts.svg"} alt="" class="empty-illustration" />
         <h2>No posts yet</h2>
         <p>
           Create your first post to start publishing. Drafts remain private until you publish them.
         </p>
         <.link navigate={~p"/#{@site.slug}/posts/new"} class="btn btn-primary">+ New post</.link>
+      </div>
+
+      <div :if={@posts == [] and filtering?(@tag_filter, @search)} class="empty-state">
+        <h2>No posts match</h2>
+        <p>
+          No posts match this filter. <.link patch={~p"/#{@site.slug}/posts"}>Clear filter</.link>
+        </p>
       </div>
     </.shell>
     """

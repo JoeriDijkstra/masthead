@@ -7,8 +7,19 @@
         <a href="{{ theme.tokens.cta_url | default: '/' }}" class="inline-block rounded-md bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90">{{ theme.tokens.cta_label | escape }}</a>
       </div>
     {% endif %}
+    <form action="/search" method="get" role="search" class="mx-auto mt-10 max-w-md">
+      <input type="search" name="q" value="{{ search_query | escape }}" placeholder="Search posts&hellip;" aria-label="Search posts" style="width:100%" class="rounded-md border border-gray-300 px-4 py-2 text-gray-900 shadow-sm focus:border-[var(--accent)] focus:outline-none" />
+    </form>
   </div>
 </section>
+
+{% if search_query %}
+  <p class="mx-auto max-w-6xl px-6 pt-12 text-sm text-gray-500">{{ search_count }} result{% unless search_count == 1 %}s{% endunless %} for &ldquo;{{ search_query | escape }}&rdquo;</p>
+{% endif %}
+
+{% if posts == empty and search_query %}
+  <section class="mx-auto max-w-6xl px-6 py-16 text-gray-600">No posts match your search.</section>
+{% endif %}
 
 {% unless posts == empty %}
   <section class="mx-auto max-w-6xl px-6 py-16 sm:py-24">

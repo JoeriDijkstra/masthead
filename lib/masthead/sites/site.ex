@@ -29,6 +29,7 @@ defmodule Masthead.Sites.Site do
     belongs_to :homepage_page, Masthead.Content.Page, foreign_key: :homepage_page_id
     has_many :posts, Masthead.Content.Post
     has_many :pages, Masthead.Content.Page
+    has_many :tags, Masthead.Content.Tag
     timestamps(type: :utc_datetime)
   end
 

@@ -1248,6 +1248,77 @@ button.danger:hover { filter: brightness(0.92); }
 .format-tag-html { background: var(--violet-soft); color: var(--violet); }
 .format-tag-blog { background: var(--good-soft); color: #166534; }
 
+/* Tags */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--rule);
+  color: var(--fg);
+}
+.tag-color-field {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.tag-color-field input[type="color"] {
+  width: 2.5rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+.tag-color-field small { margin: 0; }
+
+.tag-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/* Tag picker (toggle pills) on the post form */
+.tag-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+.tag-toggle {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--rule);
+  cursor: pointer;
+}
+.tag-toggle-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Tag filter pills on the posts list */
+.tag-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--rule);
+  color: var(--fg);
+  border: 0;
+  cursor: pointer;
+}
+
 /* Forms */
 .form {
   display: flex;

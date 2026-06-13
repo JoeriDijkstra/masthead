@@ -15,7 +15,7 @@ defmodule MastheadWeb.AdminLive.Components do
   attr :active, :atom,
     default: nil,
     doc:
-      ":overview | :posts | :pages | :uploads | :theme | :settings | :checklist | :sites | :themes"
+      ":overview | :posts | :pages | :tags | :uploads | :theme | :settings | :checklist | :sites | :themes"
 
   attr :action_count, :integer,
     default: nil,
@@ -89,6 +89,9 @@ defmodule MastheadWeb.AdminLive.Components do
             </.nav_link>
             <.nav_link href={~p"/#{@site.slug}/pages"} label="Pages" active={@active == :pages}>
               <.icon_page />
+            </.nav_link>
+            <.nav_link href={~p"/#{@site.slug}/tags"} label="Tags" active={@active == :tags}>
+              <.icon_tag />
             </.nav_link>
             <.nav_link href={~p"/#{@site.slug}/uploads"} label="Uploads" active={@active == :uploads}>
               <.icon_image />
@@ -372,8 +375,8 @@ defmodule MastheadWeb.AdminLive.Components do
   `scope` identifies which list the events belong to so a single pair of
   handlers can serve all three tabs.
   """
-  attr :scope, :atom, required: true, doc: ":users | :sites | :themes"
-  attr :filter, :atom, required: true, doc: "the currently active filter value"
+  attr :scope, :atom, required: true, doc: ":users | :sites | :themes | :posts"
+  attr :filter, :any, required: true, doc: "the currently active filter value (atom or string)"
   attr :options, :list, required: true, doc: ~s(list of `{value, label}` filter buttons)
   attr :search, :string, default: "", doc: "the current search term"
   attr :placeholder, :string, default: "Search…"
@@ -779,6 +782,26 @@ defmodule MastheadWeb.AdminLive.Components do
         stroke-linejoin="round"
         d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
       />
+    </svg>
+    """
+  end
+
+  defp icon_tag(assigns) do
+    ~H"""
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="icon"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z"
+      />
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
     </svg>
     """
   end

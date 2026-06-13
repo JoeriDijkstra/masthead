@@ -11,6 +11,7 @@ defmodule Masthead.Content.Post do
     field :published, :boolean, default: false
     field :published_at, :utc_datetime
     belongs_to :site, Masthead.Sites.Site
+    many_to_many :tags, Masthead.Content.Tag, join_through: "post_tags", on_replace: :delete
     timestamps(type: :utc_datetime)
   end
 

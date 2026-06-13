@@ -2,11 +2,18 @@
   <p class="eyebrow">{{ site.name | escape }}</p>
   <h1>{{ site.title | default: site.name | escape }}</h1>
   {% if site.description != "" %}<p class="lede">{{ site.description | escape }}</p>{% endif %}
+  <form action="/search" method="get" class="search-form" role="search">
+    <input type="search" name="q" value="{{ search_query | escape }}" placeholder="Search posts&hellip;" aria-label="Search posts" />
+  </form>
 </section>
+
+{% if search_query %}
+  <p class="search-summary">{{ search_count }} result{% unless search_count == 1 %}s{% endunless %} for &ldquo;{{ search_query | escape }}&rdquo;</p>
+{% endif %}
 
 {% if posts == empty %}
   <section class="empty-state">
-    <p>No posts yet. Check back soon.</p>
+    <p>{% if search_query %}No posts match your search.{% else %}No posts yet. Check back soon.{% endif %}</p>
   </section>
 {% else %}
   {% assign featured = posts | first %}

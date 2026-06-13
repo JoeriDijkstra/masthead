@@ -107,6 +107,19 @@ a:hover { color: var(--accent-hover); }
   max-width: 60ch;
   margin: 0;
 }
+.search-form { margin-top: 1.5rem; }
+.search-form input {
+  width: 100%;
+  max-width: 360px;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.95rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--fg);
+}
+.search-form input:focus { outline: none; border-color: var(--accent); }
+.search-summary { color: var(--muted); font-size: 0.95rem; margin: 0 0 2rem; }
 
 /* Featured card */
 .featured-card {
