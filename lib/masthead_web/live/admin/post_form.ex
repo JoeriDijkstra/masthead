@@ -556,7 +556,6 @@ defmodule MastheadWeb.AdminLive.PostForm do
             phx-click="toggle_tag"
             phx-value-id={t.id}
             class={["tag-toggle", to_string(t.id) in @selected_tag_ids && "tag-toggle-on"]}
-            style={to_string(t.id) in @selected_tag_ids && tag_toggle_style(t)}
           >
             {t.name}
           </button>
@@ -565,7 +564,7 @@ defmodule MastheadWeb.AdminLive.PostForm do
           <%= if @tags == [] do %>
             No tags yet.
           <% end %>
-          <.link navigate={~p"/#{@site_slug}/tags"}>Manage tags &rarr;</.link>
+          <.link navigate={~p"/#{@site_slug}/settings"}>Manage tags &rarr;</.link>
         </small>
       </div>
 
@@ -654,9 +653,4 @@ defmodule MastheadWeb.AdminLive.PostForm do
 
   defp format_label("html"), do: "HTML"
   defp format_label(_), do: "Markdown"
-
-  defp tag_toggle_style(%{color: color}) when is_binary(color),
-    do: "background: #{color}; border-color: #{color}; color: #fff;"
-
-  defp tag_toggle_style(_), do: nil
 end

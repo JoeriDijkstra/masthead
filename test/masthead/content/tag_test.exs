@@ -27,22 +27,9 @@ defmodule Masthead.Content.TagTest do
       assert tag.site_id == site.id
     end
 
-    test "create_tag honours an explicit slug and a hex color", %{site: site} do
-      {:ok, tag} =
-        Content.create_tag(site.id, %{"name" => "FAQ", "slug" => "faqs", "color" => "#3b82f6"})
-
+    test "create_tag honours an explicit slug", %{site: site} do
+      {:ok, tag} = Content.create_tag(site.id, %{"name" => "FAQ", "slug" => "faqs"})
       assert tag.slug == "faqs"
-      assert tag.color == "#3b82f6"
-    end
-
-    test "create_tag rejects a non-hex color", %{site: site} do
-      {:error, changeset} = Content.create_tag(site.id, %{"name" => "Bad", "color" => "red"})
-      assert %{color: [_ | _]} = errors_on(changeset)
-    end
-
-    test "create_tag treats a blank color as no color", %{site: site} do
-      {:ok, tag} = Content.create_tag(site.id, %{"name" => "Plain", "color" => ""})
-      assert tag.color == nil
     end
 
     test "tag slugs are unique per site", %{site: site} do

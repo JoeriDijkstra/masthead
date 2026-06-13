@@ -4,6 +4,7 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
 
   import MastheadWeb.AdminLive.Components
   alias Masthead.{Actions, Sites, Content}
+  alias Masthead.Content.Tag
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,7 +17,11 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
        page_title: "Settings — #{site.name}",
        published_pages: Content.list_published_pages(site.id),
        action_count: Actions.count_pending(site),
-       show_errors: false
+       show_errors: false,
+       tags: Content.list_tags(site.id),
+       tag_modal?: false,
+       editing_tag: nil,
+       tag_form: nil
      )
      |> assign_form(changeset)}
   end
@@ -61,6 +66,67 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
      socket
      |> put_flash(:info, "Site deleted. Contact support if you need it back.")
      |> push_navigate(to: ~p"/sites")}
+  end
+
+  # ---- Tags ----
+
+  def handle_event("new_tag", _params, socket) do
+    {:noreply, open_tag_modal(socket, %Tag{})}
+  end
+
+  def handle_event("edit_tag", %{"id" => id}, socket) do
+    {:noreply, open_tag_modal(socket, Content.get_tag!(socket.assigns.site.id, id))}
+  end
+
+  def handle_event("close_tag_modal", _params, socket) do
+    {:noreply, assign(socket, tag_modal?: false, editing_tag: nil, tag_form: nil)}
+  end
+
+  def handle_event("validate_tag", %{"tag" => params}, socket) do
+    changeset =
+      socket.assigns.editing_tag
+      |> Content.change_tag(params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, tag_form: to_form(changeset, as: :tag))}
+  end
+
+  def handle_event("save_tag", %{"tag" => params}, socket) do
+    result =
+      case socket.assigns.editing_tag do
+        %Tag{id: nil} -> Content.create_tag(socket.assigns.site.id, params)
+        tag -> Content.update_tag(tag, params)
+      end
+
+    case result do
+      {:ok, _tag} ->
+        {:noreply,
+         socket
+         |> assign(
+           tags: Content.list_tags(socket.assigns.site.id),
+           tag_modal?: false,
+           editing_tag: nil,
+           tag_form: nil
+         )
+         |> put_flash(:info, "Tag saved.")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, tag_form: to_form(changeset, as: :tag))}
+    end
+  end
+
+  def handle_event("delete_tag", %{"id" => id}, socket) do
+    tag = Content.get_tag!(socket.assigns.site.id, id)
+    {:ok, _} = Content.delete_tag(tag)
+    {:noreply, assign(socket, tags: Content.list_tags(socket.assigns.site.id))}
+  end
+
+  defp open_tag_modal(socket, tag) do
+    assign(socket,
+      tag_modal?: true,
+      editing_tag: tag,
+      tag_form: to_form(Content.change_tag(tag), as: :tag)
+    )
   end
 
   defp assign_form(socket, changeset) do
@@ -150,6 +216,44 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
 
           <div class="settings-section">
             <header class="settings-section-head">
+              <h2>Tags</h2>
+              <p>Group posts so you can filter them in the admin and pull them into your theme.</p>
+            </header>
+
+            <div class="settings-fields">
+              <div :if={@tags != []} class="tag-manage-list">
+                <span :for={t <- @tags} class="tag-chip">
+                  <button
+                    type="button"
+                    class="tag-chip-label"
+                    phx-click="edit_tag"
+                    phx-value-id={t.id}
+                  >
+                    {t.name}
+                  </button>
+                  <button
+                    type="button"
+                    class="tag-chip-remove"
+                    phx-click="delete_tag"
+                    phx-value-id={t.id}
+                    data-confirm={"Delete tag \"" <> t.name <> "\"? Posts keep their other tags."}
+                    aria-label={"Delete " <> t.name}
+                  >
+                    &times;
+                  </button>
+                </span>
+              </div>
+              <p :if={@tags == []} class="muted">No tags yet.</p>
+              <div>
+                <button type="button" phx-click="new_tag" class="btn btn-primary btn-sm">
+                  + New tag
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <header class="settings-section-head">
               <h2>Custom domain</h2>
               <p>Serve this site from your own domain instead of a Masthead subdomain.</p>
             </header>
@@ -221,6 +325,69 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
             </button>
           </div>
         </.form>
+      </div>
+
+      <div
+        :if={@tag_modal?}
+        class="dialog-backdrop"
+        phx-window-keydown="close_tag_modal"
+        phx-key="Escape"
+      >
+        <button
+          type="button"
+          phx-click="close_tag_modal"
+          class="dialog-close-overlay"
+          aria-label="Close"
+          tabindex="-1"
+        >
+        </button>
+        <div class="dialog">
+          <header class="dialog-header">
+            <h2>{if @editing_tag && @editing_tag.id, do: "Edit tag", else: "New tag"}</h2>
+            <button
+              type="button"
+              phx-click="close_tag_modal"
+              class="dialog-close"
+              aria-label="Close"
+            >
+              &times;
+            </button>
+          </header>
+
+          <form phx-submit="save_tag" phx-change="validate_tag" class="dialog-form">
+            <label>
+              Name
+              <input
+                type="text"
+                name="tag[name]"
+                value={@tag_form[:name].value}
+                autocomplete="off"
+                required
+                autofocus
+              />
+            </label>
+            <label>
+              Slug
+              <input
+                type="text"
+                name="tag[slug]"
+                value={@tag_form[:slug].value}
+                placeholder="auto from name"
+                autocomplete="off"
+              />
+              <small>
+                Used in theme queries: <code>{@tag_form[:slug].value || "your-tag"}</code>
+              </small>
+            </label>
+            <ul :if={@tag_form.errors != []} class="errors">
+              <li :for={{field, {msg, _}} <- @tag_form.errors}>{field}: {msg}</li>
+            </ul>
+            <div class="dialog-footer">
+              <button type="button" phx-click="close_tag_modal" class="btn">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save tag</button>
+            </div>
+          </form>
+        </div>
       </div>
     </.shell>
     """

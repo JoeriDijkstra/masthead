@@ -95,10 +95,6 @@ defmodule MastheadWeb.Router do
       live "/:site_slug/pages/import", AdminLive.PageForm, :import
       live "/:site_slug/pages/:id/edit", AdminLive.PageForm, :edit
 
-      live "/:site_slug/tags", AdminLive.TagIndex, :index
-      live "/:site_slug/tags/new", AdminLive.TagForm, :new
-      live "/:site_slug/tags/:id/edit", AdminLive.TagForm, :edit
-
       live "/:site_slug/uploads", AdminLive.UploadIndex, :index
       live "/:site_slug/uploads/:id", AdminLive.UploadShow, :show
     end

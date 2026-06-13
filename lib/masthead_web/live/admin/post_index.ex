@@ -86,11 +86,6 @@ defmodule MastheadWeb.AdminLive.PostIndex do
   defp format_label("html"), do: "HTML"
   defp format_label(other), do: other
 
-  defp tag_chip_style(%{color: color}) when is_binary(color),
-    do: "background: #{color}; color: #fff;"
-
-  defp tag_chip_style(_), do: nil
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -148,7 +143,6 @@ defmodule MastheadWeb.AdminLive.PostIndex do
                   :for={t <- p.tags}
                   type="button"
                   class="tag-filter"
-                  style={tag_chip_style(t)}
                   phx-click="switch_filter"
                   phx-value-scope="posts"
                   phx-value-filter={t.slug}

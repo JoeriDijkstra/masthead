@@ -61,7 +61,7 @@ defmodule Masthead.Themes.Presenter do
   # association so a caller that forgets to preload gets `[]` rather than a
   # crash on `%Ecto.Association.NotLoaded{}`.
   defp tags_of(%Post{tags: tags}) when is_list(tags) do
-    Enum.map(tags, fn t -> %{"name" => t.name, "slug" => t.slug, "color" => t.color} end)
+    Enum.map(tags, fn t -> %{"name" => t.name, "slug" => t.slug} end)
   end
 
   defp tags_of(_), do: []

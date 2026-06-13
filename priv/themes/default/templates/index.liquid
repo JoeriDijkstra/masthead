@@ -26,7 +26,7 @@
         {% if post.tags != empty %}
           <ul class="tag-list">
             {% for tag in post.tags %}
-              <li class="tag-pill"{% if tag.color %} style="--tag-color: {{ tag.color | escape }}"{% endif %}>{{ tag.name | escape }}</li>
+              <li class="tag-pill">{{ tag.name | escape }}</li>
             {% endfor %}
           </ul>
         {% endif %}

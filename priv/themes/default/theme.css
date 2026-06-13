@@ -49,7 +49,7 @@ main { padding-top: 2rem; padding-bottom: 4rem; }
 .search-form input:focus { outline: none; border-color: var(--accent); }
 .search-summary { color: var(--muted); font-size: 0.9rem; margin: 1.5rem 0 0; }
 .tag-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0; margin: 0.5rem 0 0; }
-.tag-pill { font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 9999px; background: var(--tag-color, var(--muted)); color: #fff; line-height: 1.4; }
+.tag-pill { font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 9999px; background: var(--rule); color: var(--muted); line-height: 1.4; }
 
 @media (max-width: 640px) {
   main, .site-nav, .site-footer { padding-left: 1rem; padding-right: 1rem; }

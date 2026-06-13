@@ -109,7 +109,7 @@ defmodule Masthead.Themes.RendererTest do
 
   describe "tags and search" do
     setup %{site: site} do
-      {:ok, tag} = Content.create_tag(site.id, %{"name" => "Featured", "color" => "#ff0000"})
+      {:ok, tag} = Content.create_tag(site.id, %{"name" => "Featured"})
 
       {:ok, _} =
         Content.create_post(site.id, %{
@@ -121,14 +121,14 @@ defmodule Masthead.Themes.RendererTest do
       %{tag: tag}
     end
 
-    test "render_index shows the search box and colored tag pills", %{site: site} do
+    test "render_index shows the search box and tag pills", %{site: site} do
       posts = Content.list_published_posts(site.id)
       pages = Content.list_published_pages(site.id)
       out = Renderer.render_index(%{site: site, posts: posts, pages: pages})
 
       assert out =~ ~s(action="/search")
       assert out =~ "Featured"
-      assert out =~ "--tag-color: #ff0000"
+      assert out =~ ~s(class="tag-pill")
     end
 
     test "render_search exposes the query and result count", %{site: site} do

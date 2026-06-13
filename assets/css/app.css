@@ -1248,32 +1248,41 @@ button.danger:hover { filter: brightness(0.92); }
 .format-tag-html { background: var(--violet-soft); color: var(--violet); }
 .format-tag-blog { background: var(--good-soft); color: #166534; }
 
-/* Tags */
+/* Tags — management list in settings */
+.tag-manage-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
 .tag-chip {
   display: inline-flex;
   align-items: center;
-  padding: 0.18rem 0.6rem;
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
   background: var(--rule);
   color: var(--fg);
+  overflow: hidden;
 }
-.tag-color-field {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-.tag-color-field input[type="color"] {
-  width: 2.5rem;
-  height: 2rem;
-  padding: 0;
-  border: 1px solid var(--rule);
-  border-radius: 6px;
+.tag-chip-label {
+  padding: 0.2rem 0.5rem 0.2rem 0.7rem;
   background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
 }
-.tag-color-field small { margin: 0; }
+.tag-chip-remove {
+  padding: 0.2rem 0.55rem;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.tag-chip-remove:hover { color: var(--danger, #991b1b); }
 
 .tag-cell {
   display: flex;

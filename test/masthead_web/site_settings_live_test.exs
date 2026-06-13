@@ -3,7 +3,7 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
 
   import Phoenix.LiveViewTest
 
-  alias Masthead.{Accounts, Sites, Themes}
+  alias Masthead.{Accounts, Content, Sites, Themes}
 
   setup do
     Masthead.Themes.Seed.run()
@@ -72,5 +72,53 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
 
     assert html =~ "Import site"
     assert html =~ ~p"/#{site.slug}/import"
+  end
+
+  describe "tag management" do
+    test "creating a tag via the modal", %{conn: conn, site: site} do
+      {:ok, lv, html} = live(conn, ~p"/#{site.slug}/settings")
+      assert html =~ "Tags"
+      assert html =~ "No tags yet."
+
+      # The modal opens on demand.
+      refute has_element?(lv, ".dialog")
+      lv |> element(~s(button[phx-click="new_tag"])) |> render_click()
+      assert has_element?(lv, ".dialog")
+
+      html =
+        lv
+        |> form(~s(.dialog-form), tag: %{name: "Announcements"})
+        |> render_submit()
+
+      refute html =~ "No tags yet."
+      [tag] = Content.list_tags(site.id)
+      assert tag.name == "Announcements"
+      assert tag.slug == "announcements"
+    end
+
+    test "an invalid tag keeps the modal open with an error", %{conn: conn, site: site} do
+      {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/settings")
+      lv |> element(~s(button[phx-click="new_tag"])) |> render_click()
+
+      html =
+        lv
+        |> form(~s(.dialog-form), tag: %{name: ""})
+        |> render_submit()
+
+      assert html =~ "can&#39;t be blank"
+      assert has_element?(lv, ".dialog")
+      assert Content.list_tags(site.id) == []
+    end
+
+    test "deleting a tag", %{conn: conn, site: site} do
+      {:ok, tag} = Content.create_tag(site.id, %{"name" => "Temp"})
+      {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/settings")
+
+      lv
+      |> element(~s(button.tag-chip-remove[phx-value-id="#{tag.id}"]))
+      |> render_click()
+
+      assert Content.list_tags(site.id) == []
+    end
   end
 end

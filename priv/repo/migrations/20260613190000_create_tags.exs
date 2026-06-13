@@ -6,7 +6,6 @@ defmodule Masthead.Repo.Migrations.CreateTags do
       add :site_id, references(:sites, on_delete: :delete_all), null: false
       add :name, :string, null: false
       add :slug, :string, null: false
-      add :color, :string
       timestamps(type: :utc_datetime)
     end
 
