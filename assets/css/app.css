@@ -1249,13 +1249,6 @@ button.danger:hover { filter: brightness(0.92); }
 .format-tag-blog { background: var(--good-soft); color: #166534; }
 
 /* Tags — management list in settings */
-.tag-manage {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
 .tag-manage-list {
   display: flex;
   flex-wrap: wrap;

@@ -239,30 +239,28 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
             </header>
 
             <div class="settings-fields">
-              <div class="tag-manage">
-                <div class="tag-manage-list">
-                  <span :for={t <- @tags} class="tag-chip">
-                    <button
-                      type="button"
-                      class="tag-chip-label"
-                      phx-click="edit_tag"
-                      phx-value-id={t.id}
-                    >
-                      {t.name}
-                    </button>
-                    <button
-                      type="button"
-                      class="tag-chip-remove"
-                      phx-click="delete_tag"
-                      phx-value-id={t.id}
-                      data-confirm={"Delete tag \"" <> t.name <> "\"? Posts keep their other tags."}
-                      aria-label={"Delete " <> t.name}
-                    >
-                      &times;
-                    </button>
-                  </span>
-                  <span :if={@tags == []} class="muted">No tags yet.</span>
-                </div>
+              <div class="tag-manage-list">
+                <span :for={t <- @tags} class="tag-chip">
+                  <button
+                    type="button"
+                    class="tag-chip-label"
+                    phx-click="edit_tag"
+                    phx-value-id={t.id}
+                  >
+                    {t.name}
+                  </button>
+                  <button
+                    type="button"
+                    class="tag-chip-remove"
+                    phx-click="delete_tag"
+                    phx-value-id={t.id}
+                    data-confirm={"Delete tag \"" <> t.name <> "\"? Posts keep their other tags."}
+                    aria-label={"Delete " <> t.name}
+                  >
+                    &times;
+                  </button>
+                </span>
+                <span :if={@tags == []} class="muted">No tags yet.</span>
                 <button type="button" phx-click="new_tag" class="tag-chip-add">
                   <span aria-hidden="true">+</span> New tag
                 </button>
