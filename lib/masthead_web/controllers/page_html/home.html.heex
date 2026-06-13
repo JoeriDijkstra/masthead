@@ -5,6 +5,12 @@
       <span class="brand-name">Masthead</span>
     </a>
     <div class="nav-cta">
+      <a href="https://blog.masthead.site" target="_blank" rel="noopener" class="nav-link">
+        Blog
+      </a>
+      <a href="https://docs.masthead.site" target="_blank" rel="noopener" class="nav-link">
+        Docs
+      </a>
       <a
         href="https://github.com/JoeriDijkstra/masthead"
         target="_blank"
@@ -31,8 +37,7 @@
       <%= if assigns[:current_user] do %>
         <.link navigate={~p"/sites"} class="btn btn-primary btn-sm">Open dashboard &rarr;</.link>
       <% else %>
-        <.link navigate={~p"/login"} class="nav-link">Log in</.link>
-        <.link navigate={~p"/signup"} class="btn btn-primary btn-sm">Sign up</.link>
+        <.link navigate={~p"/login"} class="btn btn-primary btn-sm">Login</.link>
       <% end %>
     </div>
   </nav>
@@ -254,6 +259,8 @@
       <span class="landing-version">v{Application.spec(:masthead, :vsn)}</span>
     </div>
     <div class="landing-footer-links">
+      <a href="https://blog.masthead.site" target="_blank" rel="noopener">Blog</a>
+      <a href="https://docs.masthead.site" target="_blank" rel="noopener">Docs</a>
       <%= if assigns[:current_user] do %>
         <.link navigate={~p"/sites"}>Dashboard</.link>
       <% else %>
