@@ -96,6 +96,50 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
       assert tag.slug == "announcements"
     end
 
+    test "the slug keeps tracking the name across keystrokes", %{conn: conn, site: site} do
+      {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/settings")
+      lv |> element(~s(button[phx-click="new_tag"])) |> render_click()
+
+      # Simulate typing the name one keystroke at a time, with the slug input
+      # echoing its derived value back each time (as the browser would).
+      lv
+      |> element(~s(.dialog-form))
+      |> render_change(%{"_target" => ["tag", "name"], "tag" => %{"name" => "N", "slug" => ""}})
+
+      html =
+        lv
+        |> element(~s(.dialog-form))
+        |> render_change(%{
+          "_target" => ["tag", "name"],
+          "tag" => %{"name" => "News", "slug" => "n"}
+        })
+
+      assert html =~ ~s(value="news")
+    end
+
+    test "an explicitly edited slug is preserved", %{conn: conn, site: site} do
+      {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/settings")
+      lv |> element(~s(button[phx-click="new_tag"])) |> render_click()
+
+      # User edits the slug directly, then changes the name — slug stays put.
+      lv
+      |> element(~s(.dialog-form))
+      |> render_change(%{
+        "_target" => ["tag", "slug"],
+        "tag" => %{"name" => "", "slug" => "custom"}
+      })
+
+      html =
+        lv
+        |> element(~s(.dialog-form))
+        |> render_change(%{
+          "_target" => ["tag", "name"],
+          "tag" => %{"name" => "News", "slug" => "custom"}
+        })
+
+      assert html =~ ~s(value="custom")
+    end
+
     test "an invalid tag keeps the modal open with an error", %{conn: conn, site: site} do
       {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/settings")
       lv |> element(~s(button[phx-click="new_tag"])) |> render_click()

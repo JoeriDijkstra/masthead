@@ -1249,11 +1249,36 @@ button.danger:hover { filter: brightness(0.92); }
 .format-tag-blog { background: var(--good-soft); color: #166534; }
 
 /* Tags — management list in settings */
+.tag-manage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
 .tag-manage-list {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.4rem;
-  margin-bottom: 0.75rem;
+}
+.tag-chip-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: none;
+  color: var(--accent);
+  border: 1px dashed var(--rule-strong, var(--rule));
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tag-chip-add:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 .tag-chip {
   display: inline-flex;

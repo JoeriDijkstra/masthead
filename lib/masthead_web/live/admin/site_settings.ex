@@ -21,7 +21,8 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
        tags: Content.list_tags(site.id),
        tag_modal?: false,
        editing_tag: nil,
-       tag_form: nil
+       tag_form: nil,
+       tag_slug_touched: false
      )
      |> assign_form(changeset)}
   end
@@ -82,13 +83,27 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
     {:noreply, assign(socket, tag_modal?: false, editing_tag: nil, tag_form: nil)}
   end
 
-  def handle_event("validate_tag", %{"tag" => params}, socket) do
+  def handle_event("validate_tag", %{"tag" => params} = payload, socket) do
+    target = List.last(payload["_target"] || [])
+    slug_touched = socket.assigns.tag_slug_touched or target == "slug"
+
+    # While the user hasn't hand-edited the slug, blank it on each name change
+    # so the changeset re-derives it from the (updated) name. Otherwise the
+    # slug input echoes its previous value back and sticks after one keystroke.
+    params =
+      if not slug_touched and target == "name" do
+        Map.put(params, "slug", "")
+      else
+        params
+      end
+
     changeset =
       socket.assigns.editing_tag
       |> Content.change_tag(params)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, tag_form: to_form(changeset, as: :tag))}
+    {:noreply,
+     assign(socket, tag_form: to_form(changeset, as: :tag), tag_slug_touched: slug_touched)}
   end
 
   def handle_event("save_tag", %{"tag" => params}, socket) do
@@ -125,7 +140,10 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
     assign(socket,
       tag_modal?: true,
       editing_tag: tag,
-      tag_form: to_form(Content.change_tag(tag), as: :tag)
+      tag_form: to_form(Content.change_tag(tag), as: :tag),
+      # New tags auto-derive the slug from the name; existing tags keep their
+      # slug (it's referenced by themes) unless the user edits it directly.
+      tag_slug_touched: not is_nil(tag.id)
     )
   end
 
@@ -221,32 +239,32 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
             </header>
 
             <div class="settings-fields">
-              <div :if={@tags != []} class="tag-manage-list">
-                <span :for={t <- @tags} class="tag-chip">
-                  <button
-                    type="button"
-                    class="tag-chip-label"
-                    phx-click="edit_tag"
-                    phx-value-id={t.id}
-                  >
-                    {t.name}
-                  </button>
-                  <button
-                    type="button"
-                    class="tag-chip-remove"
-                    phx-click="delete_tag"
-                    phx-value-id={t.id}
-                    data-confirm={"Delete tag \"" <> t.name <> "\"? Posts keep their other tags."}
-                    aria-label={"Delete " <> t.name}
-                  >
-                    &times;
-                  </button>
-                </span>
-              </div>
-              <p :if={@tags == []} class="muted">No tags yet.</p>
-              <div>
-                <button type="button" phx-click="new_tag" class="btn btn-primary btn-sm">
-                  + New tag
+              <div class="tag-manage">
+                <div class="tag-manage-list">
+                  <span :for={t <- @tags} class="tag-chip">
+                    <button
+                      type="button"
+                      class="tag-chip-label"
+                      phx-click="edit_tag"
+                      phx-value-id={t.id}
+                    >
+                      {t.name}
+                    </button>
+                    <button
+                      type="button"
+                      class="tag-chip-remove"
+                      phx-click="delete_tag"
+                      phx-value-id={t.id}
+                      data-confirm={"Delete tag \"" <> t.name <> "\"? Posts keep their other tags."}
+                      aria-label={"Delete " <> t.name}
+                    >
+                      &times;
+                    </button>
+                  </span>
+                  <span :if={@tags == []} class="muted">No tags yet.</span>
+                </div>
+                <button type="button" phx-click="new_tag" class="tag-chip-add">
+                  <span aria-hidden="true">+</span> New tag
                 </button>
               </div>
             </div>
