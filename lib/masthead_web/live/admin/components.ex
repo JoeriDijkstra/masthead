@@ -117,6 +117,17 @@ defmodule MastheadWeb.AdminLive.Components do
               <span>View site</span>
             </a>
 
+            <a
+              class="nav-item nav-external"
+              href="https://docs.masthead.site"
+              target="_blank"
+              rel="noopener"
+              phx-click={close_nav()}
+            >
+              <.icon_book />
+              <span>Docs</span>
+            </a>
+
             <.nav_link href={~p"/sites"} label="All sites" active={false}>
               <.icon_grid />
             </.nav_link>
@@ -137,6 +148,19 @@ defmodule MastheadWeb.AdminLive.Components do
             >
               <.icon_shield />
             </.nav_link>
+
+            <div class="sidebar-divider"></div>
+
+            <a
+              class="nav-item nav-external"
+              href="https://docs.masthead.site"
+              target="_blank"
+              rel="noopener"
+              phx-click={close_nav()}
+            >
+              <.icon_book />
+              <span>Docs</span>
+            </a>
           <% end %>
         </nav>
 
@@ -812,6 +836,25 @@ defmodule MastheadWeb.AdminLive.Components do
         stroke-linecap="round"
         stroke-linejoin="round"
         d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+      />
+    </svg>
+    """
+  end
+
+  defp icon_book(assigns) do
+    ~H"""
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="icon"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"
       />
     </svg>
     """
