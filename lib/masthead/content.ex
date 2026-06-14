@@ -65,6 +65,27 @@ defmodule Masthead.Content do
   end
 
   @doc """
+  Published posts for a blog page, keeping only those carrying at least one of
+  the given tag ids. An empty list returns all published posts (no filter).
+  """
+  def list_published_posts_filtered(site_id, []), do: list_published_posts(site_id)
+
+  def list_published_posts_filtered(site_id, tag_ids) when is_list(tag_ids) do
+    Repo.all(
+      from p in Post,
+        where:
+          p.site_id == ^site_id and p.published == true and
+            fragment(
+              "EXISTS (SELECT 1 FROM post_tags pt WHERE pt.post_id = ? AND pt.tag_id = ANY(?))",
+              p.id,
+              ^tag_ids
+            ),
+        order_by: [desc: p.published_at],
+        preload: :tags
+    )
+  end
+
+  @doc """
   Full-text-ish search over a site's published posts: case-insensitive
   substring match against title, excerpt, and body. A blank query returns all
   published posts (so the search page reads as "browse everything" rather than
@@ -133,16 +154,23 @@ defmodule Masthead.Content do
   # updates that don't touch tags (e.g. a publish toggle) leave them alone.
   # Tags are resolved site-scoped, so a forged id from another site is ignored.
   defp put_post_tags(changeset, site_id, attrs) do
-    case fetch_tag_ids(attrs) do
+    put_assoc_tags(changeset, :tags, site_id, attrs, "tag_ids", :tag_ids)
+  end
+
+  # Attach a tag association only when the caller submitted the id key, so
+  # updates that don't touch tags leave the association alone. Tags are
+  # resolved site-scoped, so a forged id from another site is ignored.
+  defp put_assoc_tags(changeset, assoc, site_id, attrs, string_key, atom_key) do
+    case fetch_ids(attrs, string_key, atom_key) do
       nil -> changeset
-      ids -> Ecto.Changeset.put_assoc(changeset, :tags, list_tags_by_ids(site_id, ids))
+      ids -> Ecto.Changeset.put_assoc(changeset, assoc, list_tags_by_ids(site_id, ids))
     end
   end
 
-  defp fetch_tag_ids(attrs) do
+  defp fetch_ids(attrs, string_key, atom_key) do
     cond do
-      Map.has_key?(attrs, "tag_ids") -> parse_ids(Map.get(attrs, "tag_ids"))
-      Map.has_key?(attrs, :tag_ids) -> parse_ids(Map.get(attrs, :tag_ids))
+      Map.has_key?(attrs, string_key) -> parse_ids(Map.get(attrs, string_key))
+      Map.has_key?(attrs, atom_key) -> parse_ids(Map.get(attrs, atom_key))
       true -> nil
     end
   end
@@ -182,13 +210,14 @@ defmodule Masthead.Content do
   end
 
   def get_page!(site_id, id) do
-    Repo.one!(from p in Page, where: p.site_id == ^site_id and p.id == ^id)
+    Repo.one!(from p in Page, where: p.site_id == ^site_id and p.id == ^id, preload: :filter_tags)
   end
 
   def get_published_page_by_slug(site_id, slug) do
     Repo.one(
       from p in Page,
-        where: p.site_id == ^site_id and p.slug == ^slug and p.published == true
+        where: p.site_id == ^site_id and p.slug == ^slug and p.published == true,
+        preload: :filter_tags
     )
   end
 
@@ -203,15 +232,18 @@ defmodule Masthead.Content do
   def get_homepage_page(%Masthead.Sites.Site{id: site_id, homepage_page_id: id}) do
     Repo.one(
       from p in Page,
-        where: p.id == ^id and p.site_id == ^site_id and p.published == true
+        where: p.id == ^id and p.site_id == ^site_id and p.published == true,
+        preload: :filter_tags
     )
   end
 
   def create_page(site_id, attrs) do
-    with {:ok, page} <-
-           %Page{site_id: site_id}
-           |> Page.changeset(Map.put(attrs, "site_id", site_id))
-           |> Repo.insert() do
+    changeset =
+      %Page{site_id: site_id}
+      |> Page.changeset(Map.put(attrs, "site_id", site_id))
+      |> put_page_filter_tags(site_id, attrs)
+
+    with {:ok, page} <- Repo.insert(changeset) do
       Masthead.Actions.complete_action(site_id, "create_first_page")
       Masthead.Actions.reached_first_content(site_id)
       {:ok, page}
@@ -219,7 +251,16 @@ defmodule Masthead.Content do
   end
 
   def update_page(%Page{} = page, attrs) do
-    page |> Page.changeset(attrs) |> Repo.update()
+    page = Repo.preload(page, :filter_tags)
+
+    page
+    |> Page.changeset(attrs)
+    |> put_page_filter_tags(page.site_id, attrs)
+    |> Repo.update()
+  end
+
+  defp put_page_filter_tags(changeset, site_id, attrs) do
+    put_assoc_tags(changeset, :filter_tags, site_id, attrs, "filter_tag_ids", :filter_tag_ids)
   end
 
   def delete_page(%Page{} = page), do: Repo.delete(page)

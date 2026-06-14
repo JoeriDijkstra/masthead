@@ -74,7 +74,8 @@ defmodule MastheadWeb.PublicController do
 
   defp render_page_or_404(conn, %{format: "blog"} = page, pages) do
     site = conn.assigns.current_site
-    posts = Content.list_published_posts(site.id)
+    tag_ids = Enum.map(page.filter_tags, & &1.id)
+    posts = Content.list_published_posts_filtered(site.id, tag_ids)
     # The body of a blog page is treated as Markdown intro text shown above
     # the post list. Pass an empty body through harmlessly.
     body_html = Content.render_body(page.body, "markdown")

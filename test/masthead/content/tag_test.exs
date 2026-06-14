@@ -168,6 +168,78 @@ defmodule Masthead.Content.TagTest do
     end
   end
 
+  describe "blog page filter tags" do
+    setup %{site: site} do
+      {:ok, news} = Content.create_tag(site.id, %{"name" => "News"})
+      {:ok, faq} = Content.create_tag(site.id, %{"name" => "FAQ"})
+
+      {:ok, news_post} =
+        Content.create_post(site.id, %{
+          "title" => "Newsy",
+          "published" => "true",
+          "tag_ids" => [news.id]
+        })
+
+      {:ok, faq_post} =
+        Content.create_post(site.id, %{
+          "title" => "Question",
+          "published" => "true",
+          "tag_ids" => [faq.id]
+        })
+
+      {:ok, plain} = Content.create_post(site.id, %{"title" => "Plain", "published" => "true"})
+
+      %{news: news, faq: faq, news_post: news_post, faq_post: faq_post, plain: plain}
+    end
+
+    test "create_page attaches submitted filter_tag_ids", %{site: site, news: news} do
+      {:ok, page} =
+        Content.create_page(site.id, %{
+          "title" => "Blog",
+          "format" => "blog",
+          "filter_tag_ids" => [to_string(news.id)]
+        })
+
+      assert Content.get_page!(site.id, page.id).filter_tags |> Enum.map(& &1.slug) == ["news"]
+    end
+
+    test "update_page replaces the filter tag set", %{site: site, news: news, faq: faq} do
+      {:ok, page} =
+        Content.create_page(site.id, %{"title" => "B", "filter_tag_ids" => [news.id]})
+
+      {:ok, _} = Content.update_page(page, %{"filter_tag_ids" => [faq.id]})
+      assert Content.get_page!(site.id, page.id).filter_tags |> Enum.map(& &1.slug) == ["faq"]
+    end
+
+    test "list_published_posts_filtered keeps only posts with a matching tag", %{
+      site: site,
+      news: news,
+      news_post: news_post
+    } do
+      ids = Content.list_published_posts_filtered(site.id, [news.id]) |> Enum.map(& &1.id)
+      assert ids == [news_post.id]
+    end
+
+    test "filtering matches posts carrying any of the tags", %{
+      site: site,
+      news: news,
+      faq: faq,
+      news_post: news_post,
+      faq_post: faq_post
+    } do
+      ids =
+        Content.list_published_posts_filtered(site.id, [news.id, faq.id])
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert ids == Enum.sort([news_post.id, faq_post.id])
+    end
+
+    test "an empty filter returns all published posts", %{site: site} do
+      assert length(Content.list_published_posts_filtered(site.id, [])) == 3
+    end
+  end
+
   describe "search_posts/2" do
     setup %{site: site} do
       {:ok, _} =

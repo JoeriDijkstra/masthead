@@ -11,6 +11,12 @@ defmodule Masthead.Content.Page do
     field :show_in_nav, :boolean, default: true
     field :metadata, :map, default: %{}
     belongs_to :site, Masthead.Sites.Site
+    # Tags a "blog"-format page filters its post list by (empty = show all).
+    # Pages are not taggable content; this is a render-time filter selection.
+    many_to_many :filter_tags, Masthead.Content.Tag,
+      join_through: "page_filter_tags",
+      on_replace: :delete
+
     timestamps(type: :utc_datetime)
   end
 
