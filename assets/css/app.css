@@ -1268,6 +1268,7 @@ button.danger:hover { filter: brightness(0.92); }
   border: 1px dashed var(--rule-strong, var(--rule));
   cursor: pointer;
   white-space: nowrap;
+  text-decoration: none;
 }
 .tag-chip-add:hover {
   border-color: var(--accent);
@@ -1317,22 +1318,8 @@ button.danger:hover { filter: brightness(0.92); }
   gap: 0.3rem;
 }
 .field-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
   font-size: 0.9rem;
   font-weight: 500;
-}
-.field-action {
-  display: inline-flex;
-  color: var(--muted);
-}
-.field-action:hover {
-  color: var(--accent);
-}
-.field-action svg {
-  width: 0.95rem;
-  height: 0.95rem;
 }
 .tag-picker {
   display: flex;
