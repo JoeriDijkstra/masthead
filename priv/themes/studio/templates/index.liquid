@@ -19,15 +19,15 @@
       <span class="card-eyebrow">Latest</span>
       <h2>{{ featured.title | escape }}</h2>
       {% if featured.excerpt != "" %}<p class="featured-excerpt">{{ featured.excerpt | escape }}</p>{% endif %}
-      {% if theme.tokens.show_tags and featured.tags != empty %}
-        <ul class="tag-list">
-          {% for tag in featured.tags %}<li class="tag-pill">{{ tag.name | escape }}</li>{% endfor %}
-        </ul>
-      {% endif %}
       <div class="meta">
-        {% if featured.published_at %}
-          <time datetime="{{ featured.published_at | iso8601 }}">{{ featured.published_at | strftime: "%b %-d, %Y" }}</time>
-        {% endif %}
+        <div class="meta-info">
+          {% if featured.published_at %}
+            <time datetime="{{ featured.published_at | iso8601 }}">{{ featured.published_at | strftime: "%b %-d, %Y" }}</time>
+          {% endif %}
+          {% if theme.tokens.show_tags and featured.tags != empty %}
+            <span class="tag-row">{% for tag in featured.tags %}<span class="tag-pill">{{ tag.name | escape }}</span>{% endfor %}</span>
+          {% endif %}
+        </div>
         <span class="read-more">Read &rarr;</span>
       </div>
     </a>
@@ -43,14 +43,14 @@
             <a href="{{ p.url }}" class="post-card">
               <h3>{{ p.title | escape }}</h3>
               {% if p.excerpt != "" %}<p class="excerpt">{{ p.excerpt | escape }}</p>{% endif %}
-              {% if theme.tokens.show_tags and p.tags != empty %}
-                <ul class="tag-list">
-                  {% for tag in p.tags %}<li class="tag-pill">{{ tag.name | escape }}</li>{% endfor %}
-                </ul>
-              {% endif %}
-              {% if p.published_at %}
-                <time datetime="{{ p.published_at | iso8601 }}">{{ p.published_at | strftime: "%b %-d, %Y" }}</time>
-              {% endif %}
+              <div class="card-meta">
+                {% if p.published_at %}
+                  <time datetime="{{ p.published_at | iso8601 }}">{{ p.published_at | strftime: "%b %-d, %Y" }}</time>
+                {% endif %}
+                {% if theme.tokens.show_tags and p.tags != empty %}
+                  <span class="tag-row">{% for tag in p.tags %}<span class="tag-pill">{{ tag.name | escape }}</span>{% endfor %}</span>
+                {% endif %}
+              </div>
             </a>
           </li>
         {% endfor %}

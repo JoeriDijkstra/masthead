@@ -1,7 +1,7 @@
 {
   "name": "Studio",
   "slug": "studio",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "author": "Masthead",
   "description": "Editorial / blue accent. Built for long-form reading.",
   "tokens": [
@@ -9,31 +9,36 @@
       "key": "accent",
       "label": "Accent color",
       "type": "color",
-      "default": "#2563eb"
+      "default": "#2563eb",
+      "category": "Appearance"
     },
     {
       "key": "max_width",
       "label": "Content width",
       "type": "length",
-      "default": "880px"
+      "default": "880px",
+      "category": "Appearance"
     },
     {
       "key": "favicon",
       "label": "Favicon",
       "type": "file",
-      "default": ""
+      "default": "",
+      "category": "Appearance"
     },
     {
       "key": "show_search",
       "label": "Show post search",
       "type": "boolean",
-      "default": false
+      "default": false,
+      "category": "Posts"
     },
     {
       "key": "show_tags",
       "label": "Show tags on posts",
       "type": "boolean",
-      "default": false
+      "default": false,
+      "category": "Posts"
     }
   ],
   "metadata": [
