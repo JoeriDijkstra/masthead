@@ -2,9 +2,11 @@
   <p class="eyebrow">{{ site.name | escape }}</p>
   <h1>{{ site.title | default: site.name | escape }}</h1>
   {% if site.description != "" %}<p class="lede">{{ site.description | escape }}</p>{% endif %}
-  <form action="/search" method="get" class="search-form" role="search">
-    <input type="search" name="q" value="{{ search_query | escape }}" placeholder="Search posts&hellip;" aria-label="Search posts" />
-  </form>
+  {% if theme.tokens.show_search %}
+    <form action="/search" method="get" class="search-form" role="search">
+      <input type="search" name="q" value="{{ search_query | escape }}" placeholder="Search posts&hellip;" aria-label="Search posts" />
+    </form>
+  {% endif %}
 </section>
 
 {% if search_query %}

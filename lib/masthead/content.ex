@@ -66,13 +66,14 @@ defmodule Masthead.Content do
 
   @doc """
   Full-text-ish search over a site's published posts: case-insensitive
-  substring match against title, excerpt, and body. Returns `[]` for a blank
-  query. Used by the public `/search` route.
+  substring match against title, excerpt, and body. A blank query returns all
+  published posts (so the search page reads as "browse everything" rather than
+  "no results"). Used by the public `/search` route.
   """
   def search_posts(site_id, query) when is_binary(query) do
     case String.trim(query) do
       "" ->
-        []
+        list_published_posts(site_id)
 
       trimmed ->
         like = "%#{trimmed}%"

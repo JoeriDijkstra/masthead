@@ -85,13 +85,18 @@ defmodule Masthead.Themes.Renderer do
   results heading. `posts` is the already-filtered result set.
   """
   def render_search(%{site: site, posts: posts, query: query, pages: pages}) do
+    # Normalise a blank query to nil: an empty string is truthy in Liquid, so
+    # leaving it as "" would render a "results for ''" heading on the
+    # browse-everything view.
+    search_query = if is_binary(query) and String.trim(query) != "", do: query, else: nil
+
     render(site, :index, %{
       "posts" => Presenter.posts(posts),
       "pages" => Presenter.pages(pages),
       "post" => nil,
       "page" => nil,
       "body_html" => "",
-      "search_query" => query,
+      "search_query" => search_query,
       "search_count" => length(posts)
     })
   end

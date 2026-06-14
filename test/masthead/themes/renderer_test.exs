@@ -121,14 +121,19 @@ defmodule Masthead.Themes.RendererTest do
       %{tag: tag}
     end
 
-    test "render_index shows the search box and tag pills", %{site: site} do
+    test "search box and tag pills are hidden unless their tokens are enabled", %{site: site} do
       posts = Content.list_published_posts(site.id)
       pages = Content.list_published_pages(site.id)
-      out = Renderer.render_index(%{site: site, posts: posts, pages: pages})
 
-      assert out =~ ~s(action="/search")
-      assert out =~ "Featured"
-      assert out =~ ~s(class="tag-pill")
+      off = Renderer.render_index(%{site: site, posts: posts, pages: pages})
+      refute off =~ ~s(action="/search")
+      refute off =~ ~s(class="tag-pill")
+
+      on = %{site | theme_tokens: %{"show_search" => "true", "show_tags" => "true"}}
+      shown = Renderer.render_index(%{site: on, posts: posts, pages: pages})
+      assert shown =~ ~s(action="/search")
+      assert shown =~ ~s(class="tag-pill")
+      assert shown =~ "Featured"
     end
 
     test "render_search exposes the query and result count", %{site: site} do

@@ -7,9 +7,11 @@
         <a href="{{ theme.tokens.cta_url | default: '/' }}" class="inline-block rounded-md bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90">{{ theme.tokens.cta_label | escape }}</a>
       </div>
     {% endif %}
-    <form action="/search" method="get" role="search" class="mx-auto mt-10 max-w-md">
-      <input type="search" name="q" value="{{ search_query | escape }}" placeholder="Search posts&hellip;" aria-label="Search posts" style="width:100%" class="rounded-md border border-gray-300 px-4 py-2 text-gray-900 shadow-sm focus:border-[var(--accent)] focus:outline-none" />
-    </form>
+    {% if theme.tokens.show_search %}
+      <form action="/search" method="get" role="search" class="mx-auto mt-10 max-w-md">
+        <input type="search" name="q" value="{{ search_query | escape }}" placeholder="Search posts&hellip;" aria-label="Search posts" style="width:100%" class="rounded-md border border-gray-300 px-4 py-2 text-gray-900 shadow-sm focus:border-[var(--accent)] focus:outline-none" />
+      </form>
+    {% endif %}
   </div>
 </section>
 

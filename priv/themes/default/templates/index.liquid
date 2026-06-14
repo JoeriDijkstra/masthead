@@ -1,9 +1,11 @@
 <header class="site-header">
   <h1>{{ site.title | default: site.name | escape }}</h1>
   {% if site.description != "" %}<p>{{ site.description | escape }}</p>{% endif %}
-  <form action="/search" method="get" class="search-form" role="search">
-    <input type="search" name="q" value="{{ search_query | escape }}" placeholder="Search posts&hellip;" aria-label="Search posts" />
-  </form>
+  {% if theme.tokens.show_search %}
+    <form action="/search" method="get" class="search-form" role="search">
+      <input type="search" name="q" value="{{ search_query | escape }}" placeholder="Search posts&hellip;" aria-label="Search posts" />
+    </form>
+  {% endif %}
 </header>
 
 {% if search_query %}
@@ -23,7 +25,7 @@
             <time datetime="{{ post.published_at | iso8601 }}">{{ post.published_at | strftime: "%B %-d, %Y" }}</time>
           {% endif %}
         </a>
-        {% if post.tags != empty %}
+        {% if theme.tokens.show_tags and post.tags != empty %}
           <ul class="tag-list">
             {% for tag in post.tags %}
               <li class="tag-pill">{{ tag.name | escape }}</li>

@@ -44,9 +44,25 @@ defmodule MastheadWeb.SiteThemeLiveTest do
   end
 
   test "a theme without token categories renders the tokens flat", %{conn: conn, site: site} do
-    # The default theme's only token (accent) has no category → no accordion.
+    # The default theme's only color token (accent) has no category → no accordion.
     {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/theme")
     refute html =~ "token-group"
+  end
+
+  test "a boolean token renders as a checkbox", %{conn: conn, site: site} do
+    {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/theme")
+    assert html =~ ~s(name="site[theme_tokens][show_search]")
+    assert html =~ ~s(type="checkbox")
+  end
+
+  test "a boolean token can be toggled on and saved", %{conn: conn, site: site} do
+    {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/theme")
+
+    lv
+    |> form("#site-theme-form", site: %{theme_tokens: %{show_search: "true"}})
+    |> render_submit()
+
+    assert Sites.get_site!(site.id).theme_tokens["show_search"] == "true"
   end
 
   test "a theme with token categories renders accordions, uncategorized under General", %{

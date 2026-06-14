@@ -61,9 +61,11 @@ defmodule MastheadWeb.PublicSearchTest do
     assert conn.resp_body =~ "elixir"
   end
 
-  test "an empty query returns no results", %{site: site} do
+  test "an empty query lists all published posts", %{site: site} do
     conn = search(site, "")
     assert conn.status == 200
-    assert conn.resp_body =~ "No posts match your search."
+    assert conn.resp_body =~ "Elixir patterns"
+    refute conn.resp_body =~ "No posts match your search."
+    refute conn.resp_body =~ "Secret elixir draft"
   end
 end

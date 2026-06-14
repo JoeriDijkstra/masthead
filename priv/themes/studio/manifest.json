@@ -1,7 +1,7 @@
 {
   "name": "Studio",
   "slug": "studio",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "author": "Masthead",
   "description": "Editorial / blue accent. Built for long-form reading.",
   "tokens": [
@@ -22,6 +22,12 @@
       "label": "Favicon",
       "type": "file",
       "default": ""
+    },
+    {
+      "key": "show_search",
+      "label": "Show post search",
+      "type": "boolean",
+      "default": false
     }
   ],
   "metadata": [

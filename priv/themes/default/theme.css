@@ -48,8 +48,8 @@ main { padding-top: 2rem; padding-bottom: 4rem; }
 .search-form input { width: 100%; max-width: 320px; padding: 0.5rem 0.75rem; font-size: 0.95rem; border: 1px solid var(--rule); border-radius: 6px; background: #fff; color: var(--fg); }
 .search-form input:focus { outline: none; border-color: var(--accent); }
 .search-summary { color: var(--muted); font-size: 0.9rem; margin: 1.5rem 0 0; }
-.tag-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0; margin: 0.5rem 0 0; }
-.tag-pill { font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 9999px; background: var(--rule); color: var(--muted); line-height: 1.4; }
+.tag-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0; margin: 0.6rem 0 0; }
+.tag-pill { font-size: 0.7rem; letter-spacing: 0.02em; padding: 0.1rem 0.6rem; border-radius: 9999px; border: 1px solid var(--accent); color: var(--accent); background: none; line-height: 1.5; }
 
 @media (max-width: 640px) {
   main, .site-nav, .site-footer { padding-left: 1rem; padding-right: 1rem; }

@@ -1,7 +1,7 @@
 {
   "name": "Default",
   "slug": "default",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "author": "Masthead",
   "description": "Minimal, readable, opinionated about typography.",
   "tokens": [
@@ -16,6 +16,18 @@
       "label": "Favicon",
       "type": "file",
       "default": ""
+    },
+    {
+      "key": "show_search",
+      "label": "Show post search",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "key": "show_tags",
+      "label": "Show tags on posts",
+      "type": "boolean",
+      "default": false
     }
   ],
   "metadata": [

@@ -188,8 +188,9 @@ defmodule Masthead.Content.TagTest do
       assert titles == ["Elixir tips"]
     end
 
-    test "a blank query returns nothing", %{site: site} do
-      assert Content.search_posts(site.id, "  ") == []
+    test "a blank query returns all published posts", %{site: site} do
+      titles = Content.search_posts(site.id, "  ") |> Enum.map(& &1.title)
+      assert titles == ["Elixir tips"]
     end
   end
 end
