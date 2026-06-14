@@ -140,6 +140,14 @@ defmodule MastheadWeb.SiteSettingsLiveTest do
       assert html =~ ~s(value="custom")
     end
 
+    test "validating a new tag does not complain about site_id", %{conn: conn, site: site} do
+      {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/settings")
+      lv |> element(~s(button[phx-click="new_tag"])) |> render_click()
+
+      html = lv |> form(~s(.dialog-form), tag: %{name: "News"}) |> render_change()
+      refute html =~ "site_id"
+    end
+
     test "an invalid tag keeps the modal open with an error", %{conn: conn, site: site} do
       {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/settings")
       lv |> element(~s(button[phx-click="new_tag"])) |> render_click()

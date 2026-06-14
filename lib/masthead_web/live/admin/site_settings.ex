@@ -72,7 +72,9 @@ defmodule MastheadWeb.AdminLive.SiteSettings do
   # ---- Tags ----
 
   def handle_event("new_tag", _params, socket) do
-    {:noreply, open_tag_modal(socket, %Tag{})}
+    # Seed the site_id so live validation doesn't immediately complain that
+    # it's required (the form never includes site_id — it's set server-side).
+    {:noreply, open_tag_modal(socket, %Tag{site_id: socket.assigns.site.id})}
   end
 
   def handle_event("edit_tag", %{"id" => id}, socket) do
