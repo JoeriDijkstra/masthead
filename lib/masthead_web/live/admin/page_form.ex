@@ -634,30 +634,25 @@ defmodule MastheadWeb.AdminLive.PageForm do
         />
       </div>
 
+      <div :if={@format == "blog"} class="field">
+        <span class="field-label">Filter posts by tag</span>
+        <div class="tag-picker">
+          <button
+            :for={t <- @tags}
+            type="button"
+            phx-click="toggle_filter_tag"
+            phx-value-id={t.id}
+            class={["tag-toggle", to_string(t.id) in @selected_filter_tag_ids && "tag-toggle-on"]}
+          >
+            {t.name}
+          </button>
+          <.link navigate={~p"/#{@site_slug}/settings"} class="tag-chip-add">Manage tags</.link>
+        </div>
+        <small>Leave empty to show all posts. Selected tags show posts matching any of them.</small>
+      </div>
+
       <input type="hidden" name="page[format]" value={@format} />
     </form>
-
-    <div :if={@format == "blog"} class="field">
-      <span class="field-label">Filter posts by tag</span>
-      <div :if={@tags != []} class="tag-picker">
-        <button
-          :for={t <- @tags}
-          type="button"
-          phx-click="toggle_filter_tag"
-          phx-value-id={t.id}
-          class={["tag-toggle", to_string(t.id) in @selected_filter_tag_ids && "tag-toggle-on"]}
-        >
-          {t.name}
-        </button>
-      </div>
-      <small>
-        <%= if @tags == [] do %>
-          No tags yet.
-        <% end %>
-        Leave empty to show all posts. Selected tags show posts matching any of them.
-        <.link navigate={~p"/#{@site_slug}/settings"} class="tag-chip-add">Manage tags</.link>
-      </small>
-    </div>
 
     <div class="wizard-footer">
       <button type="button" phx-click="back" class="btn">&larr; Back</button>
