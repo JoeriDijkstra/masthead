@@ -44,7 +44,11 @@ defmodule MastheadWeb.SiteThemeLiveTest do
   end
 
   test "a theme without token categories renders the tokens flat", %{conn: conn, site: site} do
-    # The default theme's only color token (accent) has no category → no accordion.
+    # Studio's tokens have no category → no accordion (the default theme now
+    # groups its tokens, so it would render grouped).
+    studio = Themes.get_built_in_by_slug("studio")
+    {:ok, site} = Sites.update_settings(site, %{"theme_id" => studio.id})
+
     {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/theme")
     refute html =~ "token-group"
   end

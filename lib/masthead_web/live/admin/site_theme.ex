@@ -395,6 +395,24 @@ defmodule MastheadWeb.AdminLive.SiteTheme do
   attr :site, :map, required: true
   attr :site_uploads, :list, required: true
 
+  defp token_field(%{tok: %{type: "boolean"}} = assigns) do
+    ~H"""
+    <div class="settings-checkbox">
+      <label for={"token-" <> @tok.key} class="settings-checkbox-text">
+        <span>{@tok.label}</span>
+      </label>
+      <input type="hidden" name={"site[theme_tokens][" <> @tok.key <> "]"} value="false" />
+      <input
+        type="checkbox"
+        id={"token-" <> @tok.key}
+        name={"site[theme_tokens][" <> @tok.key <> "]"}
+        value="true"
+        checked={token_checked?(@form, @tok)}
+      />
+    </div>
+    """
+  end
+
   defp token_field(assigns) do
     assigns =
       assign(
@@ -451,17 +469,8 @@ defmodule MastheadWeb.AdminLive.SiteTheme do
           {capitalize_first(opt)}
         </option>
       </select>
-      <span :if={@tok.type == "boolean"} class="token-toggle">
-        <input type="hidden" name={"site[theme_tokens][" <> @tok.key <> "]"} value="false" />
-        <input
-          type="checkbox"
-          name={"site[theme_tokens][" <> @tok.key <> "]"}
-          value="true"
-          checked={token_checked?(@form, @tok)}
-        />
-      </span>
       <input
-        :if={@tok.type not in ~w(file select boolean)}
+        :if={@tok.type not in ~w(file select)}
         type={html_input_type(@tok.type)}
         name={"site[theme_tokens][" <> @tok.key <> "]"}
         value={token_input_value(@form, @tok)}
