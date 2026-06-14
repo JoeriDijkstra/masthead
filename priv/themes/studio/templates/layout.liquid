@@ -21,11 +21,18 @@
             <span class="brand-mark">&#9679;</span>
             <span class="brand-name">{{ site.name | escape }}</span>
           </a>
-          {% if pages != empty %}
-            <nav class="primary-nav">
-              {% for p in pages %}<a href="{{ p.url }}">{{ p.title | escape }}</a>{% endfor %}
-            </nav>
-          {% endif %}
+          <div class="nav-right">
+            {% if pages != empty %}
+              <nav class="primary-nav">
+                {% for p in pages %}<a href="{{ p.url }}">{{ p.title | escape }}</a>{% endfor %}
+              </nav>
+            {% endif %}
+            {% if theme.tokens.show_search %}
+              <form action="/search" method="get" class="nav-search" role="search">
+                <input type="search" name="q" value="{{ search_query | escape }}" placeholder="Search&hellip;" aria-label="Search posts" />
+              </form>
+            {% endif %}
+          </div>
         </div>
       </header>
     {% endunless %}

@@ -74,6 +74,18 @@ a:hover { color: var(--accent-hover); }
   font-weight: 500;
 }
 .primary-nav a:hover { color: var(--fg); }
+.nav-right { display: flex; align-items: center; gap: 1.25rem; }
+.nav-search input {
+  padding: 0.32rem 0.75rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--fg);
+}
+.nav-search input:focus { outline: none; border-color: var(--accent); }
+.tag-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0; margin: 0.6rem 0 0; }
+.tag-pill { font-size: 0.7rem; letter-spacing: 0.02em; padding: 0.1rem 0.55rem; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); line-height: 1.5; }
 
 /* Content */
 .content { padding-top: 3rem; padding-bottom: 4rem; }

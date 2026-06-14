@@ -2,11 +2,6 @@
   <p class="eyebrow">{{ site.name | escape }}</p>
   <h1>{{ site.title | default: site.name | escape }}</h1>
   {% if site.description != "" %}<p class="lede">{{ site.description | escape }}</p>{% endif %}
-  {% if theme.tokens.show_search %}
-    <form action="/search" method="get" class="search-form" role="search">
-      <input type="search" name="q" value="{{ search_query | escape }}" placeholder="Search posts&hellip;" aria-label="Search posts" />
-    </form>
-  {% endif %}
 </section>
 
 {% if search_query %}
@@ -24,6 +19,11 @@
       <span class="card-eyebrow">Latest</span>
       <h2>{{ featured.title | escape }}</h2>
       {% if featured.excerpt != "" %}<p class="featured-excerpt">{{ featured.excerpt | escape }}</p>{% endif %}
+      {% if theme.tokens.show_tags and featured.tags != empty %}
+        <ul class="tag-list">
+          {% for tag in featured.tags %}<li class="tag-pill">{{ tag.name | escape }}</li>{% endfor %}
+        </ul>
+      {% endif %}
       <div class="meta">
         {% if featured.published_at %}
           <time datetime="{{ featured.published_at | iso8601 }}">{{ featured.published_at | strftime: "%b %-d, %Y" }}</time>
@@ -43,6 +43,11 @@
             <a href="{{ p.url }}" class="post-card">
               <h3>{{ p.title | escape }}</h3>
               {% if p.excerpt != "" %}<p class="excerpt">{{ p.excerpt | escape }}</p>{% endif %}
+              {% if theme.tokens.show_tags and p.tags != empty %}
+                <ul class="tag-list">
+                  {% for tag in p.tags %}<li class="tag-pill">{{ tag.name | escape }}</li>{% endfor %}
+                </ul>
+              {% endif %}
               {% if p.published_at %}
                 <time datetime="{{ p.published_at | iso8601 }}">{{ p.published_at | strftime: "%b %-d, %Y" }}</time>
               {% endif %}

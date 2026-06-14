@@ -136,6 +136,25 @@ defmodule Masthead.Themes.RendererTest do
       assert shown =~ "Featured"
     end
 
+    test "studio and tailwind render the header search and tags when enabled", %{site: site} do
+      posts = Content.list_published_posts(site.id)
+      pages = Content.list_published_pages(site.id)
+
+      for slug <- ["studio", "tailwind"] do
+        theme = Themes.get_built_in_by_slug(slug)
+
+        on = %{
+          site
+          | theme_id: theme.id,
+            theme_tokens: %{"show_search" => "true", "show_tags" => "true"}
+        }
+
+        out = Renderer.render_index(%{site: on, posts: posts, pages: pages})
+        assert out =~ ~s(action="/search"), "#{slug} should render the search form"
+        assert out =~ "Featured", "#{slug} should render the tag pill"
+      end
+    end
+
     test "render_search exposes the query and result count", %{site: site} do
       posts = Content.search_posts(site.id, "tagged")
       pages = Content.list_published_pages(site.id)
