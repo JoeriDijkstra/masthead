@@ -49,7 +49,9 @@ main { padding-top: 2rem; padding-bottom: 4rem; }
 .search-form input:focus { outline: none; border-color: var(--accent); }
 .search-summary { color: var(--muted); font-size: 0.9rem; margin: 1.5rem 0 0; }
 .tag-list { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0; margin: 0.6rem 0 0; }
-.tag-pill { font-size: 0.7rem; letter-spacing: 0.02em; padding: 0.1rem 0.6rem; border-radius: 9999px; border: 1px solid var(--accent); color: var(--accent); background: none; line-height: 1.5; }
+/* Scoped under .tag-list so these beat the theme's `.post-list li` rule,
+   which would otherwise force tall, borderless ovals on the nested <li>s. */
+.tag-list .tag-pill { padding: 0.1rem 0.6rem; border: 1px solid var(--accent); border-radius: 9999px; font-size: 0.7rem; letter-spacing: 0.02em; line-height: 1.5; color: var(--accent); background: none; }
 
 @media (max-width: 640px) {
   main, .site-nav, .site-footer { padding-left: 1rem; padding-right: 1rem; }
