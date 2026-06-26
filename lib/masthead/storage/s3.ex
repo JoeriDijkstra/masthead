@@ -117,6 +117,18 @@ defmodule Masthead.Storage.S3 do
       ".webp" -> "image/webp"
       ".svg" -> "image/svg+xml"
       ".pdf" -> "application/pdf"
+      # Scripts and styles must carry a correct content-type: the public
+      # routes send `X-Content-Type-Options: nosniff`, so a `.js`/`.css`
+      # served as octet-stream would be refused by the browser.
+      ".js" -> "text/javascript"
+      ".mjs" -> "text/javascript"
+      ".css" -> "text/css"
+      ".json" -> "application/json"
+      ".woff" -> "font/woff"
+      ".woff2" -> "font/woff2"
+      ".ttf" -> "font/ttf"
+      ".otf" -> "font/otf"
+      ".ico" -> "image/x-icon"
       _ -> "application/octet-stream"
     end
   end

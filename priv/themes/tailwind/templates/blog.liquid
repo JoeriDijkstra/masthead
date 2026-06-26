@@ -11,6 +11,15 @@
 {% endif %}
 
 <section class="mx-auto max-w-6xl px-6 py-16">
+  {% if tags != empty %}
+    <nav class="mb-10 flex flex-wrap gap-2" aria-label="Filter posts by tag">
+      <a href="{{ page.url }}" class="rounded-full border px-3 py-1 text-sm transition {% unless current_tag %}border-[var(--accent)] bg-[var(--accent)] text-white{% else %}border-gray-300 text-gray-600 hover:border-gray-400{% endunless %}">All</a>
+      {% for tag in tags %}
+        <a href="?tag={{ tag.slug }}" class="rounded-full border px-3 py-1 text-sm transition {% if tag.active %}border-[var(--accent)] bg-[var(--accent)] text-white{% else %}border-gray-300 text-gray-600 hover:border-gray-400{% endif %}">{{ tag.name | escape }}</a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+
   {% if posts == empty %}
     <p class="text-gray-500">No posts yet. Check back soon.</p>
   {% else %}

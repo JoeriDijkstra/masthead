@@ -1,7 +1,7 @@
 {
   "name": "Default",
   "slug": "default",
-  "version": "1.3.0",
+  "version": "1.6.0",
   "author": "Masthead",
   "description": "Minimal, readable, opinionated about typography.",
   "tokens": [
@@ -9,13 +9,29 @@
       "key": "accent",
       "label": "Accent color",
       "type": "color",
-      "default": "#0066cc"
+      "default": "#0066cc",
+      "category": "Appearance"
     },
     {
       "key": "favicon",
       "label": "Favicon",
       "type": "file",
-      "default": ""
+      "default": "",
+      "category": "Appearance"
+    },
+    {
+      "key": "show_search",
+      "label": "Show post search",
+      "type": "boolean",
+      "default": false,
+      "category": "Posts"
+    },
+    {
+      "key": "show_tags",
+      "label": "Show tags on posts",
+      "type": "boolean",
+      "default": false,
+      "category": "Posts"
     }
   ],
   "metadata": [

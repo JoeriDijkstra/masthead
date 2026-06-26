@@ -6,6 +6,15 @@
   <div class="page-body">{{ body_html }}</div>
 {% endif %}
 
+{% if tags != empty %}
+  <nav class="tag-filter" aria-label="Filter posts by tag">
+    <a href="{{ page.url }}" class="tag-filter-item{% unless current_tag %} tag-filter-item-active{% endunless %}">All</a>
+    {% for tag in tags %}
+      <a href="?tag={{ tag.slug }}" class="tag-filter-item{% if tag.active %} tag-filter-item-active{% endif %}">{{ tag.name | escape }}</a>
+    {% endfor %}
+  </nav>
+{% endif %}
+
 {% if posts == empty %}
   <section class="empty"><p>No posts yet.</p></section>
 {% else %}

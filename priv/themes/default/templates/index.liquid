@@ -1,10 +1,28 @@
 <header class="site-header">
   <h1>{{ site.title | default: site.name | escape }}</h1>
   {% if site.description != "" %}<p>{{ site.description | escape }}</p>{% endif %}
+  {% if theme.tokens.show_search %}
+    <form action="/search" method="get" class="search-form" role="search">
+      <input type="search" name="q" value="{{ search_query | escape }}" placeholder="Search posts&hellip;" aria-label="Search posts" />
+    </form>
+  {% endif %}
 </header>
 
+{% if search_query %}
+  <p class="search-summary">{{ search_count }} result{% unless search_count == 1 %}s{% endunless %} for &ldquo;{{ search_query | escape }}&rdquo;</p>
+{% endif %}
+
+{% if theme.tokens.show_tags and tags != empty %}
+  <nav class="tag-filter" aria-label="Filter posts by tag">
+    <a href="/" class="tag-filter-item{% unless current_tag %} tag-filter-item-active{% endunless %}">All</a>
+    {% for tag in tags %}
+      <a href="?tag={{ tag.slug }}" class="tag-filter-item{% if tag.active %} tag-filter-item-active{% endif %}">{{ tag.name | escape }}</a>
+    {% endfor %}
+  </nav>
+{% endif %}
+
 {% if posts == empty %}
-  <section class="empty"><p>No posts yet.</p></section>
+  <section class="empty"><p>{% if search_query %}No posts match your search.{% else %}No posts yet.{% endif %}</p></section>
 {% else %}
   <ul class="post-list">
     {% for post in posts %}
@@ -16,6 +34,13 @@
             <time datetime="{{ post.published_at | iso8601 }}">{{ post.published_at | strftime: "%B %-d, %Y" }}</time>
           {% endif %}
         </a>
+        {% if theme.tokens.show_tags and post.tags != empty %}
+          <ul class="tag-list">
+            {% for tag in post.tags %}
+              <li class="tag-pill">{{ tag.name | escape }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
       </li>
     {% endfor %}
   </ul>

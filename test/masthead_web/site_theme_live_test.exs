@@ -44,9 +44,60 @@ defmodule MastheadWeb.SiteThemeLiveTest do
   end
 
   test "a theme without token categories renders the tokens flat", %{conn: conn, site: site} do
-    # The default theme's only token (accent) has no category → no accordion.
+    # The built-in themes all group their tokens now, so install a custom
+    # theme whose token has no category to exercise the flat path.
+    slug = "flat#{System.unique_integer([:positive])}"
+    zip = build_uncategorized_theme_zip(slug)
+    {:ok, theme} = Masthead.Themes.Package.install(zip, site.owner_id)
+    File.rm(zip)
+    {:ok, site} = Sites.update_settings(site, %{"theme_id" => theme.id})
+
     {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/theme")
     refute html =~ "token-group"
+    assert html =~ "Accent"
+  end
+
+  defp build_uncategorized_theme_zip(slug) do
+    files = %{
+      "manifest.json" =>
+        Jason.encode!(%{
+          "name" => "Flat " <> slug,
+          "slug" => slug,
+          "version" => "1.0.0",
+          "tokens" => [
+            %{"key" => "accent", "label" => "Accent", "type" => "color", "default" => "#000000"}
+          ],
+          "metadata" => []
+        }),
+      "templates/layout.liquid" => "<html><head></head><body>{{ content }}</body></html>",
+      "templates/index.liquid" => "<h1>{{ site.name | escape }}</h1>",
+      "templates/post.liquid" => "<article>{{ body_html }}</article>",
+      "templates/page.liquid" => "<article>{{ body_html }}</article>",
+      "templates/blog.liquid" => "<h1>{{ page.title | escape }}</h1>",
+      "templates/not_found.liquid" => "<h1>Not found</h1>",
+      "theme.css" => "body { background: white; }"
+    }
+
+    tmp = Path.join(System.tmp_dir!(), "flattheme-#{System.unique_integer([:positive])}.zip")
+    entries = Enum.map(files, fn {n, b} -> {String.to_charlist(n), b} end)
+    {:ok, _} = :zip.create(String.to_charlist(tmp), entries)
+    tmp
+  end
+
+  test "a boolean token renders as a checkbox", %{conn: conn, site: site} do
+    {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/theme")
+    assert html =~ ~s(name="site[theme_tokens][show_search]")
+    assert html =~ ~s(type="checkbox")
+  end
+
+  test "a boolean token can be toggled on and saved", %{conn: conn, site: site} do
+    {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/theme")
+
+    lv
+    |> form("#site-theme-form", site: %{theme_tokens: %{show_search: "true"}})
+    |> render_submit()
+
+    assert Sites.get_site!(site.id).theme_tokens["show_search"] == "true"
   end
 
   test "a theme with token categories renders accordions, uncategorized under General", %{

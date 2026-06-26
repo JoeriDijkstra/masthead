@@ -117,17 +117,6 @@ defmodule MastheadWeb.AdminLive.Components do
               <span>View site</span>
             </a>
 
-            <a
-              class="nav-item nav-external"
-              href="https://docs.masthead.site"
-              target="_blank"
-              rel="noopener"
-              phx-click={close_nav()}
-            >
-              <.icon_book />
-              <span>Docs</span>
-            </a>
-
             <.nav_link href={~p"/sites"} label="All sites" active={false}>
               <.icon_grid />
             </.nav_link>
@@ -372,8 +361,8 @@ defmodule MastheadWeb.AdminLive.Components do
   `scope` identifies which list the events belong to so a single pair of
   handlers can serve all three tabs.
   """
-  attr :scope, :atom, required: true, doc: ":users | :sites | :themes"
-  attr :filter, :atom, required: true, doc: "the currently active filter value"
+  attr :scope, :atom, required: true, doc: ":users | :sites | :themes | :posts"
+  attr :filter, :any, required: true, doc: "the currently active filter value (atom or string)"
   attr :options, :list, required: true, doc: ~s(list of `{value, label}` filter buttons)
   attr :search, :string, default: "", doc: "the current search term"
   attr :placeholder, :string, default: "Search…"
@@ -476,7 +465,7 @@ defmodule MastheadWeb.AdminLive.Components do
         </div>
         <h3>HTML</h3>
         <p>
-          Raw HTML for full control. Sanitized on render — scripts and unsafe attributes are stripped.
+          Raw HTML with Liquid tokens and logic for full control. Nothing is stripped — scripts and embeds run.
         </p>
         <span class="format-pill format-pill-muted">Advanced</span>
       </button>

@@ -39,6 +39,11 @@
               {% for p in pages %}<a href="{{ p.url }}" class="text-sm font-medium opacity-75 transition hover:opacity-100">{{ p.title | escape }}</a>{% endfor %}
             </nav>
           {% endif %}
+          {% if theme.tokens.show_search %}
+            <form action="/search" method="get" role="search" class="{% if pages == empty %}ml-auto {% endif %}hidden sm:block">
+              <input type="search" name="q" value="{{ search_query | escape }}" placeholder="Search&hellip;" aria-label="Search posts" class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-[var(--accent)] focus:outline-none" />
+            </form>
+          {% endif %}
           {% if theme.tokens.cta_label != "" %}
             <a href="{{ theme.tokens.cta_url | default: '/' }}" class="{% if pages == empty %}ml-auto {% endif %}rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90">{{ theme.tokens.cta_label | escape }}</a>
           {% endif %}

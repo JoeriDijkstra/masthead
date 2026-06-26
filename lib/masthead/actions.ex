@@ -144,8 +144,9 @@ defmodule Masthead.Actions do
         where:
           a.status == "pending" and a.key in ^keys and
             a.inserted_at < ^cutoff and is_nil(a.reminded_at) and
-            is_nil(s.disabled_at) and not is_nil(u.confirmed_at) and
-            is_nil(u.disabled_at) and u.wants_onboarding_emails == true,
+            is_nil(s.disabled_at) and is_nil(s.deleted_at) and
+            not is_nil(u.confirmed_at) and is_nil(u.disabled_at) and
+            u.wants_onboarding_emails == true,
         preload: [site: {s, owner: u}]
     )
   end

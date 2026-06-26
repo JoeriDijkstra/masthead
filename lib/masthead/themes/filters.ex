@@ -60,4 +60,61 @@ defmodule Masthead.Themes.Filters do
   def iso8601(%Date{} = d), do: Date.to_iso8601(d)
   def iso8601(nil), do: ""
   def iso8601(other), do: to_string(other)
+
+  @doc """
+  Keep only the posts carrying the tag with the given slug. Lets a theme use
+  tagged posts as generic content blocks:
+
+      {% assign faqs = posts | where_tag: "faq" %}
+      {% for faq in faqs %}...{% endfor %}
+
+  Non-list input (or a missing slug) yields an empty list.
+  """
+  def where_tag(posts, slug) when is_list(posts) and is_binary(slug) do
+    Enum.filter(posts, fn post ->
+      post
+      |> tags_list()
+      |> Enum.any?(fn tag -> Map.get(tag, "slug") == slug end)
+    end)
+  end
+
+  def where_tag(_posts, _slug), do: []
+
+  @doc """
+  Filter a list of posts by a case-insensitive substring match against their
+  title or excerpt:
+
+      {% assign hits = posts | search: query %}
+
+  A blank query returns the list unchanged.
+  """
+  def search(posts, query) when is_list(posts) and is_binary(query) do
+    case String.trim(query) do
+      "" ->
+        posts
+
+      trimmed ->
+        needle = String.downcase(trimmed)
+
+        Enum.filter(posts, fn post ->
+          contains?(Map.get(post, "title"), needle) or
+            contains?(Map.get(post, "excerpt"), needle)
+        end)
+    end
+  end
+
+  def search(posts, _query) when is_list(posts), do: posts
+  def search(_posts, _query), do: []
+
+  defp tags_list(post) do
+    case Map.get(post, "tags") do
+      list when is_list(list) -> list
+      _ -> []
+    end
+  end
+
+  defp contains?(value, needle) when is_binary(value),
+    do: String.contains?(String.downcase(value), needle)
+
+  defp contains?(_value, _needle), do: false
 end

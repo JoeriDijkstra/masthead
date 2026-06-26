@@ -140,7 +140,7 @@ a:hover { text-decoration: underline; }
 code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background: #f4f4f5; padding: 0.1em 0.35em; border-radius: 3px; }
 .muted { color: var(--muted); }
 .empty { color: var(--muted); padding: 1.5rem 0; }
-.error { color: var(--danger); }
+.error { color: var(--danger); margin-top: 0.4rem; }
 
 .empty-state {
   display: flex;
@@ -1247,6 +1247,116 @@ button.danger:hover { filter: brightness(0.92); }
 .format-tag-markdown { background: var(--accent-soft); color: var(--accent-strong); }
 .format-tag-html { background: var(--violet-soft); color: var(--violet); }
 .format-tag-blog { background: var(--good-soft); color: #166534; }
+
+/* Tags — management list in settings */
+.tag-manage-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.tag-chip-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: none;
+  color: var(--accent);
+  border: 1px dashed var(--rule-strong, var(--rule));
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.tag-chip-add:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--rule);
+  color: var(--fg);
+  overflow: hidden;
+}
+.tag-chip-label {
+  padding: 0.2rem 0.5rem 0.2rem 0.7rem;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.tag-chip-remove {
+  padding: 0.2rem 0.55rem;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.tag-chip-remove:hover { color: var(--danger, #991b1b); }
+
+.tag-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/* Tag picker (toggle pills) on the post form */
+/* Tag picker field on the post form — mirror the .form label column layout
+   so the "Tags" title sits above the chips with the same spacing. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.field-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.tag-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+.tag-toggle {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--rule);
+  cursor: pointer;
+}
+.tag-toggle-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Tag filter pills on the posts list */
+.tag-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--rule);
+  color: var(--fg);
+  border: 0;
+  cursor: pointer;
+}
 
 /* Forms */
 .form {

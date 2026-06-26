@@ -13,7 +13,7 @@ defmodule Masthead.Themes.Presenter do
   """
 
   alias Masthead.Sites.Site
-  alias Masthead.Content.{Post, Page}
+  alias Masthead.Content.{Post, Page, Tag}
   alias Masthead.Themes.CssSanitizer
 
   @doc "Project a Site, including the per-site CSS overrides string."
@@ -52,9 +52,19 @@ defmodule Masthead.Themes.Presenter do
       "slug" => p.slug,
       "excerpt" => p.excerpt,
       "published_at" => p.published_at,
-      "url" => "/posts/" <> p.slug
+      "url" => "/posts/" <> p.slug,
+      "tags" => tags_of(p)
     }
   end
+
+  # Project a post's tags as plain maps. Defensive against an unloaded
+  # association so a caller that forgets to preload gets `[]` rather than a
+  # crash on `%Ecto.Association.NotLoaded{}`.
+  defp tags_of(%Post{tags: tags}) when is_list(tags) do
+    Enum.map(tags, fn t -> %{"name" => t.name, "slug" => t.slug} end)
+  end
+
+  defp tags_of(_), do: []
 
   def page(%Page{} = pg) do
     %{
@@ -68,6 +78,28 @@ defmodule Masthead.Themes.Presenter do
       "metadata" => pg.metadata || %{}
     }
   end
+
+  @doc """
+  Project the set of tags a blog page can be filtered by. `current_slug`
+  (or `nil`) marks the active tag with `"active" => true`, so a theme can
+  highlight the selected filter chip. Each tag is a `name`/`slug`/`active`
+  map; the theme builds its own filter links (e.g. `?tag={{ tag.slug }}`),
+  and because every rendered slug comes from this list, the resulting query
+  is guaranteed to reference a tag that exists on the site.
+  """
+  def tags(list, current_slug \\ nil) when is_list(list) do
+    Enum.map(list, fn %Tag{} = t ->
+      %{"name" => t.name, "slug" => t.slug, "active" => t.slug == current_slug}
+    end)
+  end
+
+  @doc """
+  Project the single tag a blog page is currently filtered by, or `nil` when
+  the page is showing its full list. Lets a theme render a heading or a
+  clear-filter link.
+  """
+  def tag(%Tag{} = t), do: %{"name" => t.name, "slug" => t.slug}
+  def tag(nil), do: nil
 
   @doc "Convenience: project a list of posts."
   def posts(list) when is_list(list), do: Enum.map(list, &post/1)

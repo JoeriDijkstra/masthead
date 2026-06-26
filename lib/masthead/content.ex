@@ -8,38 +8,150 @@ defmodule Masthead.Content do
   """
   import Ecto.Query
   alias Masthead.Repo
-  alias Masthead.Content.{Post, Page}
+  alias Masthead.Content.{Post, Page, Tag}
 
   # ---- Posts ----
 
-  def list_posts(site_id) do
-    Repo.all(from p in Post, where: p.site_id == ^site_id, order_by: [desc: p.inserted_at])
+  @doc """
+  Lists a site's posts, newest first. Posts are preloaded with `:tags`.
+
+  Options:
+
+    * `:filter` — `:all` (default), `:untagged`, or a tag slug (string) to
+      keep only posts carrying that tag.
+    * `:search` — a string matched (ILIKE) against the post title.
+  """
+  def list_posts(site_id, opts \\ []) do
+    from(p in Post,
+      where: p.site_id == ^site_id,
+      order_by: [desc: p.inserted_at],
+      preload: :tags
+    )
+    |> apply_post_filter(Keyword.get(opts, :filter, :all))
+    |> apply_post_search(Keyword.get(opts, :search))
+    |> Repo.all()
   end
+
+  defp apply_post_filter(query, :all), do: query
+
+  defp apply_post_filter(query, :untagged) do
+    from p in query,
+      where: fragment("NOT EXISTS (SELECT 1 FROM post_tags pt WHERE pt.post_id = ?)", p.id)
+  end
+
+  defp apply_post_filter(query, slug) when is_binary(slug) do
+    from p in query,
+      where:
+        fragment(
+          "EXISTS (SELECT 1 FROM post_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id = ? AND t.slug = ?)",
+          p.id,
+          ^slug
+        )
+  end
+
+  defp apply_post_search(query, search) when is_binary(search) and search != "" do
+    from p in query, where: ilike(p.title, ^"%#{search}%")
+  end
+
+  defp apply_post_search(query, _), do: query
 
   def list_published_posts(site_id) do
     Repo.all(
       from p in Post,
         where: p.site_id == ^site_id and p.published == true,
-        order_by: [desc: p.published_at]
+        order_by: [desc: p.published_at],
+        preload: :tags
     )
   end
 
+  @doc """
+  Published posts for a blog page, keeping only those carrying at least one of
+  the given tag ids. An empty list returns all published posts (no filter).
+  """
+  def list_published_posts_filtered(site_id, []), do: list_published_posts(site_id)
+
+  def list_published_posts_filtered(site_id, tag_ids) when is_list(tag_ids) do
+    Repo.all(
+      from p in Post,
+        where:
+          p.site_id == ^site_id and p.published == true and
+            fragment(
+              "EXISTS (SELECT 1 FROM post_tags pt WHERE pt.post_id = ? AND pt.tag_id = ANY(?))",
+              p.id,
+              ^tag_ids
+            ),
+        order_by: [desc: p.published_at],
+        preload: :tags
+    )
+  end
+
+  @doc """
+  Published posts for a site carrying the tag with the given slug, newest
+  first. A site-scoped, tag-filtered DB query (not an in-memory filter of all
+  posts) — used to back the `posts_by_tag["<slug>"]` collection in templates.
+  An unknown slug simply returns `[]`.
+  """
+  def list_published_posts_by_tag(site_id, slug) when is_binary(slug) do
+    Repo.all(
+      from p in Post,
+        where:
+          p.site_id == ^site_id and p.published == true and
+            fragment(
+              "EXISTS (SELECT 1 FROM post_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id = ? AND t.slug = ?)",
+              p.id,
+              ^slug
+            ),
+        order_by: [desc: p.published_at],
+        preload: :tags
+    )
+  end
+
+  @doc """
+  Full-text-ish search over a site's published posts: case-insensitive
+  substring match against title, excerpt, and body. A blank query returns all
+  published posts (so the search page reads as "browse everything" rather than
+  "no results"). Used by the public `/search` route.
+  """
+  def search_posts(site_id, query) when is_binary(query) do
+    case String.trim(query) do
+      "" ->
+        list_published_posts(site_id)
+
+      trimmed ->
+        like = "%#{trimmed}%"
+
+        Repo.all(
+          from p in Post,
+            where:
+              p.site_id == ^site_id and p.published == true and
+                (ilike(p.title, ^like) or ilike(p.excerpt, ^like) or ilike(p.body, ^like)),
+            order_by: [desc: p.published_at],
+            preload: :tags
+        )
+    end
+  end
+
+  def search_posts(_site_id, _query), do: []
+
   def get_post!(site_id, id) do
-    Repo.one!(from p in Post, where: p.site_id == ^site_id and p.id == ^id)
+    Repo.one!(from p in Post, where: p.site_id == ^site_id and p.id == ^id, preload: :tags)
   end
 
   def get_published_post_by_slug(site_id, slug) do
     Repo.one(
       from p in Post,
-        where: p.site_id == ^site_id and p.slug == ^slug and p.published == true
+        where: p.site_id == ^site_id and p.slug == ^slug and p.published == true,
+        preload: :tags
     )
   end
 
   def create_post(site_id, attrs) do
-    with {:ok, post} <-
-           %Post{site_id: site_id}
-           |> Post.changeset(Map.put(attrs, "site_id", site_id))
-           |> Repo.insert() do
+    changeset =
+      %Post{site_id: site_id}
+      |> Post.changeset(Map.put(attrs, "site_id", site_id))
+      |> put_post_tags(site_id, attrs)
+
+    with {:ok, post} <- Repo.insert(changeset) do
       Masthead.Actions.complete_action(site_id, "create_first_post")
       Masthead.Actions.reached_first_content(site_id)
       {:ok, post}
@@ -47,12 +159,62 @@ defmodule Masthead.Content do
   end
 
   def update_post(%Post{} = post, attrs) do
-    post |> Post.changeset(attrs) |> Repo.update()
+    post = Repo.preload(post, :tags)
+
+    post
+    |> Post.changeset(attrs)
+    |> put_post_tags(post.site_id, attrs)
+    |> Repo.update()
   end
 
   def delete_post(%Post{} = post), do: Repo.delete(post)
 
   def change_post(%Post{} = post, attrs \\ %{}), do: Post.changeset(post, attrs)
+
+  # Attach tags only when the caller actually submitted a `tag_ids` key, so
+  # updates that don't touch tags (e.g. a publish toggle) leave them alone.
+  # Tags are resolved site-scoped, so a forged id from another site is ignored.
+  defp put_post_tags(changeset, site_id, attrs) do
+    put_assoc_tags(changeset, :tags, site_id, attrs, "tag_ids", :tag_ids)
+  end
+
+  # Attach a tag association only when the caller submitted the id key, so
+  # updates that don't touch tags leave the association alone. Tags are
+  # resolved site-scoped, so a forged id from another site is ignored.
+  defp put_assoc_tags(changeset, assoc, site_id, attrs, string_key, atom_key) do
+    case fetch_ids(attrs, string_key, atom_key) do
+      nil -> changeset
+      ids -> Ecto.Changeset.put_assoc(changeset, assoc, list_tags_by_ids(site_id, ids))
+    end
+  end
+
+  defp fetch_ids(attrs, string_key, atom_key) do
+    cond do
+      Map.has_key?(attrs, string_key) -> parse_ids(Map.get(attrs, string_key))
+      Map.has_key?(attrs, atom_key) -> parse_ids(Map.get(attrs, atom_key))
+      true -> nil
+    end
+  end
+
+  defp parse_ids(ids) when is_list(ids) do
+    ids
+    |> Enum.map(fn
+      id when is_integer(id) ->
+        id
+
+      id when is_binary(id) ->
+        case Integer.parse(id) do
+          {n, ""} -> n
+          _ -> nil
+        end
+
+      _ ->
+        nil
+    end)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp parse_ids(_), do: []
 
   # ---- Pages ----
 
@@ -69,13 +231,14 @@ defmodule Masthead.Content do
   end
 
   def get_page!(site_id, id) do
-    Repo.one!(from p in Page, where: p.site_id == ^site_id and p.id == ^id)
+    Repo.one!(from p in Page, where: p.site_id == ^site_id and p.id == ^id, preload: :filter_tags)
   end
 
   def get_published_page_by_slug(site_id, slug) do
     Repo.one(
       from p in Page,
-        where: p.site_id == ^site_id and p.slug == ^slug and p.published == true
+        where: p.site_id == ^site_id and p.slug == ^slug and p.published == true,
+        preload: :filter_tags
     )
   end
 
@@ -90,15 +253,18 @@ defmodule Masthead.Content do
   def get_homepage_page(%Masthead.Sites.Site{id: site_id, homepage_page_id: id}) do
     Repo.one(
       from p in Page,
-        where: p.id == ^id and p.site_id == ^site_id and p.published == true
+        where: p.id == ^id and p.site_id == ^site_id and p.published == true,
+        preload: :filter_tags
     )
   end
 
   def create_page(site_id, attrs) do
-    with {:ok, page} <-
-           %Page{site_id: site_id}
-           |> Page.changeset(Map.put(attrs, "site_id", site_id))
-           |> Repo.insert() do
+    changeset =
+      %Page{site_id: site_id}
+      |> Page.changeset(Map.put(attrs, "site_id", site_id))
+      |> put_page_filter_tags(site_id, attrs)
+
+    with {:ok, page} <- Repo.insert(changeset) do
       Masthead.Actions.complete_action(site_id, "create_first_page")
       Masthead.Actions.reached_first_content(site_id)
       {:ok, page}
@@ -106,12 +272,53 @@ defmodule Masthead.Content do
   end
 
   def update_page(%Page{} = page, attrs) do
-    page |> Page.changeset(attrs) |> Repo.update()
+    page = Repo.preload(page, :filter_tags)
+
+    page
+    |> Page.changeset(attrs)
+    |> put_page_filter_tags(page.site_id, attrs)
+    |> Repo.update()
+  end
+
+  defp put_page_filter_tags(changeset, site_id, attrs) do
+    put_assoc_tags(changeset, :filter_tags, site_id, attrs, "filter_tag_ids", :filter_tag_ids)
   end
 
   def delete_page(%Page{} = page), do: Repo.delete(page)
 
   def change_page(%Page{} = page, attrs \\ %{}), do: Page.changeset(page, attrs)
+
+  # ---- Tags ----
+
+  def list_tags(site_id) do
+    Repo.all(from t in Tag, where: t.site_id == ^site_id, order_by: t.name)
+  end
+
+  @doc """
+  Loads the given tag ids, scoped to a site. Foreign ids (belonging to another
+  site) are silently dropped, so this is safe to call with user-submitted ids.
+  """
+  def list_tags_by_ids(_site_id, []), do: []
+
+  def list_tags_by_ids(site_id, ids) when is_list(ids) do
+    Repo.all(from t in Tag, where: t.site_id == ^site_id and t.id in ^ids)
+  end
+
+  def get_tag!(site_id, id) do
+    Repo.one!(from t in Tag, where: t.site_id == ^site_id and t.id == ^id)
+  end
+
+  def create_tag(site_id, attrs) do
+    %Tag{site_id: site_id}
+    |> Tag.changeset(Map.put(attrs, "site_id", site_id))
+    |> Repo.insert()
+  end
+
+  def update_tag(%Tag{} = tag, attrs), do: tag |> Tag.changeset(attrs) |> Repo.update()
+
+  def delete_tag(%Tag{} = tag), do: Repo.delete(tag)
+
+  def change_tag(%Tag{} = tag, attrs \\ %{}), do: Tag.changeset(tag, attrs)
 
   # ---- Rendering ----
 

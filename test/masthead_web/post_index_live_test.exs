@@ -71,4 +71,53 @@ defmodule MastheadWeb.PostIndexLiveTest do
     refute html =~ "Hello World"
     assert Content.list_posts(site.id) == []
   end
+
+  describe "tag filtering" do
+    setup %{site: site} do
+      {:ok, tag} = Content.create_tag(site.id, %{"name" => "News"})
+
+      {:ok, tagged} =
+        Content.create_post(site.id, %{"title" => "Tagged story", "tag_ids" => [tag.id]})
+
+      {:ok, untagged} = Content.create_post(site.id, %{"title" => "Lonely note"})
+      %{tag: tag, tagged: tagged, untagged: untagged}
+    end
+
+    test "filtering by a tag shows only its posts", %{conn: conn, site: site, tag: tag} do
+      {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/posts?tag=#{tag.slug}")
+      assert html =~ "Tagged story"
+      refute html =~ "Lonely note"
+    end
+
+    test "the Untagged filter hides tagged posts", %{conn: conn, site: site} do
+      {:ok, _lv, html} = live(conn, ~p"/#{site.slug}/posts?tag=untagged")
+      assert html =~ "Lonely note"
+      refute html =~ "Tagged story"
+    end
+
+    test "searching narrows by title", %{conn: conn, site: site} do
+      {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/posts")
+
+      html =
+        lv
+        |> form(~s(form.admin-search), %{"scope" => "posts", "query" => "lonely"})
+        |> render_change()
+
+      assert html =~ "Lonely note"
+      refute html =~ "Tagged story"
+    end
+
+    test "clicking a tag pill in a row applies that filter", %{conn: conn, site: site, tag: tag} do
+      {:ok, lv, _html} = live(conn, ~p"/#{site.slug}/posts")
+
+      lv
+      |> element(~s(button.tag-filter[phx-value-filter="#{tag.slug}"]))
+      |> render_click()
+
+      assert_patch(lv, ~p"/#{site.slug}/posts?tag=#{tag.slug}")
+      html = render(lv)
+      assert html =~ "Tagged story"
+      refute html =~ "Lonely note"
+    end
+  end
 end

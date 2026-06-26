@@ -40,7 +40,8 @@ defmodule MastheadWeb.AdminLive.PageForm do
        slug_touched: page != nil,
        show_errors: false,
        metadata_fields: metadata_fields,
-       has_metadata?: has_metadata?
+       has_metadata?: has_metadata?,
+       tags: Content.list_tags(socket.assigns.site.id)
      )
      |> maybe_allow_import()
      |> assign_changeset(draft)}
@@ -100,6 +101,15 @@ defmodule MastheadWeb.AdminLive.PageForm do
        |> update(:draft, &Map.put(&1, "format", fmt))
        |> assign(step: 2)}
     end
+  end
+
+  def handle_event("toggle_filter_tag", %{"id" => id}, socket) do
+    selected = socket.assigns.draft["filter_tag_ids"] || []
+
+    selected =
+      if id in selected, do: List.delete(selected, id), else: [id | selected]
+
+    {:noreply, update(socket, :draft, &Map.put(&1, "filter_tag_ids", selected))}
   end
 
   def handle_event("advance", _params, socket) do
@@ -356,7 +366,8 @@ defmodule MastheadWeb.AdminLive.PageForm do
       "body" => page.body,
       "published" => to_string(page.published),
       "show_in_nav" => to_string(page.show_in_nav),
-      "metadata" => page.metadata || %{}
+      "metadata" => page.metadata || %{},
+      "filter_tag_ids" => Enum.map(page.filter_tags, &to_string(&1.id))
     }
   end
 
@@ -409,7 +420,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
         <.publish_status :if={@page} published={@page.published} />
       </:actions>
 
-      <div class="wizard">
+      <div class="wizard" id="page-wizard" phx-hook="SaveShortcut" data-save-param="page">
         <%= case @step do %>
           <% 0 -> %>
             <.import_step uploads={@uploads} site_slug={@site.slug} />
@@ -430,6 +441,8 @@ defmodule MastheadWeb.AdminLive.PageForm do
               site_slug={@site.slug}
               show_errors={@show_errors}
               has_metadata={@has_metadata?}
+              tags={@tags}
+              selected_filter_tag_ids={@draft["filter_tag_ids"] || []}
             />
           <% 3 -> %>
             <.settings_step
@@ -584,6 +597,8 @@ defmodule MastheadWeb.AdminLive.PageForm do
   attr :site_slug, :string, required: true
   attr :show_errors, :boolean, default: false
   attr :has_metadata, :boolean, default: false
+  attr :tags, :list, default: []
+  attr :selected_filter_tag_ids, :list, default: []
 
   defp meta_step(assigns) do
     ~H"""
@@ -617,6 +632,23 @@ defmodule MastheadWeb.AdminLive.PageForm do
           value="true"
           checked={@form[:show_in_nav].value not in [false, "false"]}
         />
+      </div>
+
+      <div :if={@format == "blog"} class="field">
+        <span class="field-label">Filter posts by tag</span>
+        <div class="tag-picker">
+          <button
+            :for={t <- @tags}
+            type="button"
+            phx-click="toggle_filter_tag"
+            phx-value-id={t.id}
+            class={["tag-toggle", to_string(t.id) in @selected_filter_tag_ids && "tag-toggle-on"]}
+          >
+            {t.name}
+          </button>
+          <.link navigate={~p"/#{@site_slug}/settings"} class="tag-chip-add">Manage tags</.link>
+        </div>
+        <small>Leave empty to show all posts. Selected tags show posts matching any of them.</small>
       </div>
 
       <input type="hidden" name="page[format]" value={@format} />

@@ -99,11 +99,210 @@ defmodule Masthead.Themes.RendererTest do
     end
   end
 
+  describe "posts_by_tag (DB-backed tag query in templates)" do
+    setup %{site: site} do
+      {:ok, emacs} = Content.create_tag(site.id, %{"name" => "Emacs"})
+
+      {:ok, _} =
+        Content.create_post(site.id, %{
+          "title" => "Doom config",
+          "body" => "x",
+          "published" => true,
+          "tag_ids" => [emacs.id]
+        })
+
+      {:ok, _} =
+        Content.create_post(site.id, %{"title" => "Off topic", "body" => "y", "published" => true})
+
+      :ok
+    end
+
+    test "posts_by_tag[slug] returns only posts carrying that tag", %{site: site} do
+      [page | _] = Content.list_published_pages(site.id)
+
+      body =
+        ~s({% assign e = posts_by_tag["emacs"] %}COUNT={{ e | size }};{% for p in e %}T={{ p.title }};{% endfor %})
+
+      out = Renderer.render_page(%{site: site, page: page, liquid_body: body, pages: [page]})
+
+      assert out =~ "COUNT=1;"
+      assert out =~ "T=Doom config;"
+      refute out =~ "T=Off topic;"
+    end
+
+    test "an unknown tag slug yields an empty collection", %{site: site} do
+      [page | _] = Content.list_published_pages(site.id)
+      body = ~s({% assign e = posts_by_tag["nope"] %}COUNT={{ e | size }})
+      out = Renderer.render_page(%{site: site, page: page, liquid_body: body, pages: [page]})
+      assert out =~ "COUNT=0"
+    end
+  end
+
+  describe "render_page/1 with an html (Liquid) body" do
+    test "renders Liquid tokens against the page context", %{site: site} do
+      {:ok, page} =
+        Content.create_page(site.id, %{
+          "title" => "Liquid Page",
+          "format" => "html",
+          "body" => "<h1>{{ site.name }}</h1><p>{{ page.title }}</p>",
+          "published" => true
+        })
+
+      pages = Content.list_published_pages(site.id)
+
+      out = Renderer.render_page(%{site: site, page: page, liquid_body: page.body, pages: pages})
+
+      assert out =~ "<h1>#{site.name}</h1>"
+      assert out =~ "<p>Liquid Page</p>"
+    end
+
+    test "passes raw HTML and <script> through unsanitized", %{site: site} do
+      {:ok, page} =
+        Content.create_page(site.id, %{
+          "title" => "Scripted",
+          "format" => "html",
+          "body" => ~s|<script>alert("hi")</script><div class="x">raw</div>|,
+          "published" => true
+        })
+
+      pages = Content.list_published_pages(site.id)
+
+      out = Renderer.render_page(%{site: site, page: page, liquid_body: page.body, pages: pages})
+
+      assert out =~ ~s|<script>alert("hi")</script>|
+      assert out =~ ~s|<div class="x">raw</div>|
+    end
+
+    test "falls back to the raw body if the Liquid fails to render", %{site: site} do
+      # A stored page that somehow holds invalid Liquid must not 500 the
+      # public page — the renderer emits the raw body instead.
+      [page | _] = Content.list_published_pages(site.id)
+
+      out =
+        Renderer.render_page(%{
+          site: site,
+          page: page,
+          liquid_body: "{% bogus %}plain text",
+          pages: [page]
+        })
+
+      assert out =~ "plain text"
+    end
+  end
+
   describe "render_not_found/1" do
     test "produces a 404 body", %{site: site} do
       pages = Content.list_published_pages(site.id)
       out = Renderer.render_not_found(%{site: site, pages: pages})
       assert out =~ "Not found"
+    end
+  end
+
+  describe "tags and search" do
+    setup %{site: site} do
+      {:ok, tag} = Content.create_tag(site.id, %{"name" => "Featured"})
+
+      {:ok, _} =
+        Content.create_post(site.id, %{
+          "title" => "Tagged post",
+          "published" => true,
+          "tag_ids" => [tag.id]
+        })
+
+      %{tag: tag}
+    end
+
+    test "search box and tag pills are hidden unless their tokens are enabled", %{site: site} do
+      posts = Content.list_published_posts(site.id)
+      pages = Content.list_published_pages(site.id)
+
+      off = Renderer.render_index(%{site: site, posts: posts, pages: pages})
+      refute off =~ ~s(action="/search")
+      refute off =~ ~s(class="tag-pill")
+
+      on = %{site | theme_tokens: %{"show_search" => "true", "show_tags" => "true"}}
+      shown = Renderer.render_index(%{site: on, posts: posts, pages: pages})
+      assert shown =~ ~s(action="/search")
+      assert shown =~ ~s(class="tag-pill")
+      assert shown =~ "Featured"
+    end
+
+    test "studio and tailwind render the header search and tags when enabled", %{site: site} do
+      posts = Content.list_published_posts(site.id)
+      pages = Content.list_published_pages(site.id)
+
+      for slug <- ["studio", "tailwind"] do
+        theme = Themes.get_built_in_by_slug(slug)
+
+        on = %{
+          site
+          | theme_id: theme.id,
+            theme_tokens: %{"show_search" => "true", "show_tags" => "true"}
+        }
+
+        out = Renderer.render_index(%{site: on, posts: posts, pages: pages})
+        assert out =~ ~s(action="/search"), "#{slug} should render the search form"
+        assert out =~ "Featured", "#{slug} should render the tag pill"
+      end
+    end
+
+    test "render_search exposes the query and result count", %{site: site} do
+      posts = Content.search_posts(site.id, "tagged")
+      pages = Content.list_published_pages(site.id)
+      out = Renderer.render_search(%{site: site, posts: posts, query: "tagged", pages: pages})
+
+      assert out =~ "1 result"
+      assert out =~ "Tagged post"
+    end
+
+    test "render_search with no matches shows the empty-search message", %{site: site} do
+      pages = Content.list_published_pages(site.id)
+      out = Renderer.render_search(%{site: site, posts: [], query: "zzz", pages: pages})
+
+      assert out =~ "0 results"
+      assert out =~ "No posts match your search."
+    end
+  end
+
+  describe "where_tag through the sandbox" do
+    setup %{user: user, site: site} do
+      slug = "tagtheme#{System.unique_integer([:positive])}"
+      zip_path = build_where_tag_theme_zip(slug)
+      {:ok, theme} = Masthead.Themes.Package.install(zip_path, user.id)
+      File.rm(zip_path)
+      {:ok, site} = Sites.update_settings(site, %{"theme_id" => theme.id})
+
+      {:ok, faq} = Content.create_tag(site.id, %{"name" => "FAQ", "slug" => "faq"})
+
+      {:ok, _} =
+        Content.create_post(site.id, %{
+          "title" => "How do I publish?",
+          "published" => true,
+          "tag_ids" => [faq.id]
+        })
+
+      {:ok, _} = Content.create_post(site.id, %{"title" => "Untagged news", "published" => true})
+
+      %{site: Sites.get_site!(site.id)}
+    end
+
+    test "a page template can query posts by tag", %{site: site} do
+      [page | _] = Content.list_published_pages(site.id)
+      pages = Content.list_published_pages(site.id)
+      posts = Content.list_published_posts(site.id)
+      body_html = Content.render_body(page.body, page.format)
+
+      out =
+        Renderer.render_page(%{
+          site: site,
+          page: page,
+          body_html: body_html,
+          pages: pages,
+          posts: posts
+        })
+
+      assert out =~ "How do I publish?"
+      refute out =~ "Untagged news"
     end
   end
 
@@ -401,6 +600,39 @@ defmodule Masthead.Themes.RendererTest do
 
     File.rm(tmp)
     upload
+  end
+
+  # Helper: write a minimal zipped theme whose page template queries posts by
+  # tag via the `where_tag` filter, so we can prove the filter is wired into
+  # the sandbox end-to-end.
+  defp build_where_tag_theme_zip(slug) do
+    page_template = """
+    {% assign faqs = posts | where_tag: "faq" %}
+    <ul>{% for p in faqs %}<li>{{ p.title | escape }}</li>{% endfor %}</ul>
+    """
+
+    files = %{
+      "manifest.json" =>
+        Jason.encode!(%{
+          "name" => "Tag " <> slug,
+          "slug" => slug,
+          "version" => "1.0.0",
+          "tokens" => [],
+          "metadata" => []
+        }),
+      "templates/layout.liquid" => "<html><head></head><body>{{ content }}</body></html>",
+      "templates/index.liquid" => "<h1>{{ site.name | escape }}</h1>",
+      "templates/post.liquid" => "<article>{{ body_html }}</article>",
+      "templates/page.liquid" => page_template,
+      "templates/blog.liquid" => "<h1>{{ page.title | escape }}</h1>",
+      "templates/not_found.liquid" => "<h1>Not found</h1>",
+      "theme.css" => "body { background: white; }"
+    }
+
+    tmp = Path.join(System.tmp_dir!(), "tagtheme-#{System.unique_integer([:positive])}.zip")
+    entries = Enum.map(files, fn {n, b} -> {String.to_charlist(n), b} end)
+    {:ok, _} = :zip.create(String.to_charlist(tmp), entries)
+    tmp
   end
 
   # Helper: write a minimal zipped theme that surfaces page.metadata.layout

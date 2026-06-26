@@ -29,9 +29,12 @@ defmodule Masthead.Themes.Manifest do
     * `select` — a `<select>` over a fixed `options` list (required);
       value is the chosen option string. Use for layout switches like
       contained vs. full-width.
+    * `boolean` — a checkbox. The value reaches templates as a real
+      boolean (default is a JSON `true`/`false`), so themes can branch with
+      `{% if theme.tokens.show_search %}`. Use for on/off feature toggles.
   """
 
-  @valid_token_types ~w(color string length number file select)
+  @valid_token_types ~w(color string length number file select boolean)
   @valid_metadata_types ~w(string text boolean color url select number)
 
   @slug_re ~r/^[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?$/
@@ -52,7 +55,7 @@ defmodule Masthead.Themes.Manifest do
           key: String.t(),
           label: String.t(),
           type: String.t(),
-          default: String.t(),
+          default: String.t() | boolean(),
           options: [String.t()] | nil,
           category: String.t() | nil
         }
@@ -127,22 +130,31 @@ defmodule Masthead.Themes.Manifest do
 
   @doc """
   Return the merge of manifest token defaults with a map of per-site
-  override values. Unknown override keys are dropped. Values are always
-  strings — tokens are interpolated directly into CSS, so we never coerce
-  to other types.
+  override values. Unknown override keys are dropped. Values are strings
+  (interpolated directly into CSS) except `boolean` tokens, which are coerced
+  to real booleans for template branching.
   """
-  @spec effective_tokens(t(), map()) :: %{String.t() => String.t()}
+  @spec effective_tokens(t(), map()) :: %{String.t() => String.t() | boolean()}
   def effective_tokens(%__MODULE__{tokens: tokens}, overrides) when is_map(overrides) do
-    Enum.reduce(tokens, %{}, fn %{key: key, default: default}, acc ->
-      value =
+    Enum.reduce(tokens, %{}, fn %{key: key, type: type, default: default}, acc ->
+      raw =
         case Map.get(overrides, key) do
           v when is_binary(v) and v != "" -> v
           _ -> default
         end
 
-      Map.put(acc, key, value)
+      Map.put(acc, key, coerce_token_value(type, raw))
     end)
   end
+
+  # Tokens are interpolated into CSS as strings, except `boolean` tokens which
+  # are coerced to real booleans so templates can branch on them with
+  # `{% if theme.tokens.show_search %}` (a non-empty string is truthy in
+  # Liquid, so "false" would otherwise read as true).
+  defp coerce_token_value("boolean", v) when is_boolean(v), do: v
+  defp coerce_token_value("boolean", v) when v in ["true", "on", "1", 1], do: true
+  defp coerce_token_value("boolean", _), do: false
+  defp coerce_token_value(_type, v), do: v
 
   @doc """
   Return the merge of manifest metadata defaults with per-page overrides.
@@ -298,9 +310,18 @@ defmodule Masthead.Themes.Manifest do
           errors
       end
 
-    case Map.get(tok, "default") do
-      d when is_binary(d) -> errors
-      _ -> ["#{prefix}.default: is required and must be a string" | errors]
+    case {Map.get(tok, "type"), Map.get(tok, "default")} do
+      {"boolean", d} when is_boolean(d) ->
+        errors
+
+      {_, d} when is_binary(d) ->
+        errors
+
+      _ ->
+        [
+          "#{prefix}.default: is required and must be a string (or boolean for boolean tokens)"
+          | errors
+        ]
     end
   end
 

@@ -1,6 +1,7 @@
 defmodule Masthead.Content.Page do
   use Ecto.Schema
   import Ecto.Changeset
+  import Masthead.Content.ChangesetHelpers, only: [ensure_slug: 2, validate_liquid_body: 1]
 
   schema "pages" do
     field :title, :string
@@ -11,6 +12,12 @@ defmodule Masthead.Content.Page do
     field :show_in_nav, :boolean, default: true
     field :metadata, :map, default: %{}
     belongs_to :site, Masthead.Sites.Site
+    # Tags a "blog"-format page filters its post list by (empty = show all).
+    # Pages are not taggable content; this is a render-time filter selection.
+    many_to_many :filter_tags, Masthead.Content.Tag,
+      join_through: "page_filter_tags",
+      on_replace: :delete
+
     timestamps(type: :utc_datetime)
   end
 
@@ -19,7 +26,8 @@ defmodule Masthead.Content.Page do
     |> cast(attrs, [:title, :slug, :body, :format, :published, :show_in_nav, :metadata, :site_id])
     |> validate_required([:title, :site_id])
     |> validate_inclusion(:format, ~w(markdown html blog))
-    |> ensure_slug()
+    |> validate_liquid_body()
+    |> ensure_slug(:title)
     |> validate_format(:slug, ~r/^[a-z0-9]([a-z0-9-]{0,80}[a-z0-9])?$/,
       message: "lowercase letters, numbers, hyphens"
     )
@@ -46,22 +54,6 @@ defmodule Masthead.Content.Page do
 
       _ ->
         changeset
-    end
-  end
-
-  defp ensure_slug(changeset) do
-    case get_field(changeset, :slug) do
-      slug when is_binary(slug) and slug != "" ->
-        put_change(changeset, :slug, Slug.slugify(slug))
-
-      _ ->
-        case get_field(changeset, :title) do
-          title when is_binary(title) and title != "" ->
-            put_change(changeset, :slug, Slug.slugify(title))
-
-          _ ->
-            changeset
-        end
     end
   end
 end

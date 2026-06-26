@@ -34,7 +34,8 @@ defmodule MastheadWeb.AdminLive.PostForm do
        draft: draft,
        page_title: page_title,
        slug_touched: post != nil,
-       show_errors: false
+       show_errors: false,
+       tags: Content.list_tags(socket.assigns.site.id)
      )
      |> maybe_allow_import()
      |> assign_changeset(draft)}
@@ -151,6 +152,15 @@ defmodule MastheadWeb.AdminLive.PostForm do
        |> assign(draft: draft, show_errors: true)
        |> assign_changeset(draft, validate: true)}
     end
+  end
+
+  def handle_event("toggle_tag", %{"id" => id}, socket) do
+    selected = socket.assigns.draft["tag_ids"] || []
+
+    selected =
+      if id in selected, do: List.delete(selected, id), else: [id | selected]
+
+    {:noreply, update(socket, :draft, &Map.put(&1, "tag_ids", selected))}
   end
 
   # ---- Validation / save ----
@@ -307,7 +317,8 @@ defmodule MastheadWeb.AdminLive.PostForm do
       "excerpt" => post.excerpt,
       "format" => post.format,
       "body" => post.body,
-      "published" => to_string(post.published)
+      "published" => to_string(post.published),
+      "tag_ids" => Enum.map(post.tags, &to_string(&1.id))
     }
   end
 
@@ -353,7 +364,7 @@ defmodule MastheadWeb.AdminLive.PostForm do
         <.publish_status :if={@post} published={@post.published} />
       </:actions>
 
-      <div class="wizard">
+      <div class="wizard" id="post-wizard" phx-hook="SaveShortcut" data-save-param="post">
         <%= case @step do %>
           <% 0 -> %>
             <.import_step uploads={@uploads} site_slug={@site.slug} />
@@ -372,6 +383,8 @@ defmodule MastheadWeb.AdminLive.PostForm do
               editing={@post != nil}
               site_slug={@site.slug}
               show_errors={@show_errors}
+              tags={@tags}
+              selected_tag_ids={@draft["tag_ids"] || []}
             />
           <% 3 -> %>
             <.content_step
@@ -504,6 +517,8 @@ defmodule MastheadWeb.AdminLive.PostForm do
   attr :editing, :boolean, default: false
   attr :site_slug, :string, required: true
   attr :show_errors, :boolean, default: false
+  attr :tags, :list, default: []
+  attr :selected_tag_ids, :list, default: []
 
   defp meta_step(assigns) do
     ~H"""
@@ -531,6 +546,22 @@ defmodule MastheadWeb.AdminLive.PostForm do
           placeholder="One or two sentences shown on the homepage and in the &lt;meta&gt; description."
         >{@form[:excerpt].value}</textarea>
       </label>
+
+      <div class="field">
+        <span class="field-label">Tags</span>
+        <div class="tag-picker">
+          <button
+            :for={t <- @tags}
+            type="button"
+            phx-click="toggle_tag"
+            phx-value-id={t.id}
+            class={["tag-toggle", to_string(t.id) in @selected_tag_ids && "tag-toggle-on"]}
+          >
+            {t.name}
+          </button>
+          <.link navigate={~p"/#{@site_slug}/settings"} class="tag-chip-add">Manage tags</.link>
+        </div>
+      </div>
 
       <input type="hidden" name="post[format]" value={@format} />
     </form>

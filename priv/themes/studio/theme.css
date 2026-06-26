@@ -74,6 +74,21 @@ a:hover { color: var(--accent-hover); }
   font-weight: 500;
 }
 .primary-nav a:hover { color: var(--fg); }
+.nav-right { display: flex; align-items: center; gap: 1.25rem; }
+.nav-search input {
+  padding: 0.32rem 0.75rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--fg);
+}
+.nav-search input:focus { outline: none; border-color: var(--accent); }
+.tag-row { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+.tag-pill { font-size: 0.7rem; letter-spacing: 0.02em; padding: 0.08rem 0.55rem; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); line-height: 1.6; white-space: nowrap; }
+.tag-filter { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1.5rem 0; }
+.tag-filter-pill { font-size: 0.75rem; letter-spacing: 0.02em; padding: 0.15rem 0.7rem; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); text-decoration: none; line-height: 1.6; white-space: nowrap; }
+.tag-filter-pill-active { background: var(--accent); color: #fff; }
 
 /* Content */
 .content { padding-top: 3rem; padding-bottom: 4rem; }
@@ -107,6 +122,19 @@ a:hover { color: var(--accent-hover); }
   max-width: 60ch;
   margin: 0;
 }
+.search-form { margin-top: 1.5rem; }
+.search-form input {
+  width: 100%;
+  max-width: 360px;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.95rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--fg);
+}
+.search-form input:focus { outline: none; border-color: var(--accent); }
+.search-summary { color: var(--muted); font-size: 0.95rem; margin: 0 0 2rem; }
 
 /* Featured card */
 .featured-card {
@@ -153,10 +181,13 @@ a:hover { color: var(--accent-hover); }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.4rem;
   font-size: 0.88rem;
   color: var(--muted);
 }
-.read-more { color: var(--accent); font-weight: 500; }
+.meta-info { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0.7rem; }
+.read-more { color: var(--accent); font-weight: 500; white-space: nowrap; }
 
 /* Archive grid */
 .section-title {
@@ -209,6 +240,7 @@ a:hover { color: var(--accent-hover); }
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 0.7rem; margin-top: 0.9rem; }
 .post-card time { font-size: 0.82rem; color: var(--muted); }
 
 /* Single post / page */

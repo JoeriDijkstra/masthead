@@ -72,7 +72,7 @@ defmodule MastheadWeb.AdminLive.SiteDashboard do
         </li>
       </ul>
 
-      <p :if={length(@posts) > 5}>
+      <p :if={length(@posts) > 5} style="margin-top: 0.75rem;">
         <.link navigate={~p"/#{@site.slug}/posts"}>See all posts &rarr;</.link>
       </p>
     </.shell>

@@ -16,6 +16,7 @@ defmodule MastheadWeb.PublicRouter do
     pipe_through :public
 
     get "/", PublicController, :index
+    get "/search", PublicController, :search
     get "/posts/:slug", PublicController, :show_post
     get "/:slug", PublicController, :show_page
   end

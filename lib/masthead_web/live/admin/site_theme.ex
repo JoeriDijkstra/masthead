@@ -186,6 +186,15 @@ defmodule MastheadWeb.AdminLive.SiteTheme do
   defp token_input_value(form, %{type: "color"} = tok), do: token_display_value(form, tok)
   defp token_input_value(form, tok), do: token_value(form, tok.key)
 
+  # Checked state for a boolean token: the per-site override if set, else the
+  # manifest default (a real boolean).
+  defp token_checked?(form, tok) do
+    case token_value(form, tok.key) do
+      "" -> tok.default == true
+      v -> v in ["true", "on", "1"]
+    end
+  end
+
   # Always give text inputs a placeholder: the manifest default, or the
   # token's label when there's no default.
   defp token_placeholder(tok) do
@@ -386,6 +395,24 @@ defmodule MastheadWeb.AdminLive.SiteTheme do
   attr :site, :map, required: true
   attr :site_uploads, :list, required: true
 
+  defp token_field(%{tok: %{type: "boolean"}} = assigns) do
+    ~H"""
+    <div class="settings-checkbox">
+      <label for={"token-" <> @tok.key} class="settings-checkbox-text">
+        <span>{@tok.label}</span>
+      </label>
+      <input type="hidden" name={"site[theme_tokens][" <> @tok.key <> "]"} value="false" />
+      <input
+        type="checkbox"
+        id={"token-" <> @tok.key}
+        name={"site[theme_tokens][" <> @tok.key <> "]"}
+        value="true"
+        checked={token_checked?(@form, @tok)}
+      />
+    </div>
+    """
+  end
+
   defp token_field(assigns) do
     assigns =
       assign(
@@ -443,7 +470,7 @@ defmodule MastheadWeb.AdminLive.SiteTheme do
         </option>
       </select>
       <input
-        :if={@tok.type != "file" and @tok.type != "select"}
+        :if={@tok.type not in ~w(file select)}
         type={html_input_type(@tok.type)}
         name={"site[theme_tokens][" <> @tok.key <> "]"}
         value={token_input_value(@form, @tok)}
