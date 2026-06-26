@@ -140,7 +140,7 @@ a:hover { text-decoration: underline; }
 code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background: #f4f4f5; padding: 0.1em 0.35em; border-radius: 3px; }
 .muted { color: var(--muted); }
 .empty { color: var(--muted); padding: 1.5rem 0; }
-.error { color: var(--danger); }
+.error { color: var(--danger); margin-top: 0.4rem; }
 
 .empty-state {
   display: flex;

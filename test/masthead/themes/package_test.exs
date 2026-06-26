@@ -164,6 +164,19 @@ defmodule Masthead.Themes.PackageTest do
     File.rm(z2)
   end
 
+  test "accepts a JavaScript asset in the theme bundle", %{user: user} do
+    slug = "themejs#{System.unique_integer([:positive])}"
+
+    files =
+      valid_files(slug)
+      |> Map.put("assets/app.js", "console.log('hello from the theme')")
+
+    zip_path = build_zip(files)
+
+    assert {:ok, _theme} = Package.install(zip_path, user.id)
+    File.rm(zip_path)
+  end
+
   # ---- helpers ----
 
   defp put_version(files, version) do

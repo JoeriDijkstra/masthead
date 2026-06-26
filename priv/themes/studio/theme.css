@@ -86,6 +86,9 @@ a:hover { color: var(--accent-hover); }
 .nav-search input:focus { outline: none; border-color: var(--accent); }
 .tag-row { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
 .tag-pill { font-size: 0.7rem; letter-spacing: 0.02em; padding: 0.08rem 0.55rem; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); line-height: 1.6; white-space: nowrap; }
+.tag-filter { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1.5rem 0; }
+.tag-filter-pill { font-size: 0.75rem; letter-spacing: 0.02em; padding: 0.15rem 0.7rem; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); text-decoration: none; line-height: 1.6; white-space: nowrap; }
+.tag-filter-pill-active { background: var(--accent); color: #fff; }
 
 /* Content */
 .content { padding-top: 3rem; padding-bottom: 4rem; }

@@ -99,6 +99,97 @@ defmodule Masthead.Themes.RendererTest do
     end
   end
 
+  describe "posts_by_tag (DB-backed tag query in templates)" do
+    setup %{site: site} do
+      {:ok, emacs} = Content.create_tag(site.id, %{"name" => "Emacs"})
+
+      {:ok, _} =
+        Content.create_post(site.id, %{
+          "title" => "Doom config",
+          "body" => "x",
+          "published" => true,
+          "tag_ids" => [emacs.id]
+        })
+
+      {:ok, _} =
+        Content.create_post(site.id, %{"title" => "Off topic", "body" => "y", "published" => true})
+
+      :ok
+    end
+
+    test "posts_by_tag[slug] returns only posts carrying that tag", %{site: site} do
+      [page | _] = Content.list_published_pages(site.id)
+
+      body =
+        ~s({% assign e = posts_by_tag["emacs"] %}COUNT={{ e | size }};{% for p in e %}T={{ p.title }};{% endfor %})
+
+      out = Renderer.render_page(%{site: site, page: page, liquid_body: body, pages: [page]})
+
+      assert out =~ "COUNT=1;"
+      assert out =~ "T=Doom config;"
+      refute out =~ "T=Off topic;"
+    end
+
+    test "an unknown tag slug yields an empty collection", %{site: site} do
+      [page | _] = Content.list_published_pages(site.id)
+      body = ~s({% assign e = posts_by_tag["nope"] %}COUNT={{ e | size }})
+      out = Renderer.render_page(%{site: site, page: page, liquid_body: body, pages: [page]})
+      assert out =~ "COUNT=0"
+    end
+  end
+
+  describe "render_page/1 with an html (Liquid) body" do
+    test "renders Liquid tokens against the page context", %{site: site} do
+      {:ok, page} =
+        Content.create_page(site.id, %{
+          "title" => "Liquid Page",
+          "format" => "html",
+          "body" => "<h1>{{ site.name }}</h1><p>{{ page.title }}</p>",
+          "published" => true
+        })
+
+      pages = Content.list_published_pages(site.id)
+
+      out = Renderer.render_page(%{site: site, page: page, liquid_body: page.body, pages: pages})
+
+      assert out =~ "<h1>#{site.name}</h1>"
+      assert out =~ "<p>Liquid Page</p>"
+    end
+
+    test "passes raw HTML and <script> through unsanitized", %{site: site} do
+      {:ok, page} =
+        Content.create_page(site.id, %{
+          "title" => "Scripted",
+          "format" => "html",
+          "body" => ~s|<script>alert("hi")</script><div class="x">raw</div>|,
+          "published" => true
+        })
+
+      pages = Content.list_published_pages(site.id)
+
+      out = Renderer.render_page(%{site: site, page: page, liquid_body: page.body, pages: pages})
+
+      assert out =~ ~s|<script>alert("hi")</script>|
+      assert out =~ ~s|<div class="x">raw</div>|
+    end
+
+    test "falls back to the raw body if the Liquid fails to render", %{site: site} do
+      # A stored page that somehow holds invalid Liquid must not 500 the
+      # public page — the renderer emits the raw body instead.
+      [page | _] = Content.list_published_pages(site.id)
+
+      out =
+        Renderer.render_page(%{
+          site: site,
+          page: page,
+          liquid_body: "{% bogus %}plain text",
+          pages: [page]
+        })
+
+      assert out =~ "plain text"
+    end
+  end
+
   describe "render_not_found/1" do
     test "produces a 404 body", %{site: site} do
       pages = Content.list_published_pages(site.id)

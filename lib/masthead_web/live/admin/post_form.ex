@@ -364,7 +364,7 @@ defmodule MastheadWeb.AdminLive.PostForm do
         <.publish_status :if={@post} published={@post.published} />
       </:actions>
 
-      <div class="wizard">
+      <div class="wizard" id="post-wizard" phx-hook="SaveShortcut" data-save-param="post">
         <%= case @step do %>
           <% 0 -> %>
             <.import_step uploads={@uploads} site_slug={@site.slug} />

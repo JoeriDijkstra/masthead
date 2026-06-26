@@ -465,7 +465,7 @@ defmodule MastheadWeb.AdminLive.Components do
         </div>
         <h3>HTML</h3>
         <p>
-          Raw HTML for full control. Sanitized on render — scripts and unsafe attributes are stripped.
+          Raw HTML with Liquid tokens and logic for full control. Nothing is stripped — scripts and embeds run.
         </p>
         <span class="format-pill format-pill-muted">Advanced</span>
       </button>

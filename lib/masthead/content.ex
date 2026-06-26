@@ -86,6 +86,27 @@ defmodule Masthead.Content do
   end
 
   @doc """
+  Published posts for a site carrying the tag with the given slug, newest
+  first. A site-scoped, tag-filtered DB query (not an in-memory filter of all
+  posts) — used to back the `posts_by_tag["<slug>"]` collection in templates.
+  An unknown slug simply returns `[]`.
+  """
+  def list_published_posts_by_tag(site_id, slug) when is_binary(slug) do
+    Repo.all(
+      from p in Post,
+        where:
+          p.site_id == ^site_id and p.published == true and
+            fragment(
+              "EXISTS (SELECT 1 FROM post_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id = ? AND t.slug = ?)",
+              p.id,
+              ^slug
+            ),
+        order_by: [desc: p.published_at],
+        preload: :tags
+    )
+  end
+
+  @doc """
   Full-text-ish search over a site's published posts: case-insensitive
   substring match against title, excerpt, and body. A blank query returns all
   published posts (so the search page reads as "browse everything" rather than

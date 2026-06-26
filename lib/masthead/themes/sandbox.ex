@@ -42,6 +42,28 @@ defmodule Masthead.Themes.Sandbox do
   end
 
   @doc """
+  Best-effort reversal of the HTML entity-escaping that a browser form can
+  apply to a body as it round-trips through an HTML `<textarea>`. Covers the
+  entities `Phoenix.HTML.html_escape/1` emits (`&amp; &lt; &gt; &quot; &#39;`).
+
+  Used as a *fallback*: a Liquid body that already parses is never unescaped,
+  so legitimate entities in HTML text are preserved — this only rescues a body
+  whose Liquid delimiters were escaped in transit (e.g. `&quot;` for `"`),
+  which would otherwise fail to parse. `&amp;` is replaced last so an escaped
+  entity like `&amp;lt;` resolves to `&lt;`, not `<`.
+  """
+  @spec html_unescape(String.t()) :: String.t()
+  def html_unescape(s) when is_binary(s) do
+    s
+    |> String.replace("&lt;", "<")
+    |> String.replace("&gt;", ">")
+    |> String.replace("&quot;", "\"")
+    |> String.replace("&#39;", "'")
+    |> String.replace("&#x27;", "'")
+    |> String.replace("&amp;", "&")
+  end
+
+  @doc """
   Convenience: parse + render in one shot. Useful for tiny strings (e.g.
   inlining a token-substituted CSS snippet); production rendering should
   cache the parsed template.

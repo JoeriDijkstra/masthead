@@ -12,6 +12,15 @@
   <p class="search-summary">{{ search_count }} result{% unless search_count == 1 %}s{% endunless %} for &ldquo;{{ search_query | escape }}&rdquo;</p>
 {% endif %}
 
+{% if theme.tokens.show_tags and tags != empty %}
+  <nav class="tag-filter" aria-label="Filter posts by tag">
+    <a href="/" class="tag-filter-item{% unless current_tag %} tag-filter-item-active{% endunless %}">All</a>
+    {% for tag in tags %}
+      <a href="?tag={{ tag.slug }}" class="tag-filter-item{% if tag.active %} tag-filter-item-active{% endif %}">{{ tag.name | escape }}</a>
+    {% endfor %}
+  </nav>
+{% endif %}
+
 {% if posts == empty %}
   <section class="empty"><p>{% if search_query %}No posts match your search.{% else %}No posts yet.{% endif %}</p></section>
 {% else %}

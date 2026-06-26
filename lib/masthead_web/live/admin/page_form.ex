@@ -420,7 +420,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
         <.publish_status :if={@page} published={@page.published} />
       </:actions>
 
-      <div class="wizard">
+      <div class="wizard" id="page-wizard" phx-hook="SaveShortcut" data-save-param="page">
         <%= case @step do %>
           <% 0 -> %>
             <.import_step uploads={@uploads} site_slug={@site.slug} />

@@ -1,7 +1,7 @@
 {
   "name": "Tailwind",
   "slug": "tailwind",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "author": "Masthead",
   "description": "A customizable, website-first theme styled with Tailwind CSS: full navbar with an uploadable logo, brand colors for the header/footer/buttons, light or dark header/footer text, a hero, and a card grid. Loaded from the Tailwind CDN so you can use any utility class in your pages.",
   "tokens": [

@@ -27,12 +27,13 @@ import topbar from "../vendor/topbar"
 import {CodeEditor} from "./hooks/code_editor"
 import {FlashToast} from "./hooks/flash_toast"
 import {BadgePulse} from "./hooks/badge_pulse"
+import {SaveShortcut} from "./hooks/save_shortcut"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, CodeEditor, FlashToast, BadgePulse},
+  hooks: {...colocatedHooks, CodeEditor, FlashToast, BadgePulse, SaveShortcut},
 })
 
 // Show progress bar on live navigation and form submits

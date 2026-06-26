@@ -52,6 +52,9 @@ main { padding-top: 2rem; padding-bottom: 4rem; }
 /* Scoped under .tag-list so these beat the theme's `.post-list li` rule,
    which would otherwise force tall, borderless ovals on the nested <li>s. */
 .tag-list .tag-pill { padding: 0.1rem 0.6rem; border: 1px solid var(--accent); border-radius: 9999px; font-size: 0.7rem; letter-spacing: 0.02em; line-height: 1.5; color: var(--accent); background: none; }
+.tag-filter { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1.5rem; }
+.tag-filter-item { padding: 0.15rem 0.7rem; border: 1px solid var(--accent); border-radius: 9999px; font-size: 0.8rem; color: var(--accent); text-decoration: none; line-height: 1.5; }
+.tag-filter-item-active { background: var(--accent); color: #fff; }
 
 @media (max-width: 640px) {
   main, .site-nav, .site-footer { padding-left: 1rem; padding-right: 1rem; }

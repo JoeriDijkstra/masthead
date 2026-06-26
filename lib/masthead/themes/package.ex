@@ -34,7 +34,7 @@ defmodule Masthead.Themes.Package do
   @max_uncompressed_bytes 25 * 1024 * 1024
   @max_files 200
   @template_names ~w(layout index post page blog not_found)
-  @allowed_asset_extensions ~w(.css .png .jpg .jpeg .gif .webp .svg .woff .woff2 .ttf .otf .ico .json)
+  @allowed_asset_extensions ~w(.css .js .mjs .png .jpg .jpeg .gif .webp .svg .woff .woff2 .ttf .otf .ico .json)
 
   @doc """
   Validate, extract, and install an uploaded zip located at `archive_path`

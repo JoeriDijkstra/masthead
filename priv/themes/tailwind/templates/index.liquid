@@ -14,6 +14,15 @@
   <p class="mx-auto max-w-6xl px-6 pt-12 text-sm text-gray-500">{{ search_count }} result{% unless search_count == 1 %}s{% endunless %} for &ldquo;{{ search_query | escape }}&rdquo;</p>
 {% endif %}
 
+{% if theme.tokens.show_tags and tags != empty %}
+  <nav class="mx-auto flex max-w-6xl flex-wrap gap-2 px-6 pt-12" aria-label="Filter posts by tag">
+    <a href="/" class="rounded-full border px-3 py-1 text-sm transition {% unless current_tag %}border-[var(--accent)] bg-[var(--accent)] text-white{% else %}border-gray-300 text-gray-600 hover:border-gray-400{% endunless %}">All</a>
+    {% for tag in tags %}
+      <a href="?tag={{ tag.slug }}" class="rounded-full border px-3 py-1 text-sm transition {% if tag.active %}border-[var(--accent)] bg-[var(--accent)] text-white{% else %}border-gray-300 text-gray-600 hover:border-gray-400{% endif %}">{{ tag.name | escape }}</a>
+    {% endfor %}
+  </nav>
+{% endif %}
+
 {% if posts == empty and search_query %}
   <section class="mx-auto max-w-6xl px-6 py-16 text-gray-600">No posts match your search.</section>
 {% endif %}
