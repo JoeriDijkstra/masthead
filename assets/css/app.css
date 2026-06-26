@@ -3023,6 +3023,260 @@ button.danger:hover { filter: brightness(0.92); }
 }
 .chip-neutral { background: var(--rule); color: var(--fg-soft, #525252); }
 .chip-accent { background: var(--accent-soft); color: var(--accent-strong); }
+/* Marketplace status: blue "Verified" vs. yellow "Community". */
+/* Green chip for a verified marketplace theme. */
+.chip-verified { background: var(--good-soft); color: #166534; }
+/* Green chip marking an installed marketplace theme in the library. */
+.chip-marketplace { background: var(--good-soft); color: #166534; }
+
+/* Marketplace grid — image-forward cards; the preview leads each card. */
+.marketplace-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+.marketplace-grid li { display: block; }
+.marketplace-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+  color: inherit;
+  text-decoration: none;
+}
+.marketplace-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--rule-strong);
+  text-decoration: none;
+}
+.marketplace-thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  background: var(--rule);
+  overflow: hidden;
+}
+.marketplace-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* The thumbnail is a button that opens the image carousel. */
+.marketplace-thumb-btn {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.marketplace-thumb-zoom {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  width: 1.7rem;
+  height: 1.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 1rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.marketplace-card:hover .marketplace-thumb-zoom { opacity: 1; }
+/* Status + version chips overlaid on the top-right of the preview, like
+   the theme library cards. */
+.marketplace-card-tags {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.marketplace-thumb-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.marketplace-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+}
+.marketplace-card-id { min-width: 0; }
+.marketplace-card-meta h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.marketplace-card-meta .btn { flex-shrink: 0; }
+.marketplace-card-by {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A right-aligned button row inside a dialog form (e.g. "Add images"). */
+.dialog-form-inline {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+/* Header title that carries inline status/version chips. */
+.dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Drag-to-reorder preview list in the publish modal. */
+.preview-list-hint { margin: 0 0 0.6rem; font-size: 0.82rem; }
+.preview-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.preview-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+.preview-row.is-dragging {
+  opacity: 0.5;
+  border-style: dashed;
+  border-color: var(--accent);
+}
+.preview-drag {
+  display: inline-flex;
+  color: var(--muted);
+  cursor: grab;
+}
+.preview-drag svg { width: 1rem; height: 1rem; }
+.preview-thumb {
+  width: 4.5rem;
+  height: 3rem;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+.preview-row-spacer { flex: 1; }
+
+/* Image carousel modal (marketplace). */
+.dialog-carousel { max-width: 64rem; width: min(94vw, 64rem); }
+.carousel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem 0;
+}
+.carousel-stage {
+  flex: 1;
+  min-width: 0;
+  background: var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.carousel-stage img {
+  width: 100%;
+  max-height: 74vh;
+  min-height: 20rem;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+.carousel-nav {
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.carousel-nav svg { width: 1.25rem; height: 1.25rem; display: block; }
+.carousel-nav:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.carousel-counter {
+  margin: 0;
+  padding: 1rem 1.5rem 1.75rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+/* When a theme has a single image there's no counter, so give the stage
+   its own bottom breathing room. */
+.dialog-carousel .carousel:last-child { padding-bottom: 1.75rem; }
+
+/* Theme gallery — uploaded preview thumbnails with a remove control. */
+.theme-gallery {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+.theme-gallery li {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--rule);
+}
+.theme-gallery img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+.theme-gallery-remove {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+}
 
 /* Theme library grid — cards rather than a table. */
 .theme-grid {
@@ -3116,10 +3370,15 @@ button.danger:hover { filter: brightness(0.92); }
    slightly on card hover and turns destructive-red on its own hover.
    Disabled state (built-ins, themes owned by someone else) stays muted
    and unresponsive. */
-.theme-card-delete {
+.theme-card-actions {
   position: absolute;
   bottom: 0.6rem;
   right: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+.theme-card-icon-btn {
   width: 1.85rem;
   height: 1.85rem;
   display: inline-flex;
@@ -3134,20 +3393,30 @@ button.danger:hover { filter: brightness(0.92); }
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
-.theme-card:hover .theme-card-delete { opacity: 1; }
-.theme-card-delete:hover:not(:disabled) {
+.theme-card:hover .theme-card-icon-btn { opacity: 1; }
+.theme-card-icon-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+/* The delete button turns destructive-red on its own hover. */
+.theme-card-icon-btn.is-danger:hover:not(:disabled) {
   background: var(--danger-soft);
   color: var(--danger);
 }
-.theme-card-delete:focus-visible {
+/* A published theme's marketplace toggle reads as "live" (green). */
+.theme-card-icon-btn.is-live {
+  color: var(--good);
+  opacity: 1;
+}
+.theme-card-icon-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-.theme-card-delete:disabled {
+.theme-card-icon-btn:disabled {
   cursor: not-allowed;
   opacity: 0.35;
 }
-.theme-card-delete svg { width: 1.05rem; height: 1.05rem; }
+.theme-card-icon-btn svg { width: 1.05rem; height: 1.05rem; }
 .theme-card-version {
   /* Version numbers shouldn't get the chip's all-caps treatment — the
      'v' prefix and digits read better as-is, with tabular numerals so

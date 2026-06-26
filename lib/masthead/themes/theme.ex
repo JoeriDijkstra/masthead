@@ -31,8 +31,10 @@ defmodule Masthead.Themes.Theme do
     field :storage_path, :string
     field :manifest, :map, default: %{}
     field :public, :boolean, default: false
+    field :verified, :boolean, default: false
     belongs_to :owner, Masthead.Accounts.User
     has_many :sites, Masthead.Sites.Site
+    has_many :images, Masthead.Themes.ThemeImage, foreign_key: :theme_id
     timestamps(type: :utc_datetime)
   end
 
@@ -74,6 +76,26 @@ defmodule Masthead.Themes.Theme do
     |> validate_exclusion(:slug, @reserved_slugs, message: "is reserved for a built-in theme")
     |> unique_constraint([:owner_id, :slug], name: :themes_owner_slug_index)
     |> assoc_constraint(:owner)
+  end
+
+  @doc """
+  Changeset toggling whether an uploaded theme is published to the
+  marketplace. Publishing/unpublishing is an owner action.
+  """
+  def publish_changeset(theme, attrs) do
+    theme
+    |> cast(attrs, [:public])
+    |> validate_required([:public])
+  end
+
+  @doc """
+  Changeset toggling admin verification. A verified theme gets the blue
+  "Verified" chip and ranks ahead of unverified "Community" themes.
+  """
+  def verify_changeset(theme, attrs) do
+    theme
+    |> cast(attrs, [:verified])
+    |> validate_required([:verified])
   end
 
   @doc "Slugs that can never be claimed by uploaded themes."
