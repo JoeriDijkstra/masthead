@@ -75,7 +75,7 @@ defmodule Masthead.Sites do
   with the filter + search, not paged through.
   """
   def list_all_sites(filter \\ :all, search_query \\ nil, count \\ 20) do
-    from(s in Site, order_by: [asc: s.id], preload: [:owner])
+    from(s in Site, order_by: [desc: s.id], preload: [:owner])
     |> apply_filter(filter)
     |> apply_search(search_query)
     |> limit(^count)
