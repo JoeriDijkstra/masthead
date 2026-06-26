@@ -14,23 +14,33 @@ defmodule Masthead.Themes do
   alias Masthead.Repo
   alias Masthead.Storage
   alias Masthead.Themes.Theme
+  alias Masthead.Themes.ThemeImage
+  alias Masthead.Themes.ThemeInstall
+
+  # Storage namespace for marketplace gallery images. Keys are scoped by
+  # theme id underneath (e.g. "theme-previews/12/169…-42.png").
+  @previews_namespace "theme-previews"
 
   # The canonical files that make up a theme directory.
   @theme_files ["manifest.json", "theme.css"] ++
                  Enum.map(~w(layout index post page blog not_found), &"templates/#{&1}.liquid")
 
   @doc """
-  List every theme visible to the given user:
+  List every theme in the given user's library:
 
     * all built-ins,
     * the user's own uploads,
-    * public uploads from other users (currently always empty — the
-      `public` flag isn't exposed in v1).
+    * marketplace themes the user has installed.
+
+  Published themes the user *hasn't* installed are not here — they live in
+  the marketplace until installed.
   """
   def list_themes(user_id) when is_integer(user_id) do
+    installed = from(i in ThemeInstall, where: i.user_id == ^user_id, select: i.theme_id)
+
     Repo.all(
       from t in Theme,
-        where: t.source == "built_in" or t.owner_id == ^user_id or t.public == true,
+        where: t.source == "built_in" or t.owner_id == ^user_id or t.id in subquery(installed),
         order_by: ^theme_order()
     )
   end
@@ -117,6 +127,7 @@ defmodule Masthead.Themes do
     case live_sites_using_theme(theme.id) do
       [] ->
         detach_deleted_sites(theme.id)
+        purge_gallery_files(theme.id)
 
         theme
         |> Ecto.Changeset.change()
@@ -158,6 +169,168 @@ defmodule Masthead.Themes do
     end
   end
 
+  # ---- marketplace ----
+
+  @doc """
+  Publish an uploaded theme to the marketplace. Built-ins can't be
+  published (they're already available to everyone).
+  """
+  def publish_theme(%Theme{source: "built_in"}), do: {:error, :built_in_protected}
+
+  def publish_theme(%Theme{source: "uploaded"} = theme) do
+    theme |> Theme.publish_changeset(%{public: true}) |> Repo.update()
+  end
+
+  @doc "Remove an uploaded theme from the marketplace."
+  def unpublish_theme(%Theme{source: "uploaded"} = theme) do
+    theme |> Theme.publish_changeset(%{public: false}) |> Repo.update()
+  end
+
+  @doc "Admin marks a theme as verified (blue chip, ranks first)."
+  def verify_theme(%Theme{} = theme) do
+    theme |> Theme.verify_changeset(%{verified: true}) |> Repo.update()
+  end
+
+  @doc "Admin clears verification (theme falls back to the yellow \"community\" chip)."
+  def unverify_theme(%Theme{} = theme) do
+    theme |> Theme.verify_changeset(%{verified: false}) |> Repo.update()
+  end
+
+  @doc """
+  Published themes available to install, for the marketplace browser.
+  Excludes the viewer's own themes (you already have them). Verified
+  themes rank first (then community), each group alphabetical — in
+  Postgres `true > false`, so `desc: verified` floats verified to the top.
+  Owner and gallery images are preloaded for the grid.
+  """
+  def list_marketplace(user_id, filter \\ :all, search \\ nil) when is_integer(user_id) do
+    from(t in Theme,
+      where: t.source == "uploaded" and t.public == true and t.owner_id != ^user_id,
+      order_by: [desc: t.verified, asc: t.name],
+      preload: [:owner, :images]
+    )
+    |> apply_marketplace_filter(filter)
+    |> apply_search(search)
+    |> Repo.all()
+  end
+
+  defp apply_marketplace_filter(query, :verified), do: from(t in query, where: t.verified == true)
+
+  defp apply_marketplace_filter(query, :community),
+    do: from(t in query, where: t.verified == false)
+
+  defp apply_marketplace_filter(query, _all), do: query
+
+  @doc "Set of theme ids the user has installed (for marketplace install state)."
+  def installed_theme_ids(user_id) when is_integer(user_id) do
+    Repo.all(from i in ThemeInstall, where: i.user_id == ^user_id, select: i.theme_id)
+    |> MapSet.new()
+  end
+
+  @doc """
+  Install a published theme into the user's library. Idempotent — a repeat
+  install is a no-op. Only published (`public`) themes can be installed.
+  """
+  def install_theme(user_id, %Theme{public: true} = theme) when is_integer(user_id) do
+    %ThemeInstall{}
+    |> ThemeInstall.changeset(%{user_id: user_id, theme_id: theme.id})
+    |> Repo.insert(on_conflict: :nothing)
+  end
+
+  def install_theme(_user_id, %Theme{}), do: {:error, :not_published}
+
+  @doc "Remove an installed theme from the user's library."
+  def uninstall_theme(user_id, theme_id) when is_integer(user_id) do
+    {count, _} =
+      Repo.delete_all(
+        from i in ThemeInstall, where: i.user_id == ^user_id and i.theme_id == ^theme_id
+      )
+
+    {:ok, count}
+  end
+
+  # ---- gallery images ----
+
+  @doc "A theme's gallery images, in display order."
+  def list_theme_images(theme_id) do
+    Repo.all(
+      from i in ThemeImage,
+        where: i.theme_id == ^theme_id,
+        order_by: [asc: i.position, asc: i.id]
+    )
+  end
+
+  @doc """
+  Store an uploaded preview file (a path on disk, as handed back by
+  `consume_uploaded_entries`) and append it to the theme's gallery at the
+  next free position.
+  """
+  def add_theme_image(%Theme{} = theme, %{filename: filename, path: path}) do
+    ext = filename |> Path.extname() |> String.downcase()
+
+    key =
+      Path.join(
+        to_string(theme.id),
+        "#{System.system_time(:millisecond)}-#{:rand.uniform(1_000_000)}#{ext}"
+      )
+
+    case Storage.stream_into(@previews_namespace, key, path) do
+      {:ok, rel} ->
+        %ThemeImage{}
+        |> ThemeImage.changeset(%{
+          theme_id: theme.id,
+          storage_path: rel,
+          position: next_position(theme.id)
+        })
+        |> Repo.insert()
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp next_position(theme_id) do
+    max = Repo.one(from i in ThemeImage, where: i.theme_id == ^theme_id, select: max(i.position))
+    (max || -1) + 1
+  end
+
+  @doc """
+  Reorder a theme's gallery to match `ordered_ids` (image ids, first =
+  position 0). Ids are scoped to the theme, so a stray id from another
+  theme is ignored. Returns `:ok`.
+  """
+  def reorder_theme_images(theme_id, ordered_ids) when is_list(ordered_ids) do
+    Repo.transaction(fn ->
+      ordered_ids
+      |> Enum.with_index()
+      |> Enum.each(fn {id, index} ->
+        Repo.update_all(
+          from(i in ThemeImage, where: i.id == ^id and i.theme_id == ^theme_id),
+          set: [position: index]
+        )
+      end)
+    end)
+
+    :ok
+  end
+
+  @doc "Delete a gallery image (removes the stored file, then the row)."
+  def delete_theme_image(%ThemeImage{} = image) do
+    _ = Storage.delete(image.storage_path)
+    Repo.delete(image)
+  end
+
+  @doc "Public URL for a gallery image."
+  def image_url(%ThemeImage{storage_path: path}), do: Storage.url(path)
+
+  # Remove the stored gallery files before the rows go (the FK's
+  # `on_delete: :delete_all` clears the rows; this clears the bytes).
+  defp purge_gallery_files(theme_id) do
+    theme_id
+    |> list_theme_images()
+    |> Enum.each(&Storage.delete(&1.storage_path))
+  end
+
   # ---- admin ----
 
   @doc """
@@ -176,9 +349,10 @@ defmodule Masthead.Themes do
   defp apply_filter(query, filter) do
     case filter do
       :built_in -> from t in query, where: t.source == "built_in"
-      :uploaded -> from t in query, where: t.source == "uploaded"
       :public -> from t in query, where: t.public == true
-      :private -> from t in query, where: t.public == false
+      # Private = a user's own unpublished uploads; built-ins are excluded
+      # (they default to public == false but aren't a user's "private" theme).
+      :private -> from t in query, where: t.source == "uploaded" and t.public == false
       _ -> query
     end
   end

@@ -6,7 +6,7 @@ defmodule MastheadWeb.AdminLive.Console do
 
   alias Masthead.{Accounts, Actions, Sites, Themes}
 
-  @default_filters %{users: :all, sites: :enabled, themes: :all}
+  @default_filters %{users: :all, sites: :enabled, themes: :public}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -77,11 +77,9 @@ defmodule MastheadWeb.AdminLive.Console do
 
   defp filter_options(:themes),
     do: [
-      {:all, "All"},
-      {:built_in, "Built-in"},
-      {:uploaded, "Uploaded"},
       {:public, "Public"},
-      {:private, "Private"}
+      {:private, "Private"},
+      {:built_in, "Built-in"}
     ]
 
   # Each tab shows at most this many rows; the overview is meant to be
@@ -148,6 +146,18 @@ defmodule MastheadWeb.AdminLive.Console do
 
   def handle_event("close_action_modal", _params, socket) do
     {:noreply, assign(socket, action_modal?: false, action_site: nil)}
+  end
+
+  # ---- themes ----
+
+  def handle_event("verify_theme", %{"id" => id}, socket) do
+    {:ok, _} = id |> Themes.get_theme!() |> Themes.verify_theme()
+    {:noreply, socket |> put_flash(:info, "Theme verified.") |> load_data()}
+  end
+
+  def handle_event("unverify_theme", %{"id" => id}, socket) do
+    {:ok, _} = id |> Themes.get_theme!() |> Themes.unverify_theme()
+    {:noreply, socket |> put_flash(:info, "Theme verification cleared.") |> load_data()}
   end
 
   # ---- filtering & search (users / sites / themes) ----
@@ -374,6 +384,7 @@ defmodule MastheadWeb.AdminLive.Console do
               <th>Slug</th>
               <th>Version</th>
               <th>Source</th>
+              <th>Status</th>
               <th>Owner</th>
               <th></th>
             </tr>
@@ -384,8 +395,32 @@ defmodule MastheadWeb.AdminLive.Console do
               <td class="muted">{t.slug}</td>
               <td class="muted">{t.version}</td>
               <td>{t.source}</td>
+              <td>
+                <span :if={t.verified} class="chip chip-verified">Verified</span>
+                <span :if={t.public and not t.verified} class="muted">community</span>
+                <span :if={t.source == "uploaded" and not t.public} class="muted">private</span>
+                <span :if={t.source == "built_in"} class="muted">—</span>
+              </td>
               <td class="muted">{(t.owner && t.owner.email) || "—"}</td>
               <td class="admin-row-actions">
+                <button
+                  :if={t.source == "uploaded" and not t.verified}
+                  type="button"
+                  class="btn btn-sm"
+                  phx-click="verify_theme"
+                  phx-value-id={t.id}
+                >
+                  Verify
+                </button>
+                <button
+                  :if={t.source == "uploaded" and t.verified}
+                  type="button"
+                  class="btn btn-sm"
+                  phx-click="unverify_theme"
+                  phx-value-id={t.id}
+                >
+                  Unverify
+                </button>
                 <a
                   :if={t.source == "uploaded"}
                   href={~p"/admin/themes/#{t.id}/download"}

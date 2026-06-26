@@ -76,6 +76,8 @@ defmodule MastheadWeb.Router do
       on_mount: [{MastheadWeb.UserAuth, :require_authenticated}] do
       live "/sites", AdminLive.SiteIndex, :index
 
+      live "/marketplace", AdminLive.Marketplace, :index
+
       live "/themes", AdminLive.ThemeLibrary, :index
 
       live "/:site_slug", AdminLive.SiteDashboard, :show

@@ -15,7 +15,7 @@ defmodule MastheadWeb.AdminLive.Components do
   attr :active, :atom,
     default: nil,
     doc:
-      ":overview | :posts | :pages | :uploads | :theme | :settings | :checklist | :sites | :themes"
+      ":overview | :posts | :pages | :uploads | :theme | :settings | :checklist | :sites | :marketplace | :themes"
 
   attr :action_count, :integer,
     default: nil,
@@ -123,6 +123,10 @@ defmodule MastheadWeb.AdminLive.Components do
           <% else %>
             <.nav_link href={~p"/sites"} label="Your sites" active={@active == :sites}>
               <.icon_grid />
+            </.nav_link>
+
+            <.nav_link href={~p"/marketplace"} label="Marketplace" active={@active == :marketplace}>
+              <.icon_store />
             </.nav_link>
 
             <.nav_link href={~p"/themes"} label="Themes" active={@active == :themes}>
@@ -922,6 +926,37 @@ defmodule MastheadWeb.AdminLive.Components do
         d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"
       />
     </svg>
+    """
+  end
+
+  defp icon_store(assigns) do
+    ~H"""
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="icon"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z"
+      />
+    </svg>
+    """
+  end
+
+  @doc """
+  Marketplace status chip. Verified themes get the green "Verified" chip;
+  everything else (community / unpublished) renders nothing.
+  """
+  attr :theme, :map, required: true
+
+  def theme_badge(assigns) do
+    ~H"""
+    <span :if={@theme.verified} class="chip chip-verified">Verified</span>
     """
   end
 

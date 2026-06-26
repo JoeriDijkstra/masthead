@@ -1,0 +1,187 @@
+<!--
+  Liquid showcase — paste this whole thing into a Page body (format: HTML).
+  HTML-format page bodies are rendered as Liquid before being shown, so every
+  tag/filter below runs against the live render context.
+
+  Context this page can read (see Themes.Presenter / Themes.Renderer):
+    site            -> { name, title, description, slug, homepage_slug, css_overrides }
+    theme           -> { name, slug, version, asset_base, tokens, css }
+    page            -> { title, slug, format, url, metadata }
+    posts           -> [ { title, slug, excerpt, published_at, url, tags:[{name,slug}] } ]  (all published)
+    pages           -> [ { title, slug, format, url, metadata } ]
+    tags            -> [ { name, slug, active } ]      (active = matches ?tag=)
+    current_tag     -> { name, slug } | nil            (from ?tag= on blog pages)
+    search_query    -> string                          (search results page only)
+    posts_by_tag    -> posts_by_tag["slug"] => live, DB-backed, site-scoped post list
+
+  Custom filters (plus all standard Solid filters: default, date, upcase, size, where, ...):
+    asset_url: base | strftime: "fmt" | iso8601 | where_tag: "slug" | search: "query"
+-->
+<section class="liquid-showcase">
+
+  <h1>Liquid showcase</h1>
+
+  {%- comment -%} ───────────── 1. Site + theme + page context ───────────── {%- endcomment -%}
+  <h2>1. Context objects</h2>
+  <ul>
+    <li><strong>Site:</strong> {{ site.name }} — {{ site.title | default: "(no title)" }}</li>
+    <li><strong>Description:</strong> {{ site.description | default: "—" }}</li>
+    <li><strong>Theme:</strong> {{ theme.name }} v{{ theme.version }} ({{ theme.slug }})</li>
+    <li><strong>This page:</strong> {{ page.title }} → <code>{{ page.url }}</code> (format: {{ page.format }})</li>
+  </ul>
+
+  {%- comment -%} Theme tokens are arbitrary key/values from the manifest. {%- endcomment -%}
+  {% if theme.tokens %}
+    <p><strong>Theme tokens:</strong></p>
+    <ul>
+      {% for token in theme.tokens %}
+        <li><code>{{ token[0] }}</code> = {{ token[1] }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {%- comment -%} ───────────── 2. All posts + date filters ───────────── {%- endcomment -%}
+  <h2>2. All published posts ({{ posts | size }})</h2>
+  {% if posts == empty %}
+    <p><em>No published posts yet.</em></p>
+  {% else %}
+    <ul>
+      {% for post in posts %}
+        <li>
+          <a href="{{ post.url }}">{{ post.title }}</a>
+          {%- if post.published_at %}
+            — <time datetime="{{ post.published_at | iso8601 }}">
+                {{ post.published_at | strftime: "%B %-d, %Y" }}
+              </time>
+          {%- endif %}
+          {%- if post.tags != empty %}
+            <small>
+              {%- for t in post.tags -%}
+                #{{ t.slug }}{% unless forloop.last %}, {% endunless %}
+              {%- endfor -%}
+            </small>
+          {%- endif %}
+          {% if post.excerpt %}<br><span>{{ post.excerpt | truncate: 120 }}</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {%- comment -%} ───────────── 3. Tag list + active state (?tag=) ───────────── {%- endcomment -%}
+  <h2>3. Tag navigation</h2>
+  {% if current_tag %}
+    <p>Filtering by <strong>{{ current_tag.name }}</strong> — <a href="{{ page.url }}">clear</a></p>
+  {% endif %}
+  {% if tags == empty %}
+    <p><em>This site has no tags.</em></p>
+  {% else %}
+    <nav class="tag-nav">
+      {% for tag in tags %}
+        <a href="{{ page.url }}?tag={{ tag.slug }}"
+           class="tag-pill{% if tag.active %} is-active{% endif %}">
+          {{ tag.name }}
+        </a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+
+  {%- comment -%} ───────────── 4. Tag querying — DB-backed posts_by_tag ───────────── {%- endcomment -%}
+  <h2>4. Tag querying (posts_by_tag — live DB query)</h2>
+  <p>Only the tags referenced here are queried, each scoped to this site.</p>
+  {% for tag in tags %}
+    {% assign tagged = posts_by_tag[tag.slug] %}
+    <h3>#{{ tag.slug }} ({{ tagged | size }})</h3>
+    <ul>
+      {% for post in tagged %}
+        <li><a href="{{ post.url }}">{{ post.title }}</a></li>
+      {% else %}
+        <li><em>none</em></li>
+      {% endfor %}
+    </ul>
+  {% endfor %}
+
+  {%- comment -%} Direct literal access also works, e.g. an "emacs" tag: {%- endcomment -%}
+  {% assign emacs = posts_by_tag["emacs"] %}
+  <p><strong>posts_by_tag["emacs"]</strong> → {{ emacs | size }} post(s).</p>
+
+  {%- comment -%} ───────────── 5. Tag filtering — in-memory where_tag ───────────── {%- endcomment -%}
+  <h2>5. Tag filtering (where_tag — filters the already-loaded posts)</h2>
+  {% if current_tag %}
+    {% assign filtered = posts | where_tag: current_tag.slug %}
+    <p>{{ filtered | size }} post(s) tagged <strong>{{ current_tag.name }}</strong>:</p>
+    <ul>
+      {% for post in filtered %}
+        <li><a href="{{ post.url }}">{{ post.title }}</a></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p><em>Add <code>?tag=&lt;slug&gt;</code> to the URL to filter the loaded post list in-memory.</em></p>
+  {% endif %}
+
+  {%- comment -%} ───────────── 6. Searching — search filter ───────────── {%- endcomment -%}
+  <h2>6. Searching (search filter — title/excerpt substring)</h2>
+  {%- comment -%}
+    On the dedicated search results page `search_query` is populated from ?q=.
+    Here we also show an inline, hardcoded demo so the filter is visible anywhere.
+  {%- endcomment -%}
+  {% assign q = search_query | default: "the" %}
+  {% assign hits = posts | search: q %}
+  <form action="{{ page.url }}" method="get">
+    <input type="search" name="q" value="{{ search_query }}" placeholder="Search posts…">
+    <button type="submit">Search</button>
+  </form>
+  <p>{{ hits | size }} result(s) for "<strong>{{ q }}</strong>":</p>
+  <ul>
+    {% for post in hits %}
+      <li><a href="{{ post.url }}">{{ post.title }}</a></li>
+    {% else %}
+      <li><em>no matches</em></li>
+    {% endfor %}
+  </ul>
+
+  {%- comment -%} ───────────── 7. Standard Liquid mechanics ───────────── {%- endcomment -%}
+  <h2>7. Liquid language features</h2>
+
+  {%- comment -%} assign + capture + math + string filters {%- endcomment -%}
+  {% assign total = posts | size %}
+  {% capture summary %}{{ total }} post{% if total != 1 %}s{% endif %}{% endcapture %}
+  <p>Captured: <strong>{{ summary | upcase }}</strong></p>
+  <p>Math: {{ total | times: 2 }} (×2), {{ total | plus: 10 }} (+10)</p>
+
+  {%- comment -%} conditionals: if / elsif / else / unless / case {%- endcomment -%}
+  {% if total > 5 %}
+    <p>That's a healthy archive.</p>
+  {% elsif total > 0 %}
+    <p>A modest start.</p>
+  {% else %}
+    <p>Empty so far.</p>
+  {% endif %}
+
+  {% case total %}
+    {% when 0 %}<p>case: nothing yet</p>
+    {% when 1 %}<p>case: exactly one</p>
+    {% else %}<p>case: many</p>
+  {% endcase %}
+
+  {%- comment -%} for with loop helpers, limit, and ranges {%- endcomment -%}
+  <p>First 3 posts, numbered:</p>
+  <ol>
+    {% for post in posts limit: 3 %}
+      <li>#{{ forloop.index }} of {{ forloop.length }} — {{ post.title }}</li>
+    {% endfor %}
+  </ol>
+  <p>Range loop:
+    {% for n in (1..5) %}{{ n }}{% unless forloop.last %} · {% endunless %}{% endfor %}
+  </p>
+
+  {%- comment -%} array filters: where / map / sort / join / first / last / uniq {%- endcomment -%}
+  {% assign titles = posts | map: "title" %}
+  <p>All titles, sorted &amp; joined: {{ titles | sort | join: " | " }}</p>
+  <p>First: {{ titles | first | default: "—" }} · Last: {{ titles | last | default: "—" }}</p>
+
+  {%- comment -%} ───────────── 8. asset_url ───────────── {%- endcomment -%}
+  <h2>8. Asset URLs</h2>
+  <p>Resolves a theme asset against the active asset base:</p>
+  <p><code>{{ "logo.svg" | asset_url: theme.asset_base }}</code></p>
+
+</section>

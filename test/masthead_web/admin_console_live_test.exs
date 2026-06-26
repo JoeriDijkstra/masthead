@@ -53,8 +53,14 @@ defmodule MastheadWeb.AdminConsoleLiveTest do
     assert html =~ site.name
     assert html =~ member.email
 
-    # Themes tab.
-    html = lv |> element(~s(button[phx-value-tab="themes"])) |> render_click()
+    # Themes tab defaults to the Public filter; built-ins live under Built-in.
+    lv |> element(~s(button[phx-value-tab="themes"])) |> render_click()
+
+    html =
+      lv
+      |> element(~s(button[phx-value-scope="themes"][phx-value-filter="built_in"]))
+      |> render_click()
+
     assert html =~ "Tailwind"
   end
 
