@@ -196,7 +196,8 @@ defmodule Masthead.Content.TagTest do
       {:ok, page} =
         Content.create_page(site.id, %{
           "title" => "Blog",
-          "format" => "blog",
+          "format" => "theme",
+          "template" => "blog",
           "filter_tag_ids" => [to_string(news.id)]
         })
 

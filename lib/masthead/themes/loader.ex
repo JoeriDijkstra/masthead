@@ -16,7 +16,12 @@ defmodule Masthead.Themes.Loader do
   alias Masthead.Themes.{Manifest, Sandbox, Theme}
 
   @cache_key __MODULE__
-  @template_names ~w(layout index post page blog not_found)
+  # The fixed templates every theme must provide. `blog` is no longer
+  # required — it moved into the `templates/pages/` folder as a theme page —
+  # but it's still loaded *optionally* (see `read_templates!/1`) so themes
+  # uploaded before that change keep rendering their old `blog.liquid`.
+  @template_names ~w(layout index post page not_found)
+  @optional_template_names ~w(blog)
 
   @typedoc "Cached entry shape stored in :persistent_term."
   @type entry :: %{
@@ -24,6 +29,8 @@ defmodule Masthead.Themes.Loader do
           manifest: Manifest.t(),
           css: String.t(),
           templates: %{atom() => Solid.Template.t()},
+          page_templates: %{String.t() => Solid.Template.t()},
+          page_configs: %{String.t() => Manifest.page_config()},
           asset_base: String.t()
         }
 
@@ -62,12 +69,17 @@ defmodule Masthead.Themes.Loader do
   @spec read_from_source!(Theme.t()) :: entry()
   def read_from_source!(%Theme{source: "built_in", storage_path: path} = theme) do
     reader = priv_reader(path)
-    read_with(theme, reader, asset_base_for(path))
+    # Built-ins are on disk, so we can list the pages/ folder directly.
+    read_with(theme, reader, asset_base_for(path), priv_page_template_names(path))
   end
 
-  def read_from_source!(%Theme{source: "uploaded", storage_path: path} = theme) do
+  def read_from_source!(
+        %Theme{source: "uploaded", storage_path: path, manifest: manifest} = theme
+      ) do
     reader = storage_reader(path)
-    read_with(theme, reader, asset_base_for(path))
+    # Object storage can't be listed, so uploaded themes carry the discovered
+    # page-template names in their persisted manifest (written at install time).
+    read_with(theme, reader, asset_base_for(path), manifest_page_template_names(manifest))
   end
 
   @doc """
@@ -78,19 +90,42 @@ defmodule Masthead.Themes.Loader do
           manifest: Manifest.t(),
           css: String.t(),
           templates: %{atom() => Solid.Template.t()},
+          page_template_names: [String.t()],
+          page_configs: %{String.t() => Manifest.page_config()},
           storage_path: String.t()
         }
   def read_built_in_source!(slug) when is_binary(slug) do
     storage_path = Path.join("themes", slug)
     reader = priv_reader(storage_path)
+    page_template_names = priv_page_template_names(storage_path)
 
     %{
       manifest: read_manifest!(reader),
       templates: read_templates!(reader),
       css: read_css!(reader),
+      # The seed task persists these into the DB manifest so the admin UI and
+      # the uploaded-theme load path can find the pages without a glob.
+      page_template_names: page_template_names,
+      page_configs: read_page_configs!(reader, page_template_names),
       storage_path: storage_path
     }
   end
+
+  @doc """
+  Return the page-template names a manifest map declares (the list persisted
+  by the seed task / package installer). Handles both string-keyed (uploaded)
+  and atom-keyed (built-in seed) manifest maps. Defensive against a manifest
+  predating the pages feature — returns `[]`.
+  """
+  @spec manifest_page_template_names(map() | nil) :: [String.t()]
+  def manifest_page_template_names(%{} = manifest) do
+    case Map.get(manifest, "page_templates", Map.get(manifest, :page_templates, [])) do
+      list when is_list(list) -> Enum.filter(list, &is_binary/1)
+      _ -> []
+    end
+  end
+
+  def manifest_page_template_names(_), do: []
 
   # ---- internal ----
 
@@ -120,11 +155,13 @@ defmodule Masthead.Themes.Loader do
     entry
   end
 
-  defp read_with(%Theme{} = theme, reader, asset_base) do
+  defp read_with(%Theme{} = theme, reader, asset_base, page_template_names) do
     %{
       theme: theme,
       manifest: read_manifest!(reader),
       templates: read_templates!(reader),
+      page_templates: read_page_templates!(reader, page_template_names),
+      page_configs: read_page_configs!(reader, page_template_names),
       css: read_css!(reader),
       asset_base: asset_base
     }
@@ -144,20 +181,98 @@ defmodule Masthead.Themes.Loader do
   end
 
   defp read_templates!(reader) do
-    Map.new(@template_names, fn name ->
+    required =
+      Map.new(@template_names, fn name ->
+        rel = "templates/" <> name <> ".liquid"
+
+        case reader.(rel) do
+          {:ok, body} ->
+            case Sandbox.parse(body) do
+              {:ok, template} -> {String.to_atom(name), template}
+              {:error, err} -> raise "could not parse #{rel}: #{inspect(err)}"
+            end
+
+          {:error, reason} ->
+            raise "missing template #{rel}: #{inspect(reason)}"
+        end
+      end)
+
+    # Optional fixed templates (e.g. legacy `blog`) are loaded only when
+    # present so older uploaded themes keep working without forcing a re-upload.
+    Enum.reduce(@optional_template_names, required, fn name, acc ->
       rel = "templates/" <> name <> ".liquid"
 
       case reader.(rel) do
         {:ok, body} ->
           case Sandbox.parse(body) do
-            {:ok, template} -> {String.to_atom(name), template}
+            {:ok, template} -> Map.put(acc, String.to_atom(name), template)
+            {:error, err} -> raise "could not parse #{rel}: #{inspect(err)}"
+          end
+
+        {:error, _reason} ->
+          acc
+      end
+    end)
+  end
+
+  # Page templates live in `templates/pages/<name>.liquid`. Names are
+  # user-controlled (a theme author's file names), so they're kept as STRING
+  # keys — never `String.to_atom/1`, which would let an uploaded theme exhaust
+  # the atom table.
+  defp read_page_templates!(reader, names) when is_list(names) do
+    Map.new(names, fn name ->
+      rel = "templates/pages/" <> name <> ".liquid"
+
+      case reader.(rel) do
+        {:ok, body} ->
+          case Sandbox.parse(body) do
+            {:ok, template} -> {name, template}
             {:error, err} -> raise "could not parse #{rel}: #{inspect(err)}"
           end
 
         {:error, reason} ->
-          raise "missing template #{rel}: #{inspect(reason)}"
+          raise "missing page template #{rel}: #{inspect(reason)}"
       end
     end)
+  end
+
+  # A page template may carry a sidecar `templates/pages/<name>.json` declaring
+  # its label/description/metadata. The file is optional (no entry when absent);
+  # a present-but-invalid one raises, like a bad manifest/template.
+  defp read_page_configs!(reader, names) when is_list(names) do
+    names
+    |> Enum.reduce(%{}, fn name, acc ->
+      rel = "templates/pages/" <> name <> ".json"
+
+      case reader.(rel) do
+        {:ok, body} ->
+          case Manifest.parse_page_config(body) do
+            {:ok, config} -> Map.put(acc, name, config)
+            {:error, errors} -> raise "invalid page config #{rel}: #{Enum.join(errors, ", ")}"
+          end
+
+        {:error, _reason} ->
+          acc
+      end
+    end)
+  end
+
+  # List the `<name>` of every `templates/pages/<name>.liquid` for a built-in
+  # theme (priv disk). Returns [] when the folder is absent.
+  defp priv_page_template_names(storage_path) do
+    dir =
+      Path.join([:code.priv_dir(:masthead) |> to_string(), storage_path, "templates", "pages"])
+
+    case File.ls(dir) do
+      {:ok, entries} ->
+        entries
+        |> Enum.filter(&String.ends_with?(&1, ".liquid"))
+        |> Enum.map(&Path.rootname(&1, ".liquid"))
+        |> Enum.sort()
+
+      {:error, _} ->
+        []
+    end
   end
 
   defp read_css!(reader) do

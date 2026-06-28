@@ -3,7 +3,7 @@ defmodule Masthead.Themes.Renderer do
   Top-level theme render API.
 
   The public controller calls one of `render_index/1`, `render_post/1`,
-  `render_page/1`, `render_blog/1`, `render_not_found/1` with a plain map
+  `render_page/1`, `render_theme_page/1`, `render_not_found/1` with a plain map
   of assigns. The renderer projects the assigns through `Presenter`,
   composes the Liquid context, renders the target template, wraps it in
   the layout, and returns an iodata body ready to send.
@@ -11,6 +11,8 @@ defmodule Masthead.Themes.Renderer do
   All rendering is sandboxed via `Masthead.Themes.Sandbox` — templates can't
   reach Elixir, the file system, or the database.
   """
+
+  require Logger
 
   alias Masthead.Content
   alias Masthead.Themes
@@ -20,9 +22,9 @@ defmodule Masthead.Themes.Renderer do
   @doc """
   Render the site homepage (post list).
 
-  Like `render_blog/1`, `tags`/`current_tag` are exposed (optional) so a theme
-  can render a tag-filter bar on the index. A theme gates the bar on its own
-  `show_tags` token; the data is always supplied.
+  Like `render_theme_page/1`, `tags`/`current_tag` are exposed (optional) so a
+  theme can render a tag-filter bar on the index. A theme gates the bar on its
+  own `show_tags` token; the data is always supplied.
   """
   def render_index(%{site: site, posts: posts, pages: pages} = assigns) do
     current_tag = Map.get(assigns, :current_tag)
@@ -78,25 +80,23 @@ defmodule Masthead.Themes.Renderer do
   end
 
   @doc """
-  Render a blog-format page: intro + post list.
-
-  `tags` (the set the page can be filtered by) and `current_tag` (the active
-  filter, if any) are exposed so a theme can render its own tag-filter UI.
-  Both are optional; a page that doesn't surface a filter simply ignores them.
+  Render a theme page: a page whose layout is a Liquid template from the
+  theme's `templates/pages/` folder (chosen via `page.template`). Theme pages
+  have no editable body; they always receive the full (tag-filtered) post list,
+  plus `tags`/`current_tag` so a template can render its own filter UI — which
+  is how the former built-in "blog" format is now expressed as a theme page.
   """
-  def render_blog(
-        %{site: site, page: page, posts: posts, body_html: body_html, pages: pages} = assigns
-      ) do
+  def render_theme_page(%{site: site, page: page, posts: posts, pages: pages} = assigns) do
     current_tag = Map.get(assigns, :current_tag)
 
-    render(site, :blog, %{
+    render(site, {:page_template, page.template}, %{
       "page" => Presenter.page(page),
       "posts" => Presenter.posts(posts),
       "pages" => Presenter.pages(pages),
       "tags" => Presenter.tags(Map.get(assigns, :tags, []), current_tag && current_tag.slug),
       "current_tag" => Presenter.tag(current_tag),
       "post" => nil,
-      "body_html" => body_html
+      "body_html" => ""
     })
   end
 
@@ -162,13 +162,13 @@ defmodule Masthead.Themes.Renderer do
       }
     }
 
-    inner_template = Map.fetch!(entry.templates, target)
+    inner_template = fetch_template!(entry, target)
     layout_template = Map.fetch!(entry.templates, :layout)
 
     inner_context =
       base_context
       |> Map.merge(target_assigns)
-      |> compose_page_metadata(entry.manifest)
+      |> compose_page_metadata(entry, site)
       |> render_liquid_body(Keyword.get(opts, :liquid_body))
 
     {:ok, inner_iodata, _errs} = Sandbox.render(inner_template, inner_context)
@@ -178,6 +178,35 @@ defmodule Masthead.Themes.Renderer do
     {:ok, layout_iodata, _errs} = Sandbox.render(layout_template, layout_context)
 
     IO.iodata_to_binary(layout_iodata)
+  end
+
+  # Pick the inner template for a render target. A plain atom is one of the
+  # fixed templates; `{:page_template, name}` is a theme page from the
+  # `templates/pages/` folder. A theme page whose template is missing in the
+  # current theme (theme switch, or the template was removed on a theme
+  # update) falls back to the legacy `:blog` template if it's named "blog",
+  # otherwise to the generic `:page` template — so the page still renders
+  # rather than 500-ing.
+  defp fetch_template!(entry, target) when is_atom(target) do
+    Map.fetch!(entry.templates, target)
+  end
+
+  defp fetch_template!(entry, {:page_template, name}) do
+    cond do
+      is_binary(name) and Map.has_key?(entry.page_templates, name) ->
+        entry.page_templates[name]
+
+      name == "blog" and Map.has_key?(entry.templates, :blog) ->
+        entry.templates[:blog]
+
+      true ->
+        Logger.warning(
+          "theme page template #{inspect(name)} not found in theme #{entry.theme.slug}; " <>
+            "falling back to :page"
+        )
+
+        Map.fetch!(entry.templates, :page)
+    end
   end
 
   # An "html" post/page body is itself Liquid: render it against the same
@@ -232,13 +261,81 @@ defmodule Masthead.Themes.Renderer do
   # templates can read `page.metadata.<key>` and always see a value (the
   # manifest default if the page has no override). Unknown keys on the
   # page survive — theme-switch resilience comes from the manifest layer.
-  defp compose_page_metadata(%{"page" => %{} = page} = context, manifest) do
+  # A theme page resolves its overrides against its sidecar config's field
+  # schema (`templates/pages/<template>.json`); every other page uses the
+  # theme's global `metadata` schema.
+  defp compose_page_metadata(
+         %{"page" => %{"template" => template} = page} = context,
+         entry,
+         site
+       )
+       when is_binary(template) and template != "" do
+    fields = page_config_fields(entry, template)
+    apply_effective(context, page, fields, site)
+  end
+
+  defp compose_page_metadata(%{"page" => %{} = page} = context, entry, site) do
+    apply_effective(context, page, entry.manifest.metadata, site)
+  end
+
+  defp compose_page_metadata(context, _entry, _site), do: context
+
+  # The settings field schema for a theme page comes from its sidecar config
+  # (`templates/pages/<name>.json`), or [] when the page has no config.
+  defp page_config_fields(entry, template) do
+    case Map.get(entry.page_configs, template) do
+      %{metadata: fields} when is_list(fields) -> fields
+      _ -> []
+    end
+  end
+
+  defp apply_effective(context, page, fields, site) do
     raw = Map.get(page, "metadata", %{})
-    effective = Manifest.effective_metadata(manifest, raw)
+
+    effective =
+      fields
+      |> Manifest.merge_fields(raw)
+      |> resolve_file_metadata(fields, site)
+
     Map.put(context, "page", Map.put(page, "metadata", effective))
   end
 
-  defp compose_page_metadata(context, _manifest), do: context
+  # Like file tokens, a `file`-typed metadata field stores an upload id; swap it
+  # for the upload's public URL so templates can use `page.metadata.<key>`
+  # directly. A blank or dangling id resolves to "".
+  defp resolve_file_metadata(effective, fields, site) when is_map(effective) do
+    Enum.reduce(fields, effective, fn field, acc ->
+      case field.type do
+        "file" ->
+          Map.put(acc, field.key, resolve_upload_url(Map.get(acc, field.key), site))
+
+        "object" ->
+          obj = Map.get(acc, field.key)
+
+          if is_map(obj),
+            do: Map.put(acc, field.key, resolve_file_metadata(obj, field.fields, site)),
+            else: acc
+
+        "list" ->
+          items = Map.get(acc, field.key)
+
+          if is_list(items) do
+            Map.put(
+              acc,
+              field.key,
+              Enum.map(items, &resolve_file_metadata(&1, field.fields, site))
+            )
+          else
+            acc
+          end
+
+        _ ->
+          acc
+      end
+    end)
+  end
+
+  defp resolve_file_metadata(other, _fields, _site), do: other
 
   defp resolve_theme(%Masthead.Sites.Site{theme_id: id}) when is_integer(id) do
     Themes.get_theme!(id)

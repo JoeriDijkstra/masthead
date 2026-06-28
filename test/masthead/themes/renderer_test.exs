@@ -585,6 +585,222 @@ defmodule Masthead.Themes.RendererTest do
     end
   end
 
+  describe "render_theme_page/1" do
+    setup %{user: user, site: site} do
+      slug = "pagetest#{System.unique_integer([:positive])}"
+      zip_path = build_theme_page_zip(slug)
+
+      {:ok, theme} = Masthead.Themes.Package.install(zip_path, user.id)
+      File.rm(zip_path)
+      {:ok, site} = Sites.update_settings(site, %{"theme_id" => theme.id})
+      {:ok, theme: theme, site: Sites.get_site!(site.id)}
+    end
+
+    test "renders the chosen page template with the post list", %{site: site} do
+      {:ok, page} =
+        Content.create_page(site.id, %{
+          "title" => "Writing",
+          "format" => "theme",
+          "template" => "blog",
+          "published" => true
+        })
+
+      out =
+        Renderer.render_theme_page(%{
+          site: site,
+          page: page,
+          posts: Content.list_published_posts(site.id),
+          pages: [],
+          tags: [],
+          current_tag: nil
+        })
+
+      assert out =~ "BLOG PAGE: Writing"
+      assert out =~ "Hello"
+    end
+
+    test "resolves page_metadata for the template (not the global metadata)", %{site: site} do
+      {:ok, page} =
+        Content.create_page(site.id, %{
+          "title" => "Writing",
+          "format" => "theme",
+          "template" => "blog",
+          "published" => true,
+          "metadata" => %{"layout" => "wide"}
+        })
+
+      out =
+        Renderer.render_theme_page(%{
+          site: site,
+          page: page,
+          posts: [],
+          pages: [],
+          tags: [],
+          current_tag: nil
+        })
+
+      assert out =~ ~s(data-layout="wide")
+    end
+
+    test "a file-typed page_metadata field resolves the upload id to a URL", %{site: site} do
+      upload = create_upload(site, "hero.png")
+
+      {:ok, page} =
+        Content.create_page(site.id, %{
+          "title" => "Writing",
+          "format" => "theme",
+          "template" => "blog",
+          "published" => true,
+          "metadata" => %{"hero_image" => to_string(upload.id)}
+        })
+
+      out =
+        Renderer.render_theme_page(%{
+          site: site,
+          page: page,
+          posts: [],
+          pages: [],
+          tags: [],
+          current_tag: nil
+        })
+
+      assert out =~ ~s(data-hero="#{Uploads.url(upload)}")
+      refute out =~ ~s(data-hero="#{upload.id}")
+    end
+
+    test "object + list fields render, with file ids resolved at every depth", %{site: site} do
+      hero_img = create_upload(site, "hero.png")
+      photo = create_upload(site, "ada.png")
+
+      {:ok, page} =
+        Content.create_page(site.id, %{
+          "title" => "Showcase",
+          "format" => "theme",
+          "template" => "showcase",
+          "published" => true,
+          "metadata" => %{
+            "hero" => %{"title" => "Welcome", "image" => to_string(hero_img.id)},
+            "crew" => [
+              %{"name" => "Ada", "photo" => to_string(photo.id)},
+              %{"name" => "Lin"}
+            ]
+          }
+        })
+
+      out =
+        Renderer.render_theme_page(%{
+          site: site,
+          page: page,
+          posts: [],
+          pages: [],
+          tags: [],
+          current_tag: nil
+        })
+
+      # Object: nested file id → URL; nested string passes through.
+      assert out =~ ~s(data-hero-img="#{Uploads.url(hero_img)}")
+      assert out =~ ~s(data-hero-title="Welcome")
+      # List: iterated, with each item's file id → URL.
+      assert out =~ ~s(<span data-photo="#{Uploads.url(photo)}">Ada</span>)
+      assert out =~ ~s(<span data-photo="">Lin</span>)
+    end
+
+    test "falls back to :page when the chosen template is missing", %{site: site} do
+      {:ok, page} =
+        Content.create_page(site.id, %{
+          "title" => "Gone",
+          "format" => "theme",
+          "template" => "does-not-exist",
+          "published" => true
+        })
+
+      out =
+        Renderer.render_theme_page(%{
+          site: site,
+          page: page,
+          posts: [],
+          pages: [],
+          tags: [],
+          current_tag: nil
+        })
+
+      # The generic page template renders rather than crashing.
+      assert out =~ "GENERIC PAGE: Gone"
+    end
+  end
+
+  # A theme exposing one page template (blog) with its own page_metadata.
+  defp build_theme_page_zip(slug) do
+    files = %{
+      "manifest.json" =>
+        Jason.encode!(%{
+          "name" => "Pages " <> slug,
+          "slug" => slug,
+          "version" => "1.0.0",
+          "tokens" => [],
+          "metadata" => []
+        }),
+      "templates/layout.liquid" => "<html><head></head><body>{{ content }}</body></html>",
+      "templates/index.liquid" => "<h1>{{ site.name | escape }}</h1>",
+      "templates/post.liquid" => "<article>{{ body_html }}</article>",
+      "templates/page.liquid" => "<article>GENERIC PAGE: {{ page.title | escape }}</article>",
+      "templates/not_found.liquid" => "<h1>Not found</h1>",
+      "templates/pages/blog.liquid" =>
+        ~s(<section data-layout="{{ page.metadata.layout }}" data-hero="{{ page.metadata.hero_image }}">) <>
+          "BLOG PAGE: {{ page.title | escape }}" <>
+          "{% for p in posts %}<li>{{ p.title | escape }}</li>{% endfor %}</section>",
+      # The page's settings now live in a sidecar config, not the manifest.
+      "templates/pages/blog.json" =>
+        Jason.encode!(%{
+          "label" => "Blog",
+          "metadata" => [
+            %{
+              "key" => "layout",
+              "label" => "Layout",
+              "type" => "select",
+              "options" => ["contained", "wide"],
+              "default" => "contained"
+            },
+            %{"key" => "hero_image", "label" => "Hero", "type" => "file", "default" => ""}
+          ]
+        }),
+      "templates/pages/showcase.liquid" =>
+        ~s(<div data-hero-img="{{ page.metadata.hero.image }}" data-hero-title="{{ page.metadata.hero.title | escape }}">) <>
+          "{% for m in page.metadata.crew %}<span data-photo=\"{{ m.photo }}\">{{ m.name | escape }}</span>{% endfor %}</div>",
+      "templates/pages/showcase.json" =>
+        Jason.encode!(%{
+          "label" => "Showcase",
+          "metadata" => [
+            %{
+              "key" => "hero",
+              "label" => "Hero",
+              "type" => "object",
+              "fields" => [
+                %{"key" => "title", "label" => "T", "type" => "string", "default" => "Hi"},
+                %{"key" => "image", "label" => "I", "type" => "file", "default" => ""}
+              ]
+            },
+            %{
+              "key" => "crew",
+              "label" => "Crew",
+              "type" => "list",
+              "default" => [],
+              "fields" => [
+                %{"key" => "name", "label" => "N", "type" => "string", "default" => ""},
+                %{"key" => "photo", "label" => "P", "type" => "file", "default" => ""}
+              ]
+            }
+          ]
+        }),
+      "theme.css" => "body { background: white; }"
+    }
+
+    tmp = Path.join(System.tmp_dir!(), "pagetheme-#{System.unique_integer([:positive])}.zip")
+    entries = Enum.map(files, fn {n, b} -> {String.to_charlist(n), b} end)
+    {:ok, _} = :zip.create(String.to_charlist(tmp), entries)
+    tmp
+  end
+
   # Helper: store an upload for the site via the real Uploads pipeline so
   # the resolved URL matches what the renderer produces in this env.
   defp create_upload(site, filename) do

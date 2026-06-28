@@ -33,7 +33,10 @@ defmodule Masthead.Themes.Package do
   @max_zip_bytes 5 * 1024 * 1024
   @max_uncompressed_bytes 25 * 1024 * 1024
   @max_files 200
-  @template_names ~w(layout index post page blog not_found)
+  @template_names ~w(layout index post page not_found)
+  # `blog` is no longer required (it moved to templates/pages/), but a theme
+  # may still ship it; load it when present for back-compat.
+  @optional_template_names ~w(blog)
   @allowed_asset_extensions ~w(.css .js .mjs .png .jpg .jpeg .gif .webp .svg .woff .woff2 .ttf .otf .ico .json)
 
   @doc """
@@ -154,12 +157,24 @@ defmodule Masthead.Themes.Package do
   defp read_bundle(root) do
     with {:ok, manifest} <- read_manifest(root),
          {:ok, templates} <- read_templates(root),
+         {:ok, page_templates} <- read_page_templates(root),
+         {:ok, page_configs} <- read_page_configs(root),
          {:ok, css} <- read_css(root) do
       asset_files = list_asset_files(root)
 
       case asset_files do
         {:ok, assets} ->
-          {:ok, %{manifest: manifest, templates: templates, css: css, assets: assets, root: root}}
+          {:ok,
+           %{
+             manifest: manifest,
+             templates: templates,
+             page_templates: page_templates,
+             page_template_names: Map.keys(page_templates) |> Enum.sort(),
+             page_configs: page_configs,
+             css: css,
+             assets: assets,
+             root: root
+           }}
 
         {:error, _} = err ->
           err
@@ -182,6 +197,12 @@ defmodule Masthead.Themes.Package do
   end
 
   defp read_templates(root) do
+    with {:ok, required} <- read_required_templates(root) do
+      read_optional_templates(root, required)
+    end
+  end
+
+  defp read_required_templates(root) do
     Enum.reduce_while(@template_names, {:ok, %{}}, fn name, {:ok, acc} ->
       path = Path.join([root, "templates", name <> ".liquid"])
 
@@ -199,6 +220,100 @@ defmodule Masthead.Themes.Package do
           {:halt, {:error, {:template_unreadable, name, reason}}}
       end
     end)
+  end
+
+  defp read_optional_templates(root, acc) do
+    Enum.reduce_while(@optional_template_names, {:ok, acc}, fn name, {:ok, acc} ->
+      path = Path.join([root, "templates", name <> ".liquid"])
+
+      case File.read(path) do
+        {:ok, body} ->
+          case Sandbox.parse(body) do
+            {:ok, template} -> {:cont, {:ok, Map.put(acc, String.to_atom(name), template)}}
+            {:error, err} -> {:halt, {:error, {:template_invalid, name, err}}}
+          end
+
+        {:error, :enoent} ->
+          {:cont, {:ok, acc}}
+
+        {:error, reason} ->
+          {:halt, {:error, {:template_unreadable, name, reason}}}
+      end
+    end)
+  end
+
+  # Theme pages live in templates/pages/<name>.liquid. Names are author-chosen,
+  # so they're kept as string keys (never atoms) here and in the cache.
+  defp read_page_templates(root) do
+    dir = Path.join([root, "templates", "pages"])
+
+    case File.dir?(dir) do
+      false ->
+        {:ok, %{}}
+
+      true ->
+        names = page_template_names(dir)
+
+        Enum.reduce_while(names, {:ok, %{}}, fn name, {:ok, acc} ->
+          path = Path.join(dir, name <> ".liquid")
+
+          case File.read(path) do
+            {:ok, body} ->
+              case Sandbox.parse(body) do
+                {:ok, template} -> {:cont, {:ok, Map.put(acc, name, template)}}
+                {:error, err} -> {:halt, {:error, {:page_template_invalid, name, err}}}
+              end
+
+            {:error, reason} ->
+              {:halt, {:error, {:page_template_unreadable, name, reason}}}
+          end
+        end)
+    end
+  end
+
+  defp page_template_names(dir) do
+    dir
+    |> Path.join("*.liquid")
+    |> Path.wildcard()
+    |> Enum.reject(&File.dir?/1)
+    |> Enum.map(&Path.basename(&1, ".liquid"))
+    |> Enum.sort()
+  end
+
+  # Each `templates/pages/<name>.json` is an optional sidecar config (label,
+  # description, metadata). Validated strictly: a present-but-invalid one fails
+  # the install, like a bad manifest/template.
+  defp read_page_configs(root) do
+    dir = Path.join([root, "templates", "pages"])
+
+    case File.dir?(dir) do
+      false ->
+        {:ok, %{}}
+
+      true ->
+        names =
+          dir
+          |> Path.join("*.json")
+          |> Path.wildcard()
+          |> Enum.reject(&File.dir?/1)
+          |> Enum.map(&Path.basename(&1, ".json"))
+          |> Enum.sort()
+
+        Enum.reduce_while(names, {:ok, %{}}, fn name, {:ok, acc} ->
+          path = Path.join(dir, name <> ".json")
+
+          case File.read(path) do
+            {:ok, body} ->
+              case Manifest.parse_page_config(body) do
+                {:ok, config} -> {:cont, {:ok, Map.put(acc, name, config)}}
+                {:error, errors} -> {:halt, {:error, {:page_config_invalid, name, errors}}}
+              end
+
+            {:error, reason} ->
+              {:halt, {:error, {:page_config_unreadable, name, reason}}}
+          end
+        end)
+    end
   end
 
   defp read_css(root) do
@@ -299,7 +414,7 @@ defmodule Masthead.Themes.Package do
           version: manifest.version,
           owner_id: owner_id,
           storage_path: storage_path,
-          manifest: manifest_to_map(manifest)
+          manifest: manifest_to_map(manifest, bundle.page_template_names, bundle.page_configs)
         }
 
         case persist(action, attrs) do
@@ -354,9 +469,24 @@ defmodule Masthead.Themes.Package do
     manifest_file = {"manifest.json", Path.join(bundle.root, "manifest.json")}
     css_file = {"theme.css", Path.join(bundle.root, "theme.css")}
 
+    # Only list fixed templates that were actually read (optional `blog` may be
+    # absent). `bundle.templates` is keyed by atom; reuse those names.
     template_files =
-      Enum.map(@template_names, fn name ->
-        rel = Path.join("templates", name <> ".liquid")
+      Enum.map(Map.keys(bundle.templates), fn name ->
+        rel = Path.join("templates", Atom.to_string(name) <> ".liquid")
+        {rel, Path.join(bundle.root, rel)}
+      end)
+
+    page_template_files =
+      Enum.map(bundle.page_template_names, fn name ->
+        rel = Path.join(["templates", "pages", name <> ".liquid"])
+        {rel, Path.join(bundle.root, rel)}
+      end)
+
+    # Sidecar configs (only the names that actually have a .json).
+    page_config_files =
+      Enum.map(Map.keys(bundle.page_configs), fn name ->
+        rel = Path.join(["templates", "pages", name <> ".json"])
         {rel, Path.join(bundle.root, rel)}
       end)
 
@@ -365,7 +495,8 @@ defmodule Masthead.Themes.Package do
         {Path.join("assets", rel), abs}
       end)
 
-    [manifest_file, css_file | template_files] ++ asset_files
+    [manifest_file, css_file | template_files] ++
+      page_template_files ++ page_config_files ++ asset_files
   end
 
   defp cleanup_storage(_storage_path, _bundle) do
@@ -394,18 +525,21 @@ defmodule Masthead.Themes.Package do
             "category" => t.category
           }
         end),
-      "metadata" =>
-        Enum.map(m.metadata, fn f ->
-          %{
-            "key" => f.key,
-            "label" => f.label,
-            "type" => f.type,
-            "default" => f.default,
-            "description" => f.description,
-            "options" => f.options
-          }
-        end)
+      "metadata" => Enum.map(m.metadata, &Manifest.field_to_map/1)
     }
+  end
+
+  # Persist the installed page-template names and their sidecar configs so the
+  # render path / admin UI can find theme pages (and their settings) without
+  # listing object storage.
+  defp manifest_to_map(%Manifest{} = m, page_template_names, page_configs) do
+    serialized =
+      Map.new(page_configs, fn {name, config} -> {name, Manifest.page_config_to_map(config)} end)
+
+    m
+    |> manifest_to_map()
+    |> Map.put("page_templates", page_template_names)
+    |> Map.put("page_configs", serialized)
   end
 
   # ---- step 8: warm cache ----
@@ -415,6 +549,8 @@ defmodule Masthead.Themes.Package do
       theme: theme,
       manifest: bundle.manifest,
       templates: bundle.templates,
+      page_templates: bundle.page_templates,
+      page_configs: bundle.page_configs,
       css: bundle.css,
       asset_base: "/uploads/" <> theme.storage_path <> "/assets"
     }

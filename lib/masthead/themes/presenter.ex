@@ -71,6 +71,8 @@ defmodule Masthead.Themes.Presenter do
       "title" => pg.title,
       "slug" => pg.slug,
       "format" => pg.format,
+      # For theme pages: the chosen templates/pages/<template>.liquid name.
+      "template" => pg.template,
       "url" => "/" <> pg.slug,
       # Raw override map. The Renderer merges manifest defaults on top of
       # this before exposing it to templates, so theme authors can read
