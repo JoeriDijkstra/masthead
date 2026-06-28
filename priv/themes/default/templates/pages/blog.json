@@ -1,0 +1,21 @@
+{
+  "label": "Blog",
+  "description": "Lists your published posts, with optional tag filtering. Set it as the homepage to make it your front page.",
+  "metadata": [
+    {
+      "key": "layout",
+      "label": "Page layout",
+      "type": "select",
+      "options": ["contained", "wide"],
+      "default": "contained",
+      "description": "Use 'wide' to escape the max-width container for the post list."
+    },
+    {
+      "key": "show_navigation",
+      "label": "Show site navigation",
+      "type": "boolean",
+      "default": true,
+      "description": "Untick to hide the top nav bar on this page only."
+    }
+  ]
+}

@@ -1246,7 +1246,7 @@ button.danger:hover { filter: brightness(0.92); }
 }
 .format-tag-markdown { background: var(--accent-soft); color: var(--accent-strong); }
 .format-tag-html { background: var(--violet-soft); color: var(--violet); }
-.format-tag-blog { background: var(--good-soft); color: #166534; }
+.format-tag-theme { background: var(--good-soft); color: #166534; }
 
 /* Tags — management list in settings */
 .tag-manage-list {
@@ -1496,6 +1496,11 @@ button.danger:hover { filter: brightness(0.92); }
 .step-done .step-num { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .step-done .step-label { color: var(--fg-soft); }
 .step-done::after { background: var(--accent); }
+/* Forward steps are unreachable until the format selection is complete
+   (e.g. a theme page still needs a template). */
+.stepper .step-disabled { cursor: not-allowed; opacity: 0.45; }
+.stepper .step-disabled:hover .step-num { border-color: var(--rule); }
+.stepper .step-disabled:hover .step-label { color: var(--muted); }
 
 /* On narrow screens the row of labelled steps overflows; drop the labels and
    keep numbers + connectors so progress is still readable at a glance. */
@@ -1531,6 +1536,7 @@ button.danger:hover { filter: brightness(0.92); }
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-height: 248px;
 }
 .format-card:hover:not([disabled]):not(.format-card-selected) {
   transform: translateY(-3px);
@@ -1583,6 +1589,7 @@ button.danger:hover { filter: brightness(0.92); }
 .format-icon svg { width: 26px; height: 26px; }
 .format-pill {
   align-self: flex-start;
+  margin-top: auto;
   background: var(--accent-soft);
   color: var(--accent);
   padding: 0.2rem 0.65rem;
@@ -1593,6 +1600,28 @@ button.danger:hover { filter: brightness(0.92); }
   text-transform: uppercase;
 }
 .format-pill-muted { background: var(--bg); color: var(--muted); }
+/* On a selected card the body turns accent-soft, so the accent-soft pill would
+   read as blue-on-blue — give it a solid white chip to keep it legible. */
+.format-card-selected .format-pill {
+  background: var(--card);
+  border: 1px solid var(--accent);
+}
+
+/* The Theme page card holds a template dropdown instead of being a single
+   click target, so pin it to the bottom and style it like a form control. */
+.format-card-select { margin: 0; margin-top: auto; }
+.format-card-select select {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--card);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.format-card-select select:focus { outline: none; border-color: var(--accent); }
+.format-card-select select:disabled { cursor: not-allowed; opacity: 0.7; }
 
 .wizard-footer {
   display: flex;
@@ -3578,3 +3607,50 @@ button.danger:hover { filter: brightness(0.92); }
 }
 
 /* This file is for your main application CSS */
+
+/* Nested object/list settings fields (theme-page object & list field types) */
+.settings-group-field {
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 1rem 1.1rem 1.15rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.settings-group-field > legend {
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 0 0.4rem;
+}
+.settings-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.settings-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  background: var(--bg, #f8fafc);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+.settings-list-item.is-dragging {
+  opacity: 0.5;
+  border-style: dashed;
+  border-color: var(--accent);
+}
+.settings-list-drag {
+  display: inline-flex;
+  color: var(--muted);
+  cursor: grab;
+  padding-top: 0.4rem;
+}
+.settings-list-drag svg { width: 1rem; height: 1rem; }
+.settings-list-fields { flex: 1; }
+.settings-list-remove { align-self: flex-start; }

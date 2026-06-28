@@ -43,7 +43,9 @@ export const SortableList = {
     el.addEventListener("drop", (e) => {
       e.preventDefault()
       const ids = [...el.querySelectorAll("[data-sortable-id]")].map((li) => li.dataset.sortableId)
-      this.pushEvent(event, {ids})
+      // `key` lets a handler tell which list reordered when several share the
+      // event name; omitted (undefined) for single-list users like previews.
+      this.pushEvent(event, {ids, key: el.dataset.sortableKey})
     })
   },
 

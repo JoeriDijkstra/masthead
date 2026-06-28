@@ -1,8 +1,19 @@
 defmodule Masthead.Themes.PresenterTest do
   use ExUnit.Case, async: true
 
-  alias Masthead.Content.{Post, Tag}
+  alias Masthead.Content.{Page, Post, Tag}
   alias Masthead.Themes.Presenter
+
+  test "page/1 projects the chosen theme-page template" do
+    projected = Presenter.page(%Page{title: "T", slug: "t", format: "theme", template: "blog"})
+    assert projected["template"] == "blog"
+    assert projected["format"] == "theme"
+    assert projected["url"] == "/t"
+  end
+
+  test "page/1 leaves template nil for a markdown page" do
+    assert Presenter.page(%Page{title: "T", slug: "t", format: "markdown"})["template"] == nil
+  end
 
   test "post/1 projects loaded tags as name/slug maps" do
     post = %Post{

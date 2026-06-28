@@ -84,10 +84,14 @@ defmodule MastheadWeb.PublicController do
     conn |> put_status(:not_found) |> send_themed(body)
   end
 
-  defp render_page_or_404(conn, %{format: "blog"} = page, pages) do
+  defp render_page_or_404(conn, %{format: "theme"} = page, pages) do
     site = conn.assigns.current_site
     page_tag_ids = Enum.map(page.filter_tags, & &1.id)
 
+    # Every theme page receives the full post list, narrowed the same way the
+    # old blog format was: by the page's `filter_tags` and an optional
+    # `?tag=<slug>`. A template that doesn't render a list simply ignores it.
+    #
     # The set of tags this page can be filtered by, exposed to the theme so it
     # can render filter links. When the page restricts to a set of
     # `filter_tags`, that set is the universe; otherwise every site tag is.
@@ -100,16 +104,12 @@ defmodule MastheadWeb.PublicController do
 
     tag_ids = if current_tag, do: [current_tag.id], else: page_tag_ids
     posts = Content.list_published_posts_filtered(site.id, tag_ids)
-    # The body of a blog page is treated as Markdown intro text shown above
-    # the post list. Pass an empty body through harmlessly.
-    body_html = Content.render_body(page.body, "markdown")
 
     body =
-      Renderer.render_blog(%{
+      Renderer.render_theme_page(%{
         site: site,
         page: page,
         posts: posts,
-        body_html: body_html,
         pages: pages,
         tags: filterable,
         current_tag: current_tag
@@ -135,8 +135,8 @@ defmodule MastheadWeb.PublicController do
 
   # The "html" format is Liquid: hand the raw body to the renderer so it's
   # rendered in-context (tokens, logic) and emitted unsanitized. "markdown"
-  # is converted to sanitized HTML up front. (Blog pages are handled in their
-  # own clause, where the body is a Markdown intro.)
+  # is converted to sanitized HTML up front. (Theme pages are handled in their
+  # own clause; they have no body.)
   defp body_assigns(%{format: "html"} = content), do: %{liquid_body: content.body || ""}
   defp body_assigns(content), do: %{body_html: Content.render_body(content.body, content.format)}
 

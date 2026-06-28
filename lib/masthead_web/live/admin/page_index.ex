@@ -26,9 +26,13 @@ defmodule MastheadWeb.AdminLive.PageIndex do
     assign(socket, pages: pages, page_title: "Pages — #{socket.assigns.site.name}")
   end
 
+  defp format_label(%{format: "theme", template: t}) when is_binary(t),
+    do: t |> String.replace(["-", "_"], " ") |> String.capitalize()
+
+  defp format_label(%{format: format}), do: format_label(format)
   defp format_label("markdown"), do: "Markdown"
   defp format_label("html"), do: "HTML"
-  defp format_label("blog"), do: "Blog"
+  defp format_label("theme"), do: "Theme page"
   defp format_label(other), do: other
 
   @impl true
@@ -71,7 +75,7 @@ defmodule MastheadWeb.AdminLive.PageIndex do
               <div class="muted">/{p.slug}</div>
             </td>
             <td data-label="Format">
-              <span class={"format-tag format-tag-" <> p.format}>{format_label(p.format)}</span>
+              <span class={"format-tag format-tag-" <> p.format}>{format_label(p)}</span>
             </td>
             <td data-label="Status">
               <span class={"pill pill-" <> if(p.published, do: "live", else: "draft")}>

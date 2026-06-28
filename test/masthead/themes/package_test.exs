@@ -177,6 +177,127 @@ defmodule Masthead.Themes.PackageTest do
     File.rm(zip_path)
   end
 
+  test "installs page templates + sidecar configs and persists them", %{user: user} do
+    files =
+      valid_files("pages#{System.unique_integer([:positive])}")
+      |> Map.put("templates/pages/blog.liquid", "<h1>{{ page.title | escape }}</h1>")
+      |> Map.put("templates/pages/landing.liquid", "<main>Landing</main>")
+      |> Map.put(
+        "templates/pages/blog.json",
+        Jason.encode!(%{
+          "label" => "Blog",
+          "metadata" => [%{"key" => "x", "label" => "X", "type" => "string", "default" => ""}]
+        })
+      )
+
+    zip_path = build_zip(files)
+    assert {:ok, theme} = Package.install(zip_path, user.id)
+    assert Enum.sort(theme.manifest["page_templates"]) == ["blog", "landing"]
+    # Only the page with a .json gets a config; its label + fields are persisted.
+    assert %{"blog" => %{"label" => "Blog", "metadata" => [%{"key" => "x"}]}} =
+             theme.manifest["page_configs"]
+
+    refute Map.has_key?(theme.manifest["page_configs"], "landing")
+  end
+
+  test "installs and persists an object/list page config", %{user: user} do
+    files =
+      valid_files("nested#{System.unique_integer([:positive])}")
+      |> Map.put("templates/pages/landing.liquid", "<h1>x</h1>")
+      |> Map.put(
+        "templates/pages/landing.json",
+        Jason.encode!(%{
+          "label" => "Landing",
+          "metadata" => [
+            %{
+              "key" => "hero",
+              "label" => "Hero",
+              "type" => "object",
+              "fields" => [
+                %{"key" => "title", "label" => "T", "type" => "string", "default" => ""}
+              ]
+            },
+            %{
+              "key" => "crew",
+              "label" => "Crew",
+              "type" => "list",
+              "item_label" => "Member",
+              "default" => [],
+              "fields" => [
+                %{"key" => "name", "label" => "N", "type" => "string", "default" => ""}
+              ]
+            }
+          ]
+        })
+      )
+
+    zip_path = build_zip(files)
+    assert {:ok, theme} = Package.install(zip_path, user.id)
+    cfg = theme.manifest["page_configs"]["landing"]
+
+    assert [%{"type" => "object", "fields" => [_]}, %{"type" => "list", "item_label" => "Member"}] =
+             cfg["metadata"]
+  end
+
+  test "rejects a page config that nests a container inside a container", %{user: user} do
+    files =
+      valid_files("badnest#{System.unique_integer([:positive])}")
+      |> Map.put("templates/pages/x.liquid", "<h1>x</h1>")
+      |> Map.put(
+        "templates/pages/x.json",
+        Jason.encode!(%{
+          "metadata" => [
+            %{
+              "key" => "a",
+              "label" => "A",
+              "type" => "object",
+              "fields" => [%{"key" => "b", "label" => "B", "type" => "list", "fields" => []}]
+            }
+          ]
+        })
+      )
+
+    zip_path = build_zip(files)
+    assert {:error, {:page_config_invalid, "x", _}} = Package.install(zip_path, user.id)
+  end
+
+  test "rejects an invalid page config", %{user: user} do
+    files =
+      valid_files("badcfg#{System.unique_integer([:positive])}")
+      |> Map.put("templates/pages/blog.liquid", "<h1>x</h1>")
+      |> Map.put(
+        "templates/pages/blog.json",
+        Jason.encode!(%{"metadata" => [%{"key" => "k", "label" => "K", "type" => "weird"}]})
+      )
+
+    zip_path = build_zip(files)
+    assert {:error, {:page_config_invalid, "blog", _}} = Package.install(zip_path, user.id)
+  end
+
+  test "no templates/pages folder yields an empty page_templates list", %{user: user} do
+    zip_path = build_zip(valid_files("nopages#{System.unique_integer([:positive])}"))
+    assert {:ok, theme} = Package.install(zip_path, user.id)
+    assert theme.manifest["page_templates"] == []
+  end
+
+  test "a theme without templates/blog.liquid still installs (blog is optional)", %{user: user} do
+    files =
+      valid_files("noblog#{System.unique_integer([:positive])}")
+      |> Map.delete("templates/blog.liquid")
+
+    zip_path = build_zip(files)
+    assert {:ok, _theme} = Package.install(zip_path, user.id)
+  end
+
+  test "rejects a syntactically invalid page template", %{user: user} do
+    files =
+      valid_files("badpage#{System.unique_integer([:positive])}")
+      |> Map.put("templates/pages/broken.liquid", "{% if %}")
+
+    zip_path = build_zip(files)
+    assert {:error, {:page_template_invalid, "broken", _}} = Package.install(zip_path, user.id)
+  end
+
   # ---- helpers ----
 
   defp put_version(files, version) do

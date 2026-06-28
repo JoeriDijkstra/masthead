@@ -3,7 +3,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
   on_mount {MastheadWeb.AdminLive.Hooks, :load_site}
 
   import MastheadWeb.AdminLive.Components
-  alias Masthead.{Content, Themes}
+  alias Masthead.{Content, Themes, Uploads}
   alias Masthead.Content.Page
 
   @impl true
@@ -21,14 +21,29 @@ defmodule MastheadWeb.AdminLive.PageForm do
 
         :edit ->
           page = Content.get_page!(socket.assigns.site.id, params["id"])
-          # Existing pages open directly on the content step (4). Reaching
-          # the settings step (3) requires the Back button â it's an edit
-          # affordance, not the primary path.
-          {page, page_to_draft(page), "Edit: #{page.title}", 4}
+          # Markdown/HTML pages open on the content step (4); theme pages have
+          # no content step, so they open on Page settings (3). Earlier steps
+          # are reachable via Back.
+          edit_step = if page.format == "theme", do: 3, else: 4
+          {page, page_to_draft(page), "Edit: #{page.title}", edit_step}
       end
 
-    metadata_fields = metadata_fields_for_site(socket.assigns.site)
+    theme_manifest = theme_manifest_for_site(socket.assigns.site)
+    metadata_fields = extract_metadata_fields(theme_manifest)
     has_metadata? = metadata_fields != []
+    page_template_names = Themes.Loader.manifest_page_template_names(theme_manifest)
+
+    # Give any existing list-item metadata fresh `_id`s so the editor can track
+    # them across add/remove/reorder.
+    draft =
+      Map.put(
+        draft,
+        "metadata",
+        hydrate_metadata(
+          draft["metadata"] || %{},
+          settings_fields_for(draft, theme_manifest, metadata_fields)
+        )
+      )
 
     {:ok,
      socket
@@ -39,9 +54,15 @@ defmodule MastheadWeb.AdminLive.PageForm do
        page_title: page_title,
        slug_touched: page != nil,
        show_errors: false,
+       theme_manifest: theme_manifest,
        metadata_fields: metadata_fields,
        has_metadata?: has_metadata?,
-       tags: Content.list_tags(socket.assigns.site.id)
+       page_template_names: page_template_names,
+       page_templates: page_template_options(theme_manifest, page_template_names),
+       allow_theme?: page_template_names != [],
+       tags: Content.list_tags(socket.assigns.site.id),
+       site_uploads: Uploads.list_uploads(socket.assigns.site.id),
+       open_settings_group: nil
      )
      |> maybe_allow_import()
      |> assign_changeset(draft)}
@@ -57,50 +78,173 @@ defmodule MastheadWeb.AdminLive.PageForm do
 
   defp maybe_allow_import(socket), do: socket
 
-  # Pull the metadata schema off the site's current theme. Returns a list
-  # of `%{key, label, type, default, description, options}` maps, or [] if
-  # the theme declares none.
-  defp metadata_fields_for_site(%Masthead.Sites.Site{theme_id: id}) when is_integer(id) do
+  # The site's current theme manifest (a plain map from the DB), or nil.
+  defp theme_manifest_for_site(%Masthead.Sites.Site{theme_id: id}) when is_integer(id) do
     case Themes.get_theme(id) do
-      nil -> []
-      theme -> extract_metadata_fields(theme.manifest)
+      nil -> nil
+      theme -> theme.manifest
     end
   end
 
-  defp metadata_fields_for_site(_), do: []
+  defp theme_manifest_for_site(_), do: nil
 
+  # Pull the global metadata schema off a theme manifest. Returns a list of
+  # `%{key, label, type, default, description, options}` maps, or [].
   defp extract_metadata_fields(%{} = manifest) do
-    list = Map.get(manifest, "metadata", Map.get(manifest, :metadata, []))
-
-    if is_list(list) do
-      Enum.map(list, fn f ->
-        %{
-          key: f["key"] || f[:key],
-          label: f["label"] || f[:label],
-          type: f["type"] || f[:type],
-          default: f["default"] || f[:default],
-          description: f["description"] || f[:description],
-          options: f["options"] || f[:options] || []
-        }
-      end)
-    else
-      []
-    end
+    manifest
+    |> Map.get("metadata", Map.get(manifest, :metadata, []))
+    |> normalize_field_list()
   end
 
   defp extract_metadata_fields(_), do: []
 
+  # A theme page's settings come from its sidecar config
+  # (`templates/pages/<name>.json`), persisted into the DB manifest under
+  # `page_configs` (keyed by template name) at seed / install time.
+  # The DB manifest is string-keyed (jsonb round-trip), so configs are looked up
+  # by the string template name — never String.to_atom on user input.
+  defp page_config(%{} = manifest, template) when is_binary(template) do
+    case Map.get(manifest, "page_configs", Map.get(manifest, :page_configs, %{})) do
+      %{} = configs -> configs[template]
+      _ -> nil
+    end
+  end
+
+  defp page_config(_manifest, _template), do: nil
+
+  defp page_settings_fields(manifest, template) do
+    case page_config(manifest, template) do
+      %{} = cfg -> normalize_field_list(cfg["metadata"] || cfg[:metadata] || [])
+      _ -> []
+    end
+  end
+
+  defp page_setting_label(manifest, template) do
+    case page_config(manifest, template) do
+      %{} = cfg -> cfg["label"] || cfg[:label] || template_label(template)
+      _ -> template_label(template)
+    end
+  end
+
+  defp page_setting_description(manifest, template) do
+    case page_config(manifest, template) do
+      %{} = cfg -> cfg["description"] || cfg[:description]
+      _ -> nil
+    end
+  end
+
+  # The picker list: one `%{name, label}` per page template (label from the
+  # sidecar config, else the humanized file name).
+  defp page_template_options(manifest, names) do
+    Enum.map(names, fn name -> %{name: name, label: page_setting_label(manifest, name)} end)
+  end
+
+  defp normalize_field_list(list) when is_list(list) do
+    Enum.map(list, fn f ->
+      %{
+        key: f["key"] || f[:key],
+        label: f["label"] || f[:label],
+        type: f["type"] || f[:type],
+        default: f["default"] || f[:default],
+        description: f["description"] || f[:description],
+        options: f["options"] || f[:options] || [],
+        category: f["category"] || f[:category],
+        item_label: f["item_label"] || f[:item_label],
+        fields: normalize_field_list(f["fields"] || f[:fields])
+      }
+    end)
+  end
+
+  defp normalize_field_list(_), do: []
+
   @impl true
+  def handle_event("choose_format", %{"format" => "theme"}, socket) do
+    # Selecting the Theme page card marks the format without requiring a
+    # template yet — Continue and the stepper stay locked until one is picked.
+    if socket.assigns.page do
+      {:noreply, socket}
+    else
+      {:noreply, update(socket, :draft, &Map.put(&1, "format", "theme"))}
+    end
+  end
+
   def handle_event("choose_format", %{"format" => fmt}, socket)
-      when fmt in ~w(markdown html blog) do
+      when fmt in ~w(markdown html) do
+    # Selecting a format doesn't advance — the user can freely switch between
+    # the cards and then hit Continue. Switching away from a theme page drops
+    # any chosen template.
     if socket.assigns.page do
       {:noreply, socket}
     else
       {:noreply,
-       socket
-       |> update(:draft, &Map.put(&1, "format", fmt))
-       |> assign(step: 2)}
+       update(socket, :draft, fn d -> d |> Map.put("format", fmt) |> Map.delete("template") end)}
     end
+  end
+
+  def handle_event("choose_template", %{"template" => name}, socket) do
+    # Picking a template from the Theme page card selects the theme format too;
+    # it does not advance (Continue does). The template is fixed once the page
+    # is created, so this is a no-op when editing.
+    cond do
+      socket.assigns.page ->
+        {:noreply, socket}
+
+      name not in socket.assigns.page_template_names ->
+        {:noreply, socket}
+
+      true ->
+        # Seed the draft with the chosen template's settings (incl. any default
+        # list items) so the editor opens pre-filled with the theme's defaults.
+        meta = hydrate_metadata(%{}, page_settings_fields(socket.assigns.theme_manifest, name))
+
+        {:noreply,
+         update(socket, :draft, fn d ->
+           d
+           |> Map.put("format", "theme")
+           |> Map.put("template", name)
+           |> Map.put("metadata", meta)
+         end)}
+    end
+  end
+
+  def handle_event("toggle_settings_group", %{"group" => group}, socket) do
+    open = if socket.assigns.open_settings_group == group, do: nil, else: group
+    {:noreply, assign(socket, open_settings_group: open)}
+  end
+
+  def handle_event("clear_meta", %{"meta" => k, "sub" => sub, "item" => id}, socket) do
+    draft = put_list_item_value(socket.assigns.draft, k, id, sub, "")
+    {:noreply, socket |> assign(draft: draft) |> assign_changeset(draft)}
+  end
+
+  def handle_event("clear_meta", %{"meta" => k, "sub" => sub}, socket) do
+    draft = put_object_value(socket.assigns.draft, k, sub, "")
+    {:noreply, socket |> assign(draft: draft) |> assign_changeset(draft)}
+  end
+
+  def handle_event("clear_meta", %{"meta" => key}, socket) do
+    draft = put_metadata_value(socket.assigns.draft, key, "")
+    {:noreply, socket |> assign(draft: draft) |> assign_changeset(draft)}
+  end
+
+  def handle_event("add_list_item", %{"key" => key}, socket) do
+    subfields = list_subfields(current_settings_fields(socket), key)
+    draft = update_metadata_list(socket.assigns.draft, key, &(&1 ++ [blank_list_item(subfields)]))
+    {:noreply, socket |> assign(draft: draft) |> assign_changeset(draft)}
+  end
+
+  def handle_event("remove_list_item", %{"key" => key, "id" => id}, socket) do
+    draft =
+      update_metadata_list(socket.assigns.draft, key, fn list ->
+        Enum.reject(list, &(to_string(&1["_id"]) == to_string(id)))
+      end)
+
+    {:noreply, socket |> assign(draft: draft) |> assign_changeset(draft)}
+  end
+
+  def handle_event("reorder_list", %{"key" => key, "ids" => ids}, socket) do
+    draft = update_metadata_list(socket.assigns.draft, key, &reorder_by_id(&1, ids))
+    {:noreply, socket |> assign(draft: draft) |> assign_changeset(draft)}
   end
 
   def handle_event("toggle_filter_tag", %{"id" => id}, socket) do
@@ -113,8 +257,15 @@ defmodule MastheadWeb.AdminLive.PageForm do
   end
 
   def handle_event("advance", _params, socket) do
-    # Only fired from the Format step â Details.
-    {:noreply, assign(socket, step: 2)}
+    # Fired by the Format step's Continue button. Advance only once a complete
+    # selection exists (a theme page needs its template).
+    draft = socket.assigns.draft
+
+    if socket.assigns.page != nil or format_chosen?(draft["format"], draft["template"]) do
+      {:noreply, assign(socket, step: 2)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("back", _params, socket) do
@@ -127,9 +278,9 @@ defmodule MastheadWeb.AdminLive.PageForm do
   # validation still happens on save.
   def handle_event("goto_step", %{"step" => step}, socket) do
     target = String.to_integer(step)
-    valid = visible_steps(socket.assigns.has_metadata?) |> Enum.map(&elem(&1, 0))
+    valid = visible_step_nums(socket.assigns)
 
-    if target in valid do
+    if target in valid and nav_allowed?(socket.assigns, target) do
       {:noreply, assign(socket, step: target)}
     else
       {:noreply, socket}
@@ -190,7 +341,12 @@ defmodule MastheadWeb.AdminLive.PageForm do
     if Ecto.Changeset.get_field(changeset, :title) not in [nil, ""] do
       # Skip the settings step entirely when the theme declares no
       # metadata â we'd render an empty step otherwise.
-      next = if socket.assigns.has_metadata?, do: 3, else: 4
+      next =
+        cond do
+          draft["format"] == "theme" -> 3
+          socket.assigns.has_metadata? -> 3
+          true -> 4
+        end
 
       {:noreply,
        socket
@@ -206,7 +362,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
 
   def handle_event("next_settings", %{"page" => params}, socket) do
     # Merge the metadata sub-map into the draft and advance to Content.
-    draft = Map.merge(socket.assigns.draft, params)
+    draft = merge_draft_params(socket.assigns.draft, params, current_settings_fields(socket))
 
     {:noreply,
      socket
@@ -230,7 +386,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
         params
       end
 
-    draft = Map.merge(socket.assigns.draft, params)
+    draft = merge_draft_params(socket.assigns.draft, params, current_settings_fields(socket))
 
     {:noreply,
      socket
@@ -245,9 +401,13 @@ defmodule MastheadWeb.AdminLive.PageForm do
         page -> page.published
       end
 
+    fields = current_settings_fields(socket)
+    draft = merge_draft_params(socket.assigns.draft, page_params, fields)
+    canonical = canonicalize_metadata(draft["metadata"] || %{}, fields)
+
     full_params =
-      socket.assigns.draft
-      |> Map.merge(page_params)
+      draft
+      |> Map.put("metadata", canonical)
       |> Map.put("published", to_string(publish?))
 
     result =
@@ -257,7 +417,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
       end
 
     case result do
-      {:ok, page} ->
+      {:ok, saved} ->
         flash =
           case {socket.assigns.page, publish?} do
             {nil, true} -> "Page published."
@@ -265,10 +425,22 @@ defmodule MastheadWeb.AdminLive.PageForm do
             {_, _} -> "Changes saved."
           end
 
-        {:noreply,
-         socket
-         |> put_flash(:info, flash)
-         |> push_navigate(to: ~p"/#{socket.assigns.site.slug}/pages/#{page.id}/edit")}
+        if socket.assigns.page do
+          # Editing: save in place so UI state (an expanded settings group, the
+          # current step, scroll) is preserved rather than reset by a remount.
+          {:noreply,
+           socket
+           |> assign(page: saved, draft: draft, show_errors: false)
+           |> assign_changeset(draft)
+           |> put_flash(:info, flash)}
+        else
+          # First save of a new page: navigate so the editor switches into edit
+          # mode (and the URL reflects the saved page).
+          {:noreply,
+           socket
+           |> put_flash(:info, flash)
+           |> push_navigate(to: ~p"/#{socket.assigns.site.slug}/pages/#{saved.id}/edit")}
+        end
 
       {:error, changeset} ->
         {:noreply,
@@ -333,7 +505,35 @@ defmodule MastheadWeb.AdminLive.PageForm do
      |> push_event("editor_replace", %{id: editor_dom_id(format), text: formatted})}
   end
 
+  # A file-type metadata field's picker reports back here with the field key in
+  # its context. Store the chosen upload's id (or "" to clear) into the draft's
+  # metadata map — the renderer resolves the id to a URL, exactly like a file
+  # token. Must precede the body-insert clause, which matches any upload.
+  # A file inside a list item (context carries the list key, item `_id`, subkey).
   @impl true
+  def handle_info({:file_picked, upload, %{"meta" => k, "sub" => sub, "item" => id}}, socket) do
+    draft = put_list_item_value(socket.assigns.draft, k, id, sub, upload_value(upload))
+
+    {:noreply,
+     socket |> maybe_refresh_uploads(upload) |> assign(draft: draft) |> assign_changeset(draft)}
+  end
+
+  # A file inside an object field (context carries the object key + subkey).
+  def handle_info({:file_picked, upload, %{"meta" => k, "sub" => sub}}, socket) do
+    draft = put_object_value(socket.assigns.draft, k, sub, upload_value(upload))
+
+    {:noreply,
+     socket |> maybe_refresh_uploads(upload) |> assign(draft: draft) |> assign_changeset(draft)}
+  end
+
+  # A top-level file metadata field.
+  def handle_info({:file_picked, upload, %{"meta" => key}}, socket) do
+    draft = put_metadata_value(socket.assigns.draft, key, upload_value(upload))
+
+    {:noreply,
+     socket |> maybe_refresh_uploads(upload) |> assign(draft: draft) |> assign_changeset(draft)}
+  end
+
   def handle_info({:file_picked, %Masthead.Uploads.Upload{} = upload, _ctx}, socket) do
     format = socket.assigns.draft["format"] || "markdown"
     text = image_snippet(upload, format)
@@ -342,8 +542,6 @@ defmodule MastheadWeb.AdminLive.PageForm do
 
   def handle_info({:file_picked, _other, _ctx}, socket), do: {:noreply, socket}
 
-  # The blog format edits the description in a separate editor element.
-  defp editor_dom_id("blog"), do: "page-description-editor"
   defp editor_dom_id(format), do: "page-body-editor-" <> format
 
   defp image_snippet(upload, "html"),
@@ -363,6 +561,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
       "title" => page.title,
       "slug" => page.slug,
       "format" => page.format,
+      "template" => page.template,
       "body" => page.body,
       "published" => to_string(page.published),
       "show_in_nav" => to_string(page.show_in_nav),
@@ -378,6 +577,286 @@ defmodule MastheadWeb.AdminLive.PageForm do
       %{} = m -> Map.get(m, key) || Map.get(m, to_string(key)) || ""
       _ -> ""
     end
+  end
+
+  # Put (or clear, when value is "") a single metadata key in the draft.
+  defp put_metadata_value(draft, key, value) do
+    meta = Map.get(draft, "metadata") || %{}
+    meta = if value == "", do: Map.delete(meta, key), else: Map.put(meta, key, value)
+    Map.put(draft, "metadata", meta)
+  end
+
+  defp put_object_value(draft, key, sub, value) do
+    meta = Map.get(draft, "metadata") || %{}
+    obj = Map.get(meta, key) || %{}
+    obj = if value == "", do: Map.delete(obj, sub), else: Map.put(obj, sub, value)
+    Map.put(draft, "metadata", Map.put(meta, key, obj))
+  end
+
+  defp put_list_item_value(draft, key, id, sub, value) do
+    update_metadata_list(draft, key, fn list ->
+      Enum.map(list, fn item ->
+        cond do
+          to_string(item["_id"]) != to_string(id) -> item
+          value == "" -> Map.delete(item, sub)
+          true -> Map.put(item, sub, value)
+        end
+      end)
+    end)
+  end
+
+  defp update_metadata_list(draft, key, fun) do
+    meta = Map.get(draft, "metadata") || %{}
+
+    list =
+      case Map.get(meta, key) do
+        l when is_list(l) -> l
+        _ -> []
+      end
+
+    Map.put(draft, "metadata", Map.put(meta, key, fun.(list)))
+  end
+
+  defp upload_value(nil), do: ""
+  defp upload_value(upload), do: to_string(upload.id)
+
+  defp maybe_refresh_uploads(socket, nil), do: socket
+
+  defp maybe_refresh_uploads(socket, _upload),
+    do: assign(socket, site_uploads: Uploads.list_uploads(socket.assigns.site.id))
+
+  # The settings field schema for whatever the draft currently is: a theme
+  # page's sidecar config, or the theme's global metadata for markdown/html.
+  defp current_settings_fields(%{assigns: a}),
+    do: settings_fields_for(a.draft, a.theme_manifest, a.metadata_fields)
+
+  defp settings_fields_for(draft, theme_manifest, metadata_fields) do
+    if draft["format"] == "theme",
+      do: page_settings_fields(theme_manifest, draft["template"] || ""),
+      else: metadata_fields
+  end
+
+  defp list_subfields(fields, key) do
+    case Enum.find(fields, &(&1.key == key and &1.type == "list")) do
+      %{fields: sub} when is_list(sub) -> sub
+      _ -> []
+    end
+  end
+
+  defp blank_list_item(subfields) do
+    Enum.reduce(subfields, %{"_id" => new_meta_id()}, fn sf, acc -> Map.put(acc, sf.key, "") end)
+  end
+
+  defp reorder_by_id(list, ids) do
+    by_id = Map.new(list, &{to_string(&1["_id"]), &1})
+    ordered = Enum.flat_map(ids, fn id -> List.wrap(Map.get(by_id, to_string(id))) end)
+    seen = MapSet.new(ids, &to_string/1)
+    ordered ++ Enum.reject(list, &MapSet.member?(seen, to_string(&1["_id"])))
+  end
+
+  defp new_meta_id, do: System.unique_integer([:positive, :monotonic])
+
+  # ---- schema-aware draft/params reconciliation ----
+
+  # Fold submitted form params into the draft: non-metadata params shallow-merge
+  # (title/slug/format/…); the metadata sub-map merges against the field schema
+  # so nested objects/lists keep their canonical shape and item identity.
+  defp merge_draft_params(draft, params, fields) do
+    {meta_params, rest} = Map.pop(params, "metadata")
+    draft = Map.merge(draft, rest)
+
+    if is_map(meta_params) do
+      Map.put(draft, "metadata", merge_metadata(draft["metadata"] || %{}, meta_params, fields))
+    else
+      draft
+    end
+  end
+
+  defp merge_metadata(draft_meta, params_meta, fields) do
+    Enum.reduce(fields, draft_meta, fn field, acc ->
+      key = field.key
+
+      case field.type do
+        "object" ->
+          Map.put(
+            acc,
+            key,
+            merge_object(Map.get(acc, key) || %{}, Map.get(params_meta, key) || %{}, field.fields)
+          )
+
+        "list" ->
+          Map.put(
+            acc,
+            key,
+            merge_list(Map.get(acc, key) || [], Map.get(params_meta, key) || %{}, field.fields)
+          )
+
+        _ ->
+          case Map.fetch(params_meta, key) do
+            {:ok, v} -> Map.put(acc, key, v)
+            :error -> acc
+          end
+      end
+    end)
+  end
+
+  # Write only the subkeys present in params, preserving `_id` and any untouched
+  # keys (e.g. a file hidden input not in this change).
+  defp merge_object(draft_obj, params_obj, subfields) when is_map(params_obj) do
+    Enum.reduce(subfields, draft_obj, fn sf, acc ->
+      case Map.fetch(params_obj, sf.key) do
+        {:ok, v} -> Map.put(acc, sf.key, v)
+        :error -> acc
+      end
+    end)
+  end
+
+  defp merge_object(draft_obj, _params_obj, _subfields), do: draft_obj
+
+  # The draft list is authoritative for order/length/identity; params are keyed
+  # by each item's `_id`, so a stale/removed/reordered item can't bleed values.
+  defp merge_list(draft_list, params_map, subfields)
+       when is_list(draft_list) and is_map(params_map) do
+    Enum.map(draft_list, fn item ->
+      case Map.get(params_map, to_string(item["_id"])) do
+        %{} = item_params -> merge_object(item, item_params, subfields)
+        _ -> item
+      end
+    end)
+  end
+
+  defp merge_list(draft_list, _params_map, _subfields) when is_list(draft_list), do: draft_list
+  defp merge_list(_draft_list, _params_map, _subfields), do: []
+
+  # Strip the ephemeral `_id` and nested empties before persisting; keep empty
+  # list items (count/identity matters), drop empty subvalues (don't persist
+  # them as overrides — the renderer fills defaults).
+  defp canonicalize_metadata(meta, fields) do
+    Enum.reduce(fields, meta, fn field, acc ->
+      key = field.key
+
+      case {field.type, Map.get(acc, key)} do
+        {"object", %{} = obj} ->
+          Map.put(acc, key, strip_empty(obj))
+
+        {"list", list} when is_list(list) ->
+          Map.put(acc, key, Enum.map(list, &(&1 |> Map.delete("_id") |> strip_empty())))
+
+        _ ->
+          acc
+      end
+    end)
+  end
+
+  defp strip_empty(map), do: map |> Enum.reject(fn {_k, v} -> v in [nil, ""] end) |> Map.new()
+
+  # Give each stored list item a fresh `_id` so the editor can track it; ensure
+  # object/list keys have the right container shape for rendering.
+  defp hydrate_metadata(meta, fields) when is_map(meta) do
+    Enum.reduce(fields, meta, fn field, acc ->
+      key = field.key
+
+      case field.type do
+        "list" ->
+          case Map.get(acc, key) do
+            list when is_list(list) ->
+              Map.put(acc, key, Enum.map(list, &Map.put(ensure_map(&1), "_id", new_meta_id())))
+
+            # No stored value yet → seed the schema's default items (if any).
+            _ ->
+              Map.put(acc, key, default_items(field))
+          end
+
+        "object" ->
+          if is_map(Map.get(acc, key)), do: acc, else: Map.put(acc, key, %{})
+
+        _ ->
+          acc
+      end
+    end)
+  end
+
+  defp hydrate_metadata(_meta, _fields), do: %{}
+
+  # Build a list field's default items (from its `default` array), each filled
+  # against the nested field defaults and given a tracking `_id`.
+  defp default_items(%{default: items, fields: subfields}) when is_list(items) do
+    subs = subfields || []
+
+    Enum.map(items, fn item ->
+      base = Enum.reduce(subs, %{}, fn sf, acc -> Map.put(acc, sf.key, sf.default) end)
+      base |> Map.merge(ensure_map(item)) |> Map.put("_id", new_meta_id())
+    end)
+  end
+
+  defp default_items(_), do: []
+
+  defp ensure_map(m) when is_map(m), do: m
+  defp ensure_map(_), do: %{}
+
+  # Resolve a file field's stored upload id to its upload struct (for preview).
+  defp selected_meta_upload(_uploads, value) when value in [nil, ""], do: nil
+
+  defp selected_meta_upload(uploads, value),
+    do: Enum.find(uploads, fn u -> to_string(u.id) == to_string(value) end)
+
+  defp file_ext(filename),
+    do: filename |> Path.extname() |> String.trim_leading(".") |> String.upcase()
+
+  # Render a list of settings fields, grouped into collapsible sections when any
+  # field declares a `category` (mirrors the theme token settings). When none
+  # do, they render as a flat list. `open` is the currently-expanded category.
+  attr :fields, :list, required: true
+  attr :draft, :map, required: true
+  attr :site_uploads, :list, default: []
+  attr :open, :string, default: nil
+
+  defp settings_fields(assigns) do
+    ~H"""
+    <%= if Enum.any?(@fields, &field_categorized?/1) do %>
+      <div class="token-groups">
+        <details
+          :for={{category, fields} <- group_fields(@fields)}
+          class="token-group"
+          open={@open == category}
+        >
+          <summary
+            class="token-group-summary"
+            phx-click="toggle_settings_group"
+            phx-value-group={category}
+          >
+            {category}
+          </summary>
+          <div class="settings-fields">
+            <.setting_input :for={f <- fields} field={f} draft={@draft} site_uploads={@site_uploads} />
+          </div>
+        </details>
+      </div>
+    <% else %>
+      <div class="settings-fields">
+        <.setting_input :for={f <- @fields} field={f} draft={@draft} site_uploads={@site_uploads} />
+      </div>
+    <% end %>
+    """
+  end
+
+  defp field_categorized?(%{category: c}) when is_binary(c), do: String.trim(c) != ""
+  defp field_categorized?(_), do: false
+
+  defp field_category(f),
+    do: if(field_categorized?(f), do: String.trim(f.category), else: "General")
+
+  # Group fields by category, preserving first-seen order of both categories
+  # and the fields within each.
+  defp group_fields(fields) do
+    Enum.reduce(fields, [], fn f, acc ->
+      cat = field_category(f)
+
+      case List.keyfind(acc, cat, 0) do
+        nil -> acc ++ [{cat, [f]}]
+        {^cat, list} -> List.keyreplace(acc, cat, 0, {cat, list ++ [f]})
+      end
+    end)
   end
 
   defp import_flash(entity, ok, 0), do: "Imported #{ok} #{entity}s."
@@ -428,9 +907,12 @@ defmodule MastheadWeb.AdminLive.PageForm do
             <.format_step
               locked={@page != nil}
               format={@draft["format"]}
+              template={@draft["template"]}
               editing={@page != nil}
               site_slug={@site.slug}
               has_metadata={@has_metadata?}
+              allow_theme={@allow_theme?}
+              page_templates={@page_templates}
             />
           <% 2 -> %>
             <.meta_step
@@ -445,11 +927,33 @@ defmodule MastheadWeb.AdminLive.PageForm do
               selected_filter_tag_ids={@draft["filter_tag_ids"] || []}
             />
           <% 3 -> %>
-            <.settings_step
-              fields={@metadata_fields}
-              draft={@draft}
-              has_metadata={@has_metadata?}
-            />
+            <%= if @draft["format"] == "theme" do %>
+              <.theme_settings_step
+                fields={page_settings_fields(@theme_manifest, @draft["template"] || "")}
+                draft={@draft}
+                changeset={@changeset}
+                editing={@page != nil}
+                published={@page != nil and @page.published}
+                site={@site}
+                site_uploads={@site_uploads}
+                open_group={@open_settings_group}
+                view_path={@page && "/" <> @page.slug}
+                show_errors={@show_errors}
+                template={@draft["template"]}
+                label={page_setting_label(@theme_manifest, @draft["template"] || "")}
+                description={page_setting_description(@theme_manifest, @draft["template"] || "")}
+                has_metadata={@has_metadata?}
+              />
+            <% else %>
+              <.settings_step
+                fields={@metadata_fields}
+                draft={@draft}
+                format={@draft["format"]}
+                site_uploads={@site_uploads}
+                open_group={@open_settings_group}
+                has_metadata={@has_metadata?}
+              />
+            <% end %>
           <% 4 -> %>
             <.content_step
               form={@form}
@@ -464,23 +968,42 @@ defmodule MastheadWeb.AdminLive.PageForm do
               has_metadata={@has_metadata?}
             />
         <% end %>
+
+        <.live_component
+          module={MastheadWeb.AdminLive.FilePicker}
+          id="page-meta-file-picker"
+          site={@site}
+          accept={~w(.png .jpg .jpeg .gif .webp .svg .ico .pdf)}
+          clearable
+        />
       </div>
     </.shell>
     """
   end
 
   attr :step, :integer, default: 1
+  attr :format, :string, default: nil
   attr :has_metadata, :boolean, default: false
+  attr :nav_locked, :boolean, default: false
 
   defp stepper(assigns) do
-    assigns = assign(assigns, :entries, Enum.with_index(visible_steps(assigns.has_metadata), 1))
+    assigns =
+      assign(
+        assigns,
+        :entries,
+        Enum.with_index(visible_steps(assigns.format, assigns.has_metadata), 1)
+      )
 
     ~H"""
     <ol class="stepper">
       <li
         :for={{{step_num, label}, display_idx} <- @entries}
-        class={"step " <> step_class(step_num, @step)}
-        phx-click="goto_step"
+        class={[
+          "step",
+          step_class(step_num, @step),
+          @nav_locked and step_num != @step and "step-disabled"
+        ]}
+        phx-click={(not @nav_locked or step_num == @step) && "goto_step"}
         phx-value-step={step_num}
         role="button"
         tabindex="0"
@@ -496,18 +1019,34 @@ defmodule MastheadWeb.AdminLive.PageForm do
   defp step_class(i, current) when i == current, do: "step-current"
   defp step_class(_, _), do: "step-future"
 
-  # Returns [{internal_step, label}, ...]. The settings step is omitted
-  # when the active theme declares no metadata fields.
-  defp visible_steps(true),
+  # Returns [{internal_step, label}, ...] for the wizard. Theme pages end on
+  # Page settings (no Content step); markdown/html pages skip Page settings
+  # when the theme declares no global metadata fields.
+  defp visible_steps("theme", _has_metadata),
+    do: [{1, "Format"}, {2, "Details"}, {3, "Page settings"}]
+
+  defp visible_steps(_format, true),
     do: [{1, "Format"}, {2, "Details"}, {3, "Page settings"}, {4, "Content"}]
 
-  defp visible_steps(false),
+  defp visible_steps(_format, false),
     do: [{1, "Format"}, {2, "Details"}, {4, "Content"}]
 
-  # Previous step for the Back button. Skips step 3 when there's no
-  # metadata so the user doesn't land on a blank screen.
-  defp prev_step(%{assigns: %{step: 4, has_metadata?: false}}), do: 2
-  defp prev_step(%{assigns: %{step: step}}) when step > 1, do: step - 1
+  defp visible_steps_for(assigns),
+    do: visible_steps(assigns.draft["format"], assigns.has_metadata?)
+
+  defp visible_step_nums(assigns),
+    do: visible_steps_for(assigns) |> Enum.map(&elem(&1, 0))
+
+  # Previous visible step for the Back button (skips omitted steps so the user
+  # never lands on a blank/hidden screen).
+  defp prev_step(%{assigns: %{step: step} = assigns}) do
+    assigns
+    |> visible_step_nums()
+    |> Enum.take_while(&(&1 < step))
+    |> List.last()
+    |> Kernel.||(1)
+  end
+
   defp prev_step(_), do: 1
 
   attr :uploads, :map, required: true
@@ -568,27 +1107,67 @@ defmodule MastheadWeb.AdminLive.PageForm do
 
   attr :locked, :boolean, default: false
   attr :format, :string, default: nil
+  attr :template, :string, default: nil
   attr :editing, :boolean, default: false
   attr :site_slug, :string, required: true
   attr :has_metadata, :boolean, default: false
+  attr :allow_theme, :boolean, default: false
+  attr :page_templates, :list, default: []
 
   defp format_step(assigns) do
     ~H"""
-    <.stepper step={1} has_metadata={@has_metadata} />
+    <.stepper
+      step={1}
+      format={@format}
+      has_metadata={@has_metadata}
+      nav_locked={not @locked and not format_chosen?(@format, @template)}
+    />
 
     <h2 class="wizard-heading">
       {if @editing, do: "Page format", else: "How do you want to write this page?"}
     </h2>
 
-    <.format_cards selected={@format} locked={@locked} allow_blog={true} />
+    <.format_cards
+      selected={@format}
+      locked={@locked}
+      allow_theme={@allow_theme}
+      template={@template}
+      page_templates={@page_templates}
+    />
 
-    <div :if={@locked} class="wizard-footer">
+    <div class="wizard-footer">
       <.link navigate={~p"/#{@site_slug}/pages"} class="btn">Cancel</.link>
-      <span class="muted">Format is set at creation and cannot be changed.</span>
-      <button type="button" phx-click="advance" class="btn btn-primary">Continue &rarr;</button>
+      <span :if={@locked} class="muted">Format is set at creation and cannot be changed.</span>
+      <span
+        :if={not @locked and @format == "theme" and not format_chosen?(@format, @template)}
+        class="muted"
+      >
+        Pick a template to continue.
+      </span>
+      <button
+        type="button"
+        phx-click="advance"
+        class="btn btn-primary"
+        disabled={not @locked and not format_chosen?(@format, @template)}
+      >
+        Continue &rarr;
+      </button>
     </div>
     """
   end
+
+  # A format is ready to continue from the Format step when a writing format is
+  # picked, or — for a theme page — a template has also been chosen.
+  defp format_chosen?("theme", template), do: is_binary(template) and template != ""
+  defp format_chosen?(format, _template), do: format in ~w(markdown html)
+
+  # Stepper navigation is open while editing or once the format selection is
+  # complete; otherwise only the Format step (and Import) is reachable, so a
+  # half-picked theme page can't jump ahead without choosing a template.
+  defp nav_allowed?(%{page: page}, _target) when not is_nil(page), do: true
+
+  defp nav_allowed?(assigns, target),
+    do: target <= 1 or format_chosen?(assigns.draft["format"], assigns.draft["template"])
 
   attr :form, :map, required: true
   attr :changeset, :map, required: true
@@ -602,7 +1181,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
 
   defp meta_step(assigns) do
     ~H"""
-    <.stepper step={2} has_metadata={@has_metadata} />
+    <.stepper step={2} format={@format} has_metadata={@has_metadata} />
 
     <form id="meta-form" phx-submit="next_meta" phx-change="validate" class="form">
       <.error_list changeset={@changeset} show={@show_errors} />
@@ -634,7 +1213,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
         />
       </div>
 
-      <div :if={@format == "blog"} class="field">
+      <div :if={@format == "theme"} class="field">
         <span class="field-label">Filter posts by tag</span>
         <div class="tag-picker">
           <button
@@ -664,27 +1243,93 @@ defmodule MastheadWeb.AdminLive.PageForm do
 
   attr :fields, :list, required: true
   attr :draft, :map, required: true
+  attr :format, :string, default: nil
+  attr :site_uploads, :list, default: []
+  attr :open_group, :string, default: nil
   attr :has_metadata, :boolean, default: true
 
   defp settings_step(assigns) do
     ~H"""
-    <.stepper step={3} has_metadata={@has_metadata} />
+    <.stepper step={3} format={@format} has_metadata={@has_metadata} />
 
     <h2 class="wizard-heading">Page settings</h2>
-    <p class="wizard-intro muted">
-      Theme-specific overrides for this page. Blank fields fall back to
-      the theme default.
-    </p>
 
     <form id="settings-form" phx-submit="next_settings" phx-change="validate" class="form">
-      <div class="settings-fields">
-        <.metadata_field :for={f <- @fields} field={f} value={metadata_value(@draft, f.key)} />
-      </div>
+      <.settings_fields
+        fields={@fields}
+        draft={@draft}
+        site_uploads={@site_uploads}
+        open={@open_group}
+      />
     </form>
 
     <div class="wizard-footer">
       <button type="button" phx-click="back" class="btn">&larr; Back</button>
       <button type="submit" form="settings-form" class="btn btn-primary">Continue &rarr;</button>
+    </div>
+    """
+  end
+
+  attr :fields, :list, required: true
+  attr :draft, :map, required: true
+  attr :changeset, :map, required: true
+  attr :editing, :boolean, default: false
+  attr :published, :boolean, default: false
+  attr :site, :map, default: nil
+  attr :site_uploads, :list, default: []
+  attr :open_group, :string, default: nil
+  attr :view_path, :string, default: nil
+  attr :show_errors, :boolean, default: false
+  attr :template, :string, default: nil
+  attr :label, :string, default: nil
+  attr :description, :string, default: nil
+  attr :has_metadata, :boolean, default: false
+
+  # The terminal step for theme pages: there is no body to edit, so the page's
+  # settings (the chosen template's sidecar config) are the final step, saved
+  # via the content sidebar. The template is fixed at creation, so it's shown
+  # but not editable here.
+  defp theme_settings_step(assigns) do
+    ~H"""
+    <.stepper step={3} format="theme" has_metadata={@has_metadata} />
+
+    <h2 class="wizard-heading">{@label}</h2>
+    <p :if={@description} class="wizard-intro muted">{@description}</p>
+
+    <div class="content-layout">
+      <div class="content-main">
+        <form id="content-form" phx-submit="save" phx-change="validate" class="form">
+          <.error_list changeset={@changeset} show={@show_errors} />
+
+          <input type="hidden" name="page[title]" value={@draft["title"]} />
+          <input type="hidden" name="page[slug]" value={@draft["slug"]} />
+          <input type="hidden" name="page[format]" value="theme" />
+          <input type="hidden" name="page[template]" value={@template} />
+
+          <.settings_fields
+            fields={@fields}
+            draft={@draft}
+            site_uploads={@site_uploads}
+            open={@open_group}
+          />
+
+          <p :if={@fields == []} class="muted">This template has no settings to configure.</p>
+        </form>
+      </div>
+
+      <.content_sidebar
+        editing={@editing}
+        published={@published}
+        entity="page"
+        site={@site}
+        view_path={@view_path}
+        format="theme"
+        tools={false}
+      />
+    </div>
+
+    <div class="wizard-footer">
+      <button type="button" phx-click="back" class="btn">&larr; Back</button>
     </div>
     """
   end
@@ -702,7 +1347,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
 
   defp content_step(assigns) do
     ~H"""
-    <.stepper step={4} has_metadata={@has_metadata} />
+    <.stepper step={4} format={@format} has_metadata={@has_metadata} />
 
     <div class="content-layout">
       <div class="content-main">
@@ -713,11 +1358,7 @@ defmodule MastheadWeb.AdminLive.PageForm do
           <input type="hidden" name="page[slug]" value={@form[:slug].value} />
           <input type="hidden" name="page[format]" value={@format} />
 
-          <%= if @format == "blog" do %>
-            <.blog_description_editor form={@form} slug={Ecto.Changeset.get_field(@changeset, :slug)} />
-          <% else %>
-            <.body_editor form={@form} format={@format} />
-          <% end %>
+          <.body_editor form={@form} format={@format} />
         </form>
       </div>
 
@@ -765,72 +1406,190 @@ defmodule MastheadWeb.AdminLive.PageForm do
     """
   end
 
-  attr :form, :map, required: true
-  attr :slug, :string, default: nil
-
-  defp blog_description_editor(assigns) do
-    ~H"""
-    <div class="editor editor-short">
-      <div class="editor-pane">
-        <label for="page-description-textarea" class="editor-label">
-          Description (Markdown, optional)
-        </label>
-        <div
-          id="page-description-editor"
-          class="code-editor code-editor-short"
-          phx-hook="CodeEditor"
-          phx-update="ignore"
-          data-language="markdown"
-        >
-          <textarea
-            id="page-description-textarea"
-            name="page[body]"
-            rows="6"
-            phx-debounce="200"
-            class="markdown-editor"
-          >{@form[:body].value}</textarea>
-        </div>
-        <small class="muted">
-          Short intro shown above the post list. Leave empty to render just the list.
-          Posts list appears at <code>/{@slug || "your-slug"}</code>.
-        </small>
-      </div>
-    </div>
-    """
-  end
-
   defp format_label("html"), do: "HTML"
   defp format_label(_), do: "Markdown"
 
+  # Humanize a page-template file name for display ("about-us" -> "About us").
+  defp template_label(nil), do: "page"
+
+  defp template_label(name) when is_binary(name),
+    do: name |> String.replace(["-", "_"], " ") |> String.capitalize()
+
+  # Dispatch a top-level settings field: container types render their own
+  # structure, everything else is a scalar input.
+  attr :field, :map, required: true
+  attr :draft, :map, required: true
+  attr :site_uploads, :list, default: []
+
+  defp setting_input(%{field: %{type: "object"}} = assigns), do: object_field(assigns)
+  defp setting_input(%{field: %{type: "list"}} = assigns), do: list_field(assigns)
+
+  defp setting_input(assigns) do
+    assigns =
+      assign(assigns,
+        name: "page[metadata][" <> assigns.field.key <> "]",
+        value: metadata_value(assigns.draft, assigns.field.key),
+        picker_ctx: %{"meta" => assigns.field.key}
+      )
+
+    scalar_field(assigns)
+  end
+
+  # An `object` field: a group of scalar subfields under one key.
+  defp object_field(assigns) do
+    assigns = assign(assigns, :obj, sub_map(assigns.draft, assigns.field.key))
+
+    ~H"""
+    <fieldset class="settings-group-field">
+      <legend>{@field.label}</legend>
+      <small :if={@field.description} class="muted">{@field.description}</small>
+      <div class="settings-fields">
+        <.scalar_field
+          :for={sf <- @field.fields}
+          field={sf}
+          name={"page[metadata][" <> @field.key <> "][" <> sf.key <> "]"}
+          value={sub_value(@obj, sf.key)}
+          picker_ctx={%{"meta" => @field.key, "sub" => sf.key}}
+          site_uploads={@site_uploads}
+        />
+      </div>
+    </fieldset>
+    """
+  end
+
+  # A `list` field: a repeatable group with add / remove / drag-reorder.
+  defp list_field(assigns) do
+    assigns = assign(assigns, :items, list_items(assigns.draft, assigns.field.key))
+
+    ~H"""
+    <fieldset class="settings-group-field">
+      <legend>{@field.label}</legend>
+      <small :if={@field.description} class="muted">{@field.description}</small>
+
+      <ul
+        id={"meta-list-" <> @field.key}
+        phx-hook="SortableList"
+        data-sortable-event="reorder_list"
+        data-sortable-key={@field.key}
+        class="settings-list"
+      >
+        <li
+          :for={item <- @items}
+          id={@field.key <> "-" <> to_string(item["_id"])}
+          draggable="true"
+          data-sortable-id={item["_id"]}
+          class="settings-list-item"
+        >
+          <span class="settings-list-drag" aria-hidden="true"><.drag_handle_icon /></span>
+          <div class="settings-fields settings-list-fields">
+            <.scalar_field
+              :for={sf <- @field.fields}
+              field={sf}
+              name={"page[metadata][" <> @field.key <> "][" <> to_string(item["_id"]) <> "][" <> sf.key <> "]"}
+              value={sub_value(item, sf.key)}
+              picker_ctx={%{"meta" => @field.key, "item" => to_string(item["_id"]), "sub" => sf.key}}
+              site_uploads={@site_uploads}
+            />
+          </div>
+          <button
+            type="button"
+            class="btn btn-sm btn-danger settings-list-remove"
+            phx-click="remove_list_item"
+            phx-value-key={@field.key}
+            phx-value-id={item["_id"]}
+          >
+            Remove
+          </button>
+        </li>
+      </ul>
+
+      <button type="button" class="btn btn-sm" phx-click="add_list_item" phx-value-key={@field.key}>
+        + Add {@field.item_label || @field.label}
+      </button>
+    </fieldset>
+    """
+  end
+
+  # A single scalar input. `name` is the full form name (so it works at any
+  # nesting depth) and `picker_ctx` is the file-picker context (`meta`/`sub`/
+  # `item`) round-tripped back via `{:file_picked, _, ctx}`.
   attr :field, :map, required: true
   attr :value, :any, required: true
+  attr :name, :string, required: true
+  attr :picker_ctx, :map, default: %{}
+  attr :site_uploads, :list, default: []
 
-  defp metadata_field(%{field: %{type: "boolean"}} = assigns) do
-    assigns = assign(assigns, :checked?, truthy?(assigns.value, assigns.field.default))
+  defp scalar_field(%{field: %{type: "file"}} = assigns) do
+    assigns =
+      assign(assigns,
+        selected: selected_meta_upload(assigns.site_uploads, assigns.value),
+        open_attrs: picker_attrs(assigns.picker_ctx) ++ [{"phx-value-current", assigns.value}],
+        clear_attrs: picker_attrs(assigns.picker_ctx)
+      )
+
+    ~H"""
+    <label>
+      {@field.label}
+      <div class="token-file">
+        <input type="hidden" name={@name} value={@value} />
+        <span :if={@selected} class="token-file-thumb">
+          <img :if={Uploads.image?(@selected)} src={Uploads.url(@selected)} alt="" />
+          <span :if={not Uploads.image?(@selected)} class="file-badge file-badge-sm">
+            {file_ext(@selected.filename)}
+          </span>
+        </span>
+        <span :if={@selected} class="token-file-name">{@selected.filename}</span>
+        <span :if={is_nil(@selected)} class="token-file-empty">No file selected</span>
+        <div class="token-file-actions">
+          <button
+            type="button"
+            class="btn btn-sm"
+            phx-click="open"
+            phx-target="#page-meta-file-picker"
+            {@open_attrs}
+          >
+            {if @selected, do: "Change", else: "Choose file"}
+          </button>
+          <button
+            :if={@selected}
+            type="button"
+            class="btn btn-sm"
+            phx-click="clear_meta"
+            {@clear_attrs}
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+      <small :if={@field.description}>{@field.description}</small>
+    </label>
+    """
+  end
+
+  defp scalar_field(%{field: %{type: "boolean"}} = assigns) do
+    assigns =
+      assign(assigns,
+        checked?: truthy?(assigns.value, assigns.field.default),
+        dom_id: field_dom_id(assigns.name)
+      )
 
     ~H"""
     <div class="settings-checkbox">
-      <label for={"meta-" <> @field.key} class="settings-checkbox-text">
+      <label for={@dom_id} class="settings-checkbox-text">
         <span>{@field.label}</span>
         <small :if={@field.description}>{@field.description}</small>
       </label>
-      <input type="hidden" name={"page[metadata][" <> @field.key <> "]"} value="false" />
-      <input
-        type="checkbox"
-        id={"meta-" <> @field.key}
-        name={"page[metadata][" <> @field.key <> "]"}
-        value="true"
-        checked={@checked?}
-      />
+      <input type="hidden" name={@name} value="false" />
+      <input type="checkbox" id={@dom_id} name={@name} value="true" checked={@checked?} />
     </div>
     """
   end
 
-  defp metadata_field(%{field: %{type: "select"}} = assigns) do
+  defp scalar_field(%{field: %{type: "select"}} = assigns) do
     ~H"""
     <label>
       {@field.label}
-      <select name={"page[metadata][" <> @field.key <> "]"}>
+      <select name={@name}>
         <option
           :for={opt <- @field.options}
           value={opt}
@@ -844,36 +1603,62 @@ defmodule MastheadWeb.AdminLive.PageForm do
     """
   end
 
-  defp metadata_field(%{field: %{type: "text"}} = assigns) do
+  defp scalar_field(%{field: %{type: "text"}} = assigns) do
     ~H"""
     <label>
       {@field.label}
-      <textarea
-        name={"page[metadata][" <> @field.key <> "]"}
-        rows="3"
-        placeholder={to_string(@field.default || "")}
-      >{@value}</textarea>
+      <textarea name={@name} rows="3" placeholder={to_string(@field.default || "")}>{@value}</textarea>
       <small :if={@field.description}>{@field.description}</small>
     </label>
     """
   end
 
-  defp metadata_field(assigns) do
+  defp scalar_field(assigns) do
     assigns =
       assign(assigns, :display_value, metadata_display_value(assigns.value, assigns.field))
 
     ~H"""
     <label>
       {@field.label}
-      <input
-        type={metadata_input_type(@field.type)}
-        name={"page[metadata][" <> @field.key <> "]"}
-        value={@display_value}
-      />
+      <input type={metadata_input_type(@field.type)} name={@name} value={@display_value} />
       <small :if={@field.description}>{@field.description}</small>
     </label>
     """
   end
+
+  defp drag_handle_icon(assigns) do
+    ~H"""
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M9 5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 7a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm-1.5 8.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM18 5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm-1.5 8.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm0 7a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+    </svg>
+    """
+  end
+
+  # File-picker context → phx-value-* attribute tuples for dynamic spreading.
+  defp picker_attrs(ctx), do: Enum.map(ctx, fn {k, v} -> {"phx-value-#{k}", v} end)
+
+  # A DOM-safe id from a bracketed input name (unique per nested path).
+  defp field_dom_id(name),
+    do: "meta-" <> (name |> String.replace(~r/[^a-zA-Z0-9_]+/, "-") |> String.trim("-"))
+
+  defp sub_map(draft, key) do
+    case Map.get(draft, "metadata") do
+      %{} = m -> ensure_map(Map.get(m, key))
+      _ -> %{}
+    end
+  end
+
+  defp list_items(draft, key) do
+    case Map.get(draft, "metadata") do
+      %{} = m -> (is_list(Map.get(m, key)) && Map.get(m, key)) || []
+      _ -> []
+    end
+  end
+
+  defp sub_value(map, key) when is_map(map),
+    do: Map.get(map, key) || Map.get(map, to_string(key)) || ""
+
+  defp sub_value(_map, _key), do: ""
 
   # Show the page override if set, else the manifest default â matches the
   # select field's behaviour so every settings input reflects its effective

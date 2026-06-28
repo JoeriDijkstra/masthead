@@ -60,7 +60,13 @@ defmodule Masthead.Themes.Seed do
       version: manifest.version,
       storage_path: source.storage_path,
       manifest:
-        Map.from_struct(manifest) |> Map.update!(:tokens, &Enum.map(&1, fn t -> Map.new(t) end))
+        Map.from_struct(manifest)
+        |> Map.update!(:tokens, &Enum.map(&1, fn t -> Map.new(t) end))
+        # Persist the discovered page-template names and their sidecar configs
+        # so the admin UI can find pages and their settings without touching
+        # the filesystem.
+        |> Map.put("page_templates", source.page_template_names)
+        |> Map.put("page_configs", serialize_page_configs(source.page_configs))
     }
 
     case Themes.upsert_built_in(attrs) do
@@ -73,5 +79,11 @@ defmodule Masthead.Themes.Seed do
       {:error, changeset} ->
         raise "failed to upsert built-in theme #{slug}: #{inspect(changeset.errors)}"
     end
+  end
+
+  defp serialize_page_configs(configs) do
+    Map.new(configs, fn {name, config} ->
+      {name, Masthead.Themes.Manifest.page_config_to_map(config)}
+    end)
   end
 end

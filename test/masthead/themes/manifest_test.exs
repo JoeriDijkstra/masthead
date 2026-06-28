@@ -191,4 +191,197 @@ defmodule Masthead.Themes.ManifestTest do
       assert out["from_old_theme"] == "still here"
     end
   end
+
+  describe "field type parity (tokens and metadata share one type set)" do
+    test "metadata accepts a file field (same as a token)" do
+      json =
+        ~s({"name":"X","slug":"x","version":"1.0.0","tokens":[],) <>
+          ~s("metadata":[{"key":"hero","label":"Hero","type":"file","default":""}]})
+
+      assert {:ok, %Manifest{metadata: [%{key: "hero", type: "file"}]}} = Manifest.parse(json)
+    end
+
+    test "a page config accepts a file field" do
+      json = ~s({"metadata":[{"key":"img","label":"Image","type":"file","default":""}]})
+      assert {:ok, %{metadata: [%{type: "file"}]}} = Manifest.parse_page_config(json)
+    end
+
+    test "tokens accept text and url types (same as metadata)" do
+      json =
+        ~s({"name":"X","slug":"x","version":"1.0.0","tokens":[) <>
+          ~s({"key":"bio","label":"Bio","type":"text","default":""},) <>
+          ~s({"key":"link","label":"Link","type":"url","default":""}]})
+
+      assert {:ok, %Manifest{tokens: [%{type: "text"}, %{type: "url"}]}} = Manifest.parse(json)
+    end
+
+    test "an unknown field type is rejected for both" do
+      assert {:error, errs} =
+               Manifest.parse(
+                 ~s({"name":"X","slug":"x","version":"1.0.0",) <>
+                   ~s("tokens":[{"key":"k","label":"K","type":"weird","default":""}]})
+               )
+
+      assert Enum.any?(errs, &String.contains?(&1, "tokens[0].type"))
+    end
+  end
+
+  describe "parse_page_config/1" do
+    test "parses a label, description, and metadata fields" do
+      json = """
+      {"label":"About","description":"The about page",
+       "metadata":[
+         {"key":"layout","label":"L","type":"select","options":["a","b"],"default":"a"},
+         {"key":"show_footer","label":"F","type":"boolean","default":true}
+       ]}
+      """
+
+      assert {:ok, config} = Manifest.parse_page_config(json)
+      assert config.label == "About"
+      assert config.description == "The about page"
+      assert [%{key: "layout"}, %{key: "show_footer"}] = config.metadata
+    end
+
+    test "label, description and metadata are all optional" do
+      assert {:ok, %{label: nil, description: nil, metadata: []}} =
+               Manifest.parse_page_config("{}")
+    end
+
+    test "rejects invalid JSON" do
+      assert {:error, [msg]} = Manifest.parse_page_config("not json")
+      assert msg =~ "invalid JSON"
+    end
+
+    test "rejects a non-string label" do
+      assert {:error, errors} = Manifest.parse_page_config(~s({"label":123}))
+      assert Enum.any?(errors, &String.contains?(&1, "label"))
+    end
+
+    test "validates each metadata field (invalid type / select without options)" do
+      json =
+        ~s({"metadata":[) <>
+          ~s({"key":"a","label":"A","type":"weird","default":"x"},) <>
+          ~s({"key":"b","label":"B","type":"select","default":"x"}]})
+
+      assert {:error, errors} = Manifest.parse_page_config(json)
+      assert Enum.any?(errors, &String.contains?(&1, "metadata[0].type"))
+      assert Enum.any?(errors, &String.contains?(&1, "metadata[1].options"))
+    end
+  end
+
+  describe "object/list (nested) field types" do
+    test "parses an object field with nested fields" do
+      json = ~s({"metadata":[{"key":"hero","label":"Hero","type":"object","fields":[
+        {"key":"title","label":"T","type":"string","default":"Hi"},
+        {"key":"image","label":"I","type":"file","default":""}]}]})
+
+      assert {:ok, %{metadata: [field]}} = Manifest.parse_page_config(json)
+      assert field.type == "object"
+      assert [%{key: "title"}, %{key: "image", type: "file"}] = field.fields
+    end
+
+    test "parses a list field with item_label and nested fields" do
+      json = ~s({"metadata":[{"key":"crew","label":"Crew","type":"list","item_label":"Member",
+        "default":[],"fields":[{"key":"name","label":"N","type":"string","default":""}]}]})
+
+      assert {:ok, %{metadata: [field]}} = Manifest.parse_page_config(json)
+      assert field.type == "list"
+      assert field.item_label == "Member"
+      assert [%{key: "name"}] = field.fields
+    end
+
+    test "a container requires a non-empty fields list" do
+      assert {:error, errs} =
+               Manifest.parse_page_config(
+                 ~s({"metadata":[{"key":"x","label":"X","type":"object"}]})
+               )
+
+      assert Enum.any?(errs, &String.contains?(&1, "metadata[0].fields"))
+    end
+
+    test "containers cannot nest other containers (one level only)" do
+      json = ~s({"metadata":[{"key":"x","label":"X","type":"object","fields":[
+        {"key":"y","label":"Y","type":"list","fields":[]}]}]})
+
+      assert {:error, errs} = Manifest.parse_page_config(json)
+      assert Enum.any?(errs, &String.contains?(&1, "metadata[0].fields[0].type"))
+    end
+
+    test "a nested scalar still needs a default" do
+      json = ~s({"metadata":[{"key":"x","label":"X","type":"object","fields":[
+        {"key":"y","label":"Y","type":"string"}]}]})
+
+      assert {:error, errs} = Manifest.parse_page_config(json)
+      assert Enum.any?(errs, &String.contains?(&1, "metadata[0].fields[0].default"))
+    end
+
+    test "merge_fields recurses into objects and lists" do
+      {:ok, %{metadata: fields}} =
+        Manifest.parse_page_config(~s({"metadata":[
+          {"key":"hero","label":"H","type":"object","fields":[
+            {"key":"title","label":"T","type":"string","default":"Default title"},
+            {"key":"on","label":"O","type":"boolean","default":true}]},
+          {"key":"crew","label":"C","type":"list","fields":[
+            {"key":"name","label":"N","type":"string","default":""}]}
+        ]}))
+
+      # No overrides → object fills nested defaults, list is empty.
+      assert %{"hero" => %{"title" => "Default title", "on" => true}, "crew" => []} =
+               Manifest.merge_fields(fields, %{})
+
+      # Overrides: object subkey + list of items (each filled per nested schema).
+      merged =
+        Manifest.merge_fields(fields, %{
+          "hero" => %{"title" => "Custom", "on" => "false"},
+          "crew" => [%{"name" => "Ada"}, %{}]
+        })
+
+      assert merged["hero"] == %{"title" => "Custom", "on" => false}
+      assert merged["crew"] == [%{"name" => "Ada"}, %{"name" => ""}]
+    end
+
+    test "a list's default items render when there is no override" do
+      {:ok, %{metadata: fields}} =
+        Manifest.parse_page_config(~s({"metadata":[
+          {"key":"stats","label":"S","type":"list","default":[
+            {"value":"30+","label":"Years"},{"value":"0","label":"Sales"}],
+           "fields":[
+             {"key":"value","label":"V","type":"string","default":""},
+             {"key":"label","label":"L","type":"string","default":""}]}
+        ]}))
+
+      assert %{"stats" => [%{"value" => "30+", "label" => "Years"}, %{"value" => "0"}]} =
+               Manifest.merge_fields(fields, %{})
+
+      # An explicit empty-list override wins over the defaults.
+      assert %{"stats" => []} = Manifest.merge_fields(fields, %{"stats" => []})
+    end
+  end
+
+  describe "merge_fields/2" do
+    setup do
+      {:ok, config} =
+        Manifest.parse_page_config(~s({
+          "metadata":[
+            {"key":"layout","label":"L","type":"select","options":["contained","wide"],"default":"contained"},
+            {"key":"show_nav","label":"N","type":"boolean","default":true}
+          ]
+        }))
+
+      {:ok, fields: config.metadata}
+    end
+
+    test "applies defaults, coercion, and preserves unknown keys", %{fields: fields} do
+      assert %{"layout" => "contained", "show_nav" => true} = Manifest.merge_fields(fields, %{})
+
+      assert %{"layout" => "wide", "show_nav" => false} =
+               Manifest.merge_fields(fields, %{"layout" => "wide", "show_nav" => "false"})
+
+      assert %{"legacy" => "kept"} = Manifest.merge_fields(fields, %{"legacy" => "kept"})
+    end
+
+    test "an empty field list yields just the preserved overrides" do
+      assert %{"x" => "1"} = Manifest.merge_fields([], %{"x" => "1"})
+    end
+  end
 end

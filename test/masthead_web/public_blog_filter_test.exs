@@ -53,7 +53,8 @@ defmodule MastheadWeb.PublicBlogFilterTest do
       Content.create_page(site.id, %{
         "title" => "Updates",
         "slug" => "updates",
-        "format" => "blog",
+        "format" => "theme",
+        "template" => "blog",
         "published" => "true",
         "filter_tag_ids" => [news.id]
       })
@@ -69,7 +70,8 @@ defmodule MastheadWeb.PublicBlogFilterTest do
       Content.create_page(site.id, %{
         "title" => "Everything",
         "slug" => "everything",
-        "format" => "blog",
+        "format" => "theme",
+        "template" => "blog",
         "published" => "true"
       })
 
@@ -83,7 +85,8 @@ defmodule MastheadWeb.PublicBlogFilterTest do
       Content.create_page(site.id, %{
         "title" => "Everything",
         "slug" => "everything",
-        "format" => "blog",
+        "format" => "theme",
+        "template" => "blog",
         "published" => "true"
       })
 
@@ -97,7 +100,8 @@ defmodule MastheadWeb.PublicBlogFilterTest do
       Content.create_page(site.id, %{
         "title" => "Everything",
         "slug" => "everything",
-        "format" => "blog",
+        "format" => "theme",
+        "template" => "blog",
         "published" => "true"
       })
 
@@ -122,7 +126,8 @@ defmodule MastheadWeb.PublicBlogFilterTest do
       Content.create_page(site.id, %{
         "title" => "Updates",
         "slug" => "updates",
-        "format" => "blog",
+        "format" => "theme",
+        "template" => "blog",
         "published" => "true",
         "filter_tag_ids" => [news.id]
       })
@@ -137,7 +142,8 @@ defmodule MastheadWeb.PublicBlogFilterTest do
       Content.create_page(site.id, %{
         "title" => "Everything",
         "slug" => "everything",
-        "format" => "blog",
+        "format" => "theme",
+        "template" => "blog",
         "published" => "true"
       })
 
@@ -152,7 +158,8 @@ defmodule MastheadWeb.PublicBlogFilterTest do
       Content.create_page(site.id, %{
         "title" => "Everything",
         "slug" => "everything",
-        "format" => "blog",
+        "format" => "theme",
+        "template" => "blog",
         "published" => "true"
       })
 

@@ -8,6 +8,9 @@ defmodule Masthead.Content.Page do
     field :slug, :string
     field :body, :string, default: ""
     field :format, :string, default: "markdown"
+    # For `theme`-format pages: the chosen template name from the theme's
+    # templates/pages/ folder. nil for markdown/html pages.
+    field :template, :string
     field :published, :boolean, default: false
     field :show_in_nav, :boolean, default: true
     field :metadata, :map, default: %{}
@@ -23,9 +26,20 @@ defmodule Masthead.Content.Page do
 
   def changeset(page, attrs) do
     page
-    |> cast(attrs, [:title, :slug, :body, :format, :published, :show_in_nav, :metadata, :site_id])
+    |> cast(attrs, [
+      :title,
+      :slug,
+      :body,
+      :format,
+      :template,
+      :published,
+      :show_in_nav,
+      :metadata,
+      :site_id
+    ])
     |> validate_required([:title, :site_id])
-    |> validate_inclusion(:format, ~w(markdown html blog))
+    |> validate_inclusion(:format, ~w(markdown html theme))
+    |> normalize_template()
     |> validate_liquid_body()
     |> ensure_slug(:title)
     |> validate_format(:slug, ~r/^[a-z0-9]([a-z0-9-]{0,80}[a-z0-9])?$/,
@@ -34,6 +48,15 @@ defmodule Masthead.Content.Page do
     |> normalize_metadata()
     |> unique_constraint([:site_id, :slug], name: :pages_site_id_slug_index)
     |> assoc_constraint(:site)
+  end
+
+  # A `theme` page must name a template; any other format never carries one
+  # (so switching format can't leave a stale template behind).
+  defp normalize_template(changeset) do
+    case get_field(changeset, :format) do
+      "theme" -> validate_required(changeset, [:template])
+      _ -> put_change(changeset, :template, nil)
+    end
   end
 
   # Form posts arrive as `metadata[<key>] => "..."`. Strip empty-string

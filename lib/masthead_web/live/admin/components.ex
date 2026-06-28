@@ -415,10 +415,14 @@ defmodule MastheadWeb.AdminLive.Components do
   * `locked`   — when true, cards are non-interactive (no `phx-click`) and
                  the un-selected card is disabled. Used on edit pages where
                  format is fixed at creation.
+  * `allow_theme` — when true, shows a third "Theme page" card (pages only;
+                 requires the active theme to expose page templates).
   """
   attr :selected, :string, default: nil
   attr :locked, :boolean, default: false
-  attr :allow_blog, :boolean, default: false
+  attr :allow_theme, :boolean, default: false
+  attr :template, :string, default: nil
+  attr :page_templates, :list, default: []
 
   def format_cards(assigns) do
     ~H"""
@@ -474,13 +478,13 @@ defmodule MastheadWeb.AdminLive.Components do
         <span class="format-pill format-pill-muted">Advanced</span>
       </button>
 
-      <button
-        :if={@allow_blog}
-        type="button"
+      <div
+        :if={@allow_theme}
         phx-click={!@locked && "choose_format"}
-        phx-value-format="blog"
-        disabled={@locked && @selected != "blog"}
-        class={card_classes("blog", @selected, @locked)}
+        phx-value-format="theme"
+        role="button"
+        tabindex="0"
+        class={card_classes("theme", @selected, @locked)}
       >
         <div class="format-icon">
           <svg
@@ -490,19 +494,28 @@ defmodule MastheadWeb.AdminLive.Components do
             stroke="currentColor"
             stroke-width="1.5"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M3.75 6h16.5M3.75 12h16.5m-16.5 6h16.5"
-            />
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9h18M8 9v11" />
           </svg>
         </div>
-        <h3>Blog</h3>
+        <h3>Theme page</h3>
         <p>
-          Renders the list of published posts. Body is shown as Markdown intro above the list. Set as homepage to make this the front page.
+          A ready-made layout from your theme (e.g. a blog index or landing page). You set its options, not its body.
         </p>
-        <span class="format-pill format-pill-muted">List</span>
-      </button>
+        <form phx-change="choose_template" class="format-card-select" onsubmit="return false">
+          <label>
+            <span class="sr-only">Page template</span>
+            <select name="template" disabled={@locked}>
+              <option value="" disabled selected={@selected != "theme" or @template in [nil, ""]}>
+                Choose a template…
+              </option>
+              <option :for={t <- @page_templates} value={t.name} selected={@template == t.name}>
+                {t.label}
+              </option>
+            </select>
+          </label>
+        </form>
+      </div>
     </div>
     """
   end
@@ -543,7 +556,8 @@ defmodule MastheadWeb.AdminLive.Components do
     default: nil,
     doc: ~s(public path of the record, e.g. "/posts/my-slug")
 
-  attr :format, :string, default: "markdown", doc: ~s("markdown" | "html" | "blog")
+  attr :format, :string, default: "markdown", doc: ~s("markdown" | "html" | "theme")
+  attr :tools, :boolean, default: true, doc: "show the editor Tools card (Insert / Format)"
 
   def content_sidebar(assigns) do
     ~H"""
@@ -607,7 +621,7 @@ defmodule MastheadWeb.AdminLive.Components do
         </div>
       <% end %>
 
-      <div class="sidebar-card">
+      <div :if={@tools} class="sidebar-card">
         <h3 class="sidebar-card-title">Tools</h3>
         <button
           type="button"
